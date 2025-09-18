@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "496768958985",
+    "project_id": "aftaler-og-regnskab",
+    "storage_bucket": "aftaler-og-regnskab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:496768958985:android:574057967846c4d8dbaed8",
+        "android_client_info": {
+          "package_name": "com.jakobjacobsen.aftaler_og_regnskab"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "496768958985-a42331tgm5kvvd2fi3h89ch6h0ve9q8p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jakobjacobsen.aftaler_og_regnskab",
+            "certificate_hash": "942708922730fb870a3b74ef2c58619a8af4a500"
+          }
+        },
+        {
+          "client_id": "496768958985-98b85isstaj83kb4bakhglkndbfkt3f8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBP7YibJkKPdcGDtNL6c-QxHuvfFOYhINc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "496768958985-98b85isstaj83kb4bakhglkndbfkt3f8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "496768958985-vqkfia5vf9v8asl6bdgbsbf2fsv33ctf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jakobjacobsen.aftalerOgRegnskab"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
