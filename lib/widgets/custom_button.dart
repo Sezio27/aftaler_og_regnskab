@@ -30,7 +30,17 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     final radius = BorderRadius.circular(borderRadius);
+
+    final bgColor = gradient == null ? (color ?? cs.primary) : null;
+
+    final labelStyle =
+        (textStyle ?? tt.labelLarge)?.copyWith(
+          color: (textStyle?.color) ?? cs.onPrimary,
+        ) ??
+        TextStyle(color: cs.onPrimary);
 
     return Material(
       color: Colors.transparent,
@@ -43,23 +53,12 @@ class CustomButton extends StatelessWidget {
           width: width ?? double.infinity,
           decoration: BoxDecoration(
             gradient: gradient,
-            color: gradient == null
-                ? (color ?? Theme.of(context).colorScheme.primary)
-                : null,
+            color: bgColor,
             borderRadius: radius,
             boxShadow: shadow,
           ),
           child: Center(
-            child: Text(
-              text,
-              style:
-                  (textStyle ??
-                      Theme.of(
-                        context,
-                      ).textTheme.labelLarge?.copyWith(color: Colors.white)) ??
-                  const TextStyle(color: Colors.white),
-              textAlign: TextAlign.center,
-            ),
+            child: Text(text, style: labelStyle, textAlign: TextAlign.center),
           ),
         ),
       ),

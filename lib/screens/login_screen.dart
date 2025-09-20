@@ -1,5 +1,7 @@
+import 'package:aftaler_og_regnskab/screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/phone_screen.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:flutter/material.dart';
 
@@ -39,23 +41,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Buttons just under the logo
                   SizedBox(
-                    height: 60,
+                    height: 50,
                     child: CustomButton(
-                      onTap: () {
-                        Navigator.pushNamed(context, PhoneScreen.routeName);
-                      },
+                      onTap: () {},
                       text: 'Login',
+                      textStyle: AppTypography.button1,
                       gradient: AppGradients.peach3,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   SizedBox(
-                    height: 60,
+                    height: 50,
                     child: CustomButton(
                       onTap: () {
-                        // TODO: sign-up flow
+                        Navigator.pushNamed(
+                          context,
+                          ObEnterPhoneScreen.routeName,
+                        );
                       },
                       text: 'Tilmeld',
+                      textStyle: AppTypography.button1,
                       gradient: AppGradients.peach3,
                     ),
                   ),

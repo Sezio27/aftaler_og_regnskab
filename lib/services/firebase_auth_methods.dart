@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:aftaler_og_regnskab/utils/showOtpDialog.dart';
 import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,68 +25,57 @@ class FirebaseAuthMethods {
   // Stream get authState => FirebaseAuth.instance.idTokenChanges();
   // KNOW MORE ABOUT THEM HERE: https://firebase.flutter.dev/docs/auth/start#auth-state
 
-
   // PHONE SIGN IN
-  Future<void> phoneSignIn(
-    BuildContext context,
-    String phoneNumber,
-  ) async {
-    TextEditingController codeController = TextEditingController();
-    if (kIsWeb) {
-      // !!! Works only on web !!!
-      ConfirmationResult result =
-          await _auth.signInWithPhoneNumber(phoneNumber);
+  Future<(String verificationId, int? resendToken)> startPhoneVerification(
+    String phoneNumber, {
+    int? forceResendingToken,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    final completer = Completer<(String, int?)>();
 
-      // Diplay Dialog Box To accept OTP
-      showOTPDialog(
-        codeController: codeController,
-        context: context,
-        onPressed: () async {
-          PhoneAuthCredential credential = PhoneAuthProvider.credential(
-            verificationId: result.verificationId,
-            smsCode: codeController.text.trim(),
-          );
-
-          await _auth.signInWithCredential(credential);
-          Navigator.of(context).pop(); // Remove the dialog box
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        timeout: timeout,
+        forceResendingToken: forceResendingToken,
+        verificationCompleted: (PhoneAuthCredential cred) async {
+          // Android instant verification / auto-retrieval
+          try {
+            await _auth.signInWithCredential(cred);
+          } catch (_) {
+            /* ignore */
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          if (!completer.isCompleted) completer.completeError(e);
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          if (!completer.isCompleted)
+            completer.complete((verificationId, resendToken));
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          // Still return an id if timeout fires before codeSent (rare)
+          if (!completer.isCompleted)
+            completer.complete((verificationId, null));
         },
       );
-    } else {
-      await _auth.verifyPhoneNumber(
-  phoneNumber: phoneNumber,
-  verificationCompleted: (PhoneAuthCredential credential) async {
-    try {
-      await _auth.signInWithCredential(credential);
     } catch (e) {
-      if (kDebugMode) print('signInWithCredential(auto) error: $e');
+      if (!completer.isCompleted) completer.completeError(e);
     }
-  },
-  verificationFailed: (FirebaseAuthException e) {
-    if (kDebugMode) {
-      print('verifyPhoneNumber FAILED: code=${e.code}, message=${e.message}, message=${e}');
-    }
-    showSnackBar(context, '${e.code}: ${e.message}');
-  },
-  codeSent: ((String verificationId, int? resendToken) async {
-          showOTPDialog(
-            codeController: codeController,
-            context: context,
-            onPressed: () async {
-              PhoneAuthCredential credential = PhoneAuthProvider.credential(
-                verificationId: verificationId,
-                smsCode: codeController.text.trim(),
-              );
 
-              // !!! Works only on Android, iOS !!!
-              await _auth.signInWithCredential(credential);
-              Navigator.of(context).pop(); // Remove the dialog box
-            },);
-        }),
-  codeAutoRetrievalTimeout: (String verificationId) {},
-  timeout: const Duration(seconds: 60),
-);
+    // ✅ Always returns a value or throws — no “body might complete normally”
+    return completer.future;
+  }
 
-    }
+  Future<UserCredential> confirmSmsCode({
+    required String verificationId,
+    required String smsCode,
+  }) {
+    final cred = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    return _auth.signInWithCredential(cred);
   }
 
   // SIGN OUT

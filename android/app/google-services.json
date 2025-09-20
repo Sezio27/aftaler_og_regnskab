@@ -14,15 +14,15 @@
       },
       "oauth_client": [
         {
-          "client_id": "496768958985-a42331tgm5kvvd2fi3h89ch6h0ve9q8p.apps.googleusercontent.com",
+          "client_id": "496768958985-m4t2onjsftuf4pc8mq55o23cnlf0sk7q.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.jakobjacobsen.aftaler_og_regnskab",
-            "certificate_hash": "942708922730fb870a3b74ef2c58619a8af4a500"
+            "certificate_hash": "f7ab9b93cdf37daf90d148126b67d41c2fa25700"
           }
         },
         {
-          "client_id": "496768958985-98b85isstaj83kb4bakhglkndbfkt3f8.apps.googleusercontent.com",
+          "client_id": "496768958985-melmu2osumtt0uqr6npq0k8asir3oogo.apps.googleusercontent.com",
           "client_type": 3
         }
       ],

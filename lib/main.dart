@@ -1,8 +1,12 @@
 import 'package:aftaler_og_regnskab/firebase_options.dart';
 import 'package:aftaler_og_regnskab/screens/home_screen.dart';
 import 'package:aftaler_og_regnskab/screens/login_screen.dart';
+import 'package:aftaler_og_regnskab/screens/ob_email_screen.dart';
+import 'package:aftaler_og_regnskab/screens/ob_enter_phone_screen.dart';
+import 'package:aftaler_og_regnskab/screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
+import 'package:aftaler_og_regnskab/theme/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -10,9 +14,7 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -33,9 +35,15 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Flutter Firebase Auth Demo',
-        theme: ThemeData(primarySwatch: Colors.blue),
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system,
         home: const AuthWrapper(),
         routes: {
+          ObEnterPhoneScreen.routeName: (context) => const ObEnterPhoneScreen(),
+          ObValidatePhoneScreen.routeName: (context) =>
+              const ObValidatePhoneScreen(),
+          ObEmailScreen.routeName: (context) => const ObEmailScreen(),
           PhoneScreen.routeName: (context) => const PhoneScreen(),
         },
         // 👇 these are NOT inside `routes`

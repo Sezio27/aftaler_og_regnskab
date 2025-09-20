@@ -34,9 +34,8 @@ class _PhoneScreenState extends State<PhoneScreen> {
           ),
           CustomButton(
             onTap: () {
-              context
-                  .read<FirebaseAuthMethods>()
-                  .phoneSignIn(context, phoneController.text);
+              context.read<FirebaseAuthMethods>();
+              //.phoneSignIn(context, phoneController.text);
             },
             text: 'OK',
           ),
