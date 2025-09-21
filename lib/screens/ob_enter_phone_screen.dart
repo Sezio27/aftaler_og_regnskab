@@ -2,6 +2,7 @@ import 'package:aftaler_og_regnskab/screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
@@ -49,6 +50,7 @@ class _ObEnterPhoneScreenState extends State<ObEnterPhoneScreen> {
     setState(() => _loading = true);
     try {
       final vm = context.read<OnboardingViewModel>();
+
       await vm.startPhoneVerification(context.read<FirebaseAuthMethods>());
       if (!mounted) return;
 
@@ -77,7 +79,7 @@ class _ObEnterPhoneScreenState extends State<ObEnterPhoneScreen> {
 
     return OnboardingStepPage(
       progress: 0.02,
-      title: 'Hvad er dit nummer?',
+      title: vm.attemptLogin ? "Indtast dit nummer" : 'Hvad er dit nummer?',
       isLoading: _loading,
       fields: [
         Padding(

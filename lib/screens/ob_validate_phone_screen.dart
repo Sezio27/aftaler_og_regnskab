@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:aftaler_og_regnskab/screens/home_screen.dart';
+import 'package:aftaler_og_regnskab/screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/ob_email_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
@@ -63,35 +65,50 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
   Future<void> _confirmAndRoute() async {
     if (_loading) return;
     setState(() => _loading = true);
-    try {
-      final outcome = await context
-          .read<OnboardingViewModel>()
-          .confirmCodeAndDecide(
-            smsCode: ctrl.text,
-            auth: context.read<FirebaseAuthMethods>(),
-          );
-      if (!mounted) return;
-      if (outcome == VerifyOutcome.existingUser) {
+    final vm = context.read<OnboardingViewModel>();
+    final auth = context.read<FirebaseAuthMethods>();
+
+    await vm.confirmAndRoute(
+      smsCode: ctrl.text,
+      auth: auth,
+      goHome: () async {
         Navigator.pushNamedAndRemoveUntil(
           context,
           HomeScreen.routeName,
           (_) => false,
         );
-      } else {
+      },
+      goOnboarding: () async {
         Navigator.pushNamedAndRemoveUntil(
           context,
           ObEmailScreen.routeName,
           (_) => false,
         );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+      },
+      loginNoAccount: () async {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Telefonnummeret er ikke tilknyttet en bruger.'),
+          ),
+        );
+        await Future.delayed(const Duration(milliseconds: 300));
+        await vm.signOut();
+        if (!context.mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          LoginScreen.routeName,
+          (_) => false,
+        );
+        vm.setAttemptLogin(false);
+      },
+      onError: (err) async {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$err')));
+      },
+    );
+    if (mounted) setState(() => _loading = false);
   }
 
   @override

@@ -7,7 +7,6 @@ import 'package:aftaler_og_regnskab/screens/ob_email_screen.dart';
 import 'package:aftaler_og_regnskab/screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/ob_validate_phone_screen.dart';
-import 'package:aftaler_og_regnskab/screens/phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/services/user_repository.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
@@ -46,6 +45,7 @@ class MyApp extends StatelessWidget {
         themeMode: ThemeMode.system,
         home: const AuthGate(),
         routes: {
+          LoginScreen.routeName: (context) => const LoginScreen(),
           HomeScreen.routeName: (context) => const HomeScreen(),
           ObEnterPhoneScreen.routeName: (context) => const ObEnterPhoneScreen(),
           ObValidatePhoneScreen.routeName: (context) =>
@@ -56,7 +56,6 @@ class MyApp extends StatelessWidget {
               const ObBusinessNameScreen(),
           ObBusinessLocationScreen.routeName: (context) =>
               const ObBusinessLocationScreen(),
-          PhoneScreen.routeName: (context) => const PhoneScreen(),
         },
       ),
     );

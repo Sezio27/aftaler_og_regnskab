@@ -24,12 +24,6 @@ class OnboardingModel {
     this.postal,
   });
 
-  String get fullName {
-    final f = (firstName ?? '').trim();
-    final l = (lastName ?? '').trim();
-    return [f, l].where((s) => s.isNotEmpty).join(' ');
-  }
-
   bool get isComplete =>
       _notEmpty(phone) &&
       _notEmpty(email) &&
@@ -68,7 +62,7 @@ class OnboardingModel {
     'uid': uid,
     'phone': phone,
     'email': email,
-    'name': {'first': firstName, 'last': lastName, 'full': fullName},
+    'name': {'first': firstName, 'last': lastName},
     'business': {
       'name': businessName,
       'address': address,

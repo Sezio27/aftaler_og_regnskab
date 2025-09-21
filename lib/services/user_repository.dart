@@ -35,8 +35,8 @@ class UserRepository {
     });
 
     final user = _auth.currentUser;
-    final name = model.fullName.trim();
-    if (user != null && name.isNotEmpty && user.displayName != name) {
+    final name = model.firstName;
+    if (user != null && name!.isNotEmpty && user.displayName != name) {
       try {
         await user.updateDisplayName(name);
       } catch (_) {}

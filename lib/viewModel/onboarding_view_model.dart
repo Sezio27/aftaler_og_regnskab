@@ -1,4 +1,5 @@
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../model/onboardingModel.dart';
 import '../services/user_repository.dart';
@@ -8,7 +9,7 @@ import '../services/user_repository.dart';
 /// - Exposes update methods per field
 /// - Performs save() via the repository
 
-enum VerifyOutcome { existingUser, newUser }
+enum NextStep { home, onboarding, loginNoAccount }
 
 class OnboardingViewModel extends ChangeNotifier {
   OnboardingViewModel(this._repo, {OnboardingModel? initial})
@@ -33,6 +34,13 @@ class OnboardingViewModel extends ChangeNotifier {
   void setAddress(String v) => _set(_state.copyWith(address: v.trim()));
   void setCity(String v) => _set(_state.copyWith(city: v.trim()));
   void setPostal(String v) => _set(_state.copyWith(postal: v.trim()));
+
+  bool _attemptLogin = false;
+  bool get attemptLogin => _attemptLogin;
+  void setAttemptLogin(bool v) {
+    _attemptLogin = v;
+    // no need to notify unless the UI shows different text immediately
+  }
 
   void _set(OnboardingModel next) {
     if (identical(next, _state)) return;
@@ -68,9 +76,38 @@ class OnboardingViewModel extends ChangeNotifier {
     return _emailRe.hasMatch(v);
   }
 
-  Future<bool> profileExists() {
-    return _repo.userDocExists();
+  Future<bool> profileExists() => _repo.userDocExists();
+
+  Future<void> confirmAndRoute({
+    required String smsCode,
+    required FirebaseAuthMethods auth,
+    required Future<void> Function() goHome,
+    required Future<void> Function() goOnboarding,
+    required Future<void> Function()
+    loginNoAccount, // will be called if attemptLogin && no profile
+    Future<void> Function(Object error)? onError, // optional UI error handler
+  }) async {
+    try {
+      await confirmCode(smsCode: smsCode, auth: auth);
+      final exists = await profileExists();
+
+      if (exists) {
+        await goHome();
+        return;
+      }
+
+      if (attemptLogin) {
+        await loginNoAccount();
+        _attemptLogin = false;
+      } else {
+        await goOnboarding();
+      }
+    } catch (e) {
+      if (onError != null) await onError(e);
+    }
   }
+
+  Future<void> signOut() => FirebaseAuth.instance.signOut();
 
   // --- Verification session (VM-owned) ---
   String? _verificationId;
@@ -117,7 +154,7 @@ class OnboardingViewModel extends ChangeNotifier {
   }
 
   /// Confirm code then decide: existing user -> Home, otherwise -> onboarding.
-  Future<VerifyOutcome> confirmCodeAndDecide({
+  Future<void> confirmCode({
     required String smsCode,
     required FirebaseAuthMethods auth,
   }) async {
@@ -126,8 +163,6 @@ class OnboardingViewModel extends ChangeNotifier {
       throw StateError('No verificationId. Start or seed the session first.');
     }
     await auth.confirmSmsCode(verificationId: vId, smsCode: smsCode);
-    final exists = await _repo.userDocExists();
-    return exists ? VerifyOutcome.existingUser : VerifyOutcome.newUser;
   }
 
   bool get isPhoneValid => isPhoneValidFor(_currentDial, minNationalLen: 8);
