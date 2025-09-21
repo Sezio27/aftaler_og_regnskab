@@ -22,14 +22,13 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Center(
-            // centers the whole column vertically
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
-                mainAxisSize: MainAxisSize.min, // shrink to content
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo
+                  //Logo
                   SizedBox(
                     width: size.width * 0.6,
                     child: Image.asset(
@@ -37,19 +36,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       fit: BoxFit.contain,
                     ),
                   ),
+
                   const SizedBox(height: 26),
 
-                  // Buttons just under the logo
+                  //Buttons
                   SizedBox(
                     height: 50,
                     child: CustomButton(
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          ObEnterPhoneScreen.routeName,
+                        );
+                      },
                       text: 'Login',
                       textStyle: AppTypography.button1,
                       gradient: AppGradients.peach3,
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   SizedBox(
                     height: 50,
                     child: CustomButton(

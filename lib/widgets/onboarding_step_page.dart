@@ -12,6 +12,7 @@ class OnboardingStepPage extends StatelessWidget {
   final List<Widget> fields;
   final String buttonText;
   final bool enabled;
+  final bool isLoading;
   final VoidCallback onContinue;
 
   const OnboardingStepPage({
@@ -22,6 +23,7 @@ class OnboardingStepPage extends StatelessWidget {
     required this.fields,
     this.buttonText = 'Fortsæt',
     required this.enabled,
+    this.isLoading = false,
     required this.onContinue,
   });
 
@@ -73,12 +75,43 @@ class OnboardingStepPage extends StatelessWidget {
               //Continue button
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: CustomButton(
-                  onTap: enabled ? onContinue : () {},
-                  text: 'Fortsæt',
-                  textStyle: AppTypography.button1,
-                  gradient: enabled ? AppGradients.peach3 : null,
-                  color: enabled ? null : Colors.black26,
+                child: SizedBox(
+                  height: 52, // same visual height as your button
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // The button (disabled while loading or not enabled)
+                      CustomButton(
+                        onTap: (enabled && !isLoading) ? onContinue : () {},
+                        text: isLoading ? '' : buttonText,
+                        textStyle: AppTypography.button1,
+                        gradient: enabled ? AppGradients.peach3 : null,
+                        color: enabled ? null : Colors.black26,
+                      ),
+
+                      // Progress overlay
+                      if (isLoading)
+                        const IgnorePointer(
+                          // block taps during loading
+                          ignoring: true,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(), // transparent overlay
+                            child: Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],

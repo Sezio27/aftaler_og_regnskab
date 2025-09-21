@@ -1,19 +1,19 @@
-import 'package:aftaler_og_regnskab/screens/ob_name.dart';
+import 'package:aftaler_og_regnskab/screens/ob_business_location_screen.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/ob_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ObEmailScreen extends StatefulWidget {
-  const ObEmailScreen({super.key});
-  static String routeName = '/email';
+class ObBusinessNameScreen extends StatefulWidget {
+  const ObBusinessNameScreen({super.key});
+  static String routeName = '/forretningnavn';
 
   @override
-  State<ObEmailScreen> createState() => _ObEmailScreenState();
+  State<ObBusinessNameScreen> createState() => _ObForretningNavnScreenState();
 }
 
-class _ObEmailScreenState extends State<ObEmailScreen> {
+class _ObForretningNavnScreenState extends State<ObBusinessNameScreen> {
   final ctrl = TextEditingController();
 
   @override
@@ -22,11 +22,11 @@ class _ObEmailScreenState extends State<ObEmailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = context.read<OnboardingViewModel>();
-      ctrl.text = vm.email ?? '';
+      ctrl.text = vm.businessName ?? '';
     });
 
     ctrl.addListener(
-      () => context.read<OnboardingViewModel>().setEmail(ctrl.text),
+      () => context.read<OnboardingViewModel>().setBusinessName(ctrl.text),
     );
   }
 
@@ -39,22 +39,21 @@ class _ObEmailScreenState extends State<ObEmailScreen> {
   @override
   Widget build(BuildContext context) {
     final canContinue = context.select<OnboardingViewModel, bool>(
-      (vm) => vm.isEmailValid,
+      (vm) => vm.isBusinessNameValid,
     );
-
     return OnboardingStepPage(
-      progress: 0.25,
-      title: 'Hvad er din email?',
+      progress: 0.75,
+      title: 'Hvad hedder din forretning?',
       fields: [
         ObTextfield(
-          hintText: 'Indtast e-mail',
+          hintText: 'Indtast forretningsnavn',
           controller: ctrl,
-          autofillHints: const [AutofillHints.email],
+          autofillHints: const [AutofillHints.organizationName],
         ),
       ],
       enabled: canContinue,
       onContinue: () {
-        Navigator.pushNamed(context, ObNameScreen.routeName);
+        Navigator.pushNamed(context, ObBusinessLocationScreen.routeName);
       },
     );
   }

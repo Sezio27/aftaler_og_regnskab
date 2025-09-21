@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
-
+  static String routeName = '/home';
   @override
   Widget build(BuildContext context) {
     final user = context.read<FirebaseAuthMethods>().user;

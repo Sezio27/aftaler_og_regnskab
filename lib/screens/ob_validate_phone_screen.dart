@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:aftaler_og_regnskab/screens/home_screen.dart';
 import 'package:aftaler_og_regnskab/screens/ob_email_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
@@ -19,22 +21,7 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
   final ctrl = TextEditingController();
   Timer? _timer;
   int _secondsLeft = 0;
-
-  String _fullPhone = '';
-  String? _verificationId;
-  int? _resendToken;
-  bool _didInit = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_didInit) return;
-    final args = (ModalRoute.of(context)!.settings.arguments as Map?) ?? {};
-    _fullPhone = (args['fullPhone'] as String?) ?? _fullPhone;
-    _verificationId ??= args['verificationId'] as String?;
-    _resendToken ??= args['resendToken'] as int?;
-    _didInit = true;
-  }
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -57,44 +44,69 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
   }
 
   Future<void> _resend() async {
+    if (_secondsLeft > 0 || _loading) return;
     _startResendCooldown();
-
     try {
-      final auth = context.read<FirebaseAuthMethods>();
-
-      // Key line: pass the previous resend token so Firebase allows immediate resend
-      final (newVerificationId, newResendToken) = await auth
-          .startPhoneVerification(
-            _fullPhone,
-            forceResendingToken: _resendToken,
-            timeout: const Duration(seconds: 60),
-          );
-
-      if (!mounted) return;
-      setState(() {
-        _verificationId = newVerificationId;
-        _resendToken = newResendToken;
-      });
+      await context.read<OnboardingViewModel>().resendCode(
+        context.read<FirebaseAuthMethods>(),
+      );
     } catch (e) {
-      if (!mounted) return;
       _timer?.cancel();
       setState(() => _secondsLeft = 0);
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Kunne ikke sende ny SMS: $e')));
     }
   }
 
+  Future<void> _confirmAndRoute() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final outcome = await context
+          .read<OnboardingViewModel>()
+          .confirmCodeAndDecide(
+            smsCode: ctrl.text,
+            auth: context.read<FirebaseAuthMethods>(),
+          );
+      if (!mounted) return;
+      if (outcome == VerifyOutcome.existingUser) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          HomeScreen.routeName,
+          (_) => false,
+        );
+      } else {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          ObEmailScreen.routeName,
+          (_) => false,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final canContinue = ctrl.text.length == 6;
-    final bc = Theme.of(context).colorScheme;
+    final vm = context.watch<OnboardingViewModel>();
+
+    final canContinue = ctrl.text.length == 6 && !_loading;
+    final cs = Theme.of(context).colorScheme;
 
     final baseUnderline = BorderSide(
-      color: bc.onSurface.withOpacity(0.75),
+      color: cs.onSurface.withOpacity(0.75),
       width: 1,
     );
-    final focusUnderline = BorderSide(color: bc.primary, width: 2);
+
+    final focusUnderline = BorderSide(color: cs.primary, width: 2);
     final defaultPinTheme = PinTheme(
       width: 40,
       height: 52,
@@ -108,7 +120,7 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
     return OnboardingStepPage(
       progress: 0.1,
       title: "Indtast din kode",
-      subtitle: _fullPhone,
+      subtitle: vm.fullPhoneForSession.isEmpty ? null : vm.fullPhoneForSession,
       fields: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -141,15 +153,13 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
                 children: [
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: _secondsLeft == 0 ? () => _resend() : null,
+                    onTap: (_secondsLeft == 0 && !_loading) ? _resend : null,
                     child: Text(
                       _secondsLeft == 0
                           ? 'Send igen'
                           : 'Send igen (${_secondsLeft}s)',
                       style: AppTypography.b2.copyWith(
-                        color: _secondsLeft == 0
-                            ? bc.primary
-                            : bc.onSurface.withValues(alpha: 1),
+                        color: _secondsLeft == 0 ? cs.primary : cs.onSurface,
                       ),
                     ),
                   ),
@@ -160,23 +170,8 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
         ),
       ],
       enabled: canContinue,
-      onContinue: () async {
-        if (_verificationId == null) return;
-        try {
-          await context.read<FirebaseAuthMethods>().confirmSmsCode(
-            verificationId: _verificationId!,
-            smsCode: ctrl.text,
-          );
-          if (!mounted) return;
-          Navigator.pushNamed(context, ObEmailScreen.routeName);
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(e.toString())));
-          }
-        }
-      },
+      isLoading: _loading,
+      onContinue: _confirmAndRoute,
     );
   }
 }

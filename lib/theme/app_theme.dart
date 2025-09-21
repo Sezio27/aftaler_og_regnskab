@@ -21,6 +21,21 @@ class AppTheme {
     useMaterial3: true,
     colorScheme: _lightScheme,
     scaffoldBackgroundColor: Colors.white,
+    inputDecorationTheme: InputDecorationTheme(
+      isDense: false,
+      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _lightScheme.onSurface, width: 1.5),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _lightScheme.onSurface, width: 1.5),
+      ),
+      disabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _lightScheme.onSurface.withOpacity(.4)),
+      ),
+      labelStyle: TextStyle(color: _lightScheme.onSurface),
+      floatingLabelStyle: TextStyle(color: _lightScheme.onSurface),
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: ButtonStyle(
         minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
@@ -41,6 +56,21 @@ class AppTheme {
     useMaterial3: true,
     colorScheme: _darkScheme,
     scaffoldBackgroundColor: Colors.black,
+    inputDecorationTheme: InputDecorationTheme(
+      isDense: false,
+      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _darkScheme.onSurface, width: 1.5),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _darkScheme.onSurface, width: 1.5),
+      ),
+      disabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: _darkScheme.onSurface.withOpacity(.4)),
+      ),
+      labelStyle: TextStyle(color: _darkScheme.onSurface),
+      floatingLabelStyle: TextStyle(color: _darkScheme.onSurface),
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: ButtonStyle(
         minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),

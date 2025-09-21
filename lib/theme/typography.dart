@@ -33,9 +33,10 @@ class AppTypography {
   static final TextStyle h2 = _raleway(24, FontWeight.w600);
   static final TextStyle h3 = _raleway(22, FontWeight.w600);
   static final TextStyle b1 = _raleway(18, FontWeight.w500);
-  static final TextStyle b2 = _raleway(15, FontWeight.w500);
+  static final TextStyle b2 = _raleway(15, FontWeight.w400);
   static final TextStyle button1 = _raleway(17, FontWeight.w700);
   static final TextStyle num1 = _inter(16, FontWeight.w400);
+  static final TextStyle phoneInput = _inter(16, FontWeight.w400, letter: 0.3);
   static final TextStyle num2 = _inter(15, FontWeight.w500);
   static final TextStyle numBig = _inter(24, FontWeight.w600);
 
