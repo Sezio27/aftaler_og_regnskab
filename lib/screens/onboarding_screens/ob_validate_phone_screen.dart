@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:aftaler_og_regnskab/screens/home_screen.dart';
-import 'package:aftaler_og_regnskab/screens/login_screen.dart';
-import 'package:aftaler_og_regnskab/screens/ob_email_screen.dart';
+import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
+import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';

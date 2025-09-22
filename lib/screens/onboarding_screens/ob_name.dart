@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/screens/ob_business_name_screen.dart';
+import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/ob_textfield.dart';

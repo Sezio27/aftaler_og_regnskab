@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/screens/ob_validate_phone_screen.dart';
+import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 
 import 'package:aftaler_og_regnskab/theme/typography.dart';
