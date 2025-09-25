@@ -50,7 +50,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.h3.copyWith(color: Colors.white),
+                        style: AppTypography.h2.copyWith(color: Colors.white),
                       ),
 
                       if (subtitle != null) ...[

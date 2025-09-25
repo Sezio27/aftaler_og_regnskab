@@ -1,19 +1,21 @@
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  // layout
   final double height;
   final double? width;
   final double borderRadius;
 
-  // style
-  final Color? color; // solid fill
-  final Gradient? gradient; // overrides color if set
-  final List<BoxShadow>? shadow; // drop shadow (optional)
-  final TextStyle? textStyle; // override label style
+  final Color? color;
+  final Gradient? gradient;
+  final List<BoxShadow>? shadow;
+  final TextStyle? textStyle;
+  final BoxBorder? borderStroke;
+
+  final Widget? icon;
 
   const CustomButton({
     super.key,
@@ -26,6 +28,8 @@ class CustomButton extends StatelessWidget {
     this.gradient,
     this.shadow,
     this.textStyle,
+    this.icon,
+    this.borderStroke,
   });
 
   @override
@@ -43,8 +47,10 @@ class CustomButton extends StatelessWidget {
         TextStyle(color: cs.onPrimary);
 
     return Material(
+      elevation: 1,
       color: Colors.transparent,
       borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: radius,
         onTap: onTap,
@@ -56,9 +62,14 @@ class CustomButton extends StatelessWidget {
             color: bgColor,
             borderRadius: radius,
             boxShadow: shadow,
+            border: borderStroke,
           ),
-          child: Center(
-            child: Text(text, style: labelStyle, textAlign: TextAlign.center),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[icon!, const SizedBox(width: 6)],
+              Text(text, style: labelStyle, textAlign: TextAlign.center),
+            ],
           ),
         ),
       ),

@@ -45,6 +45,7 @@ class MyApp extends StatelessWidget {
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,
+
         home: const AuthGate(),
         routes: {
           LoginScreen.routeName: (context) => const LoginScreen(),
