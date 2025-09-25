@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/screens/ob_enter_phone_screen.dart';
+import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
