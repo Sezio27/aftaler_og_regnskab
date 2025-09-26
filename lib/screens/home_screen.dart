@@ -19,7 +19,7 @@ class HomeScreen extends StatelessWidget {
           24,
           24,
           24,
-          10 + kBottomNavigationBarHeight, // leave room for shell BottomNav
+         kBottomNavigationBarHeight,
         ),
         child: Column(
           children: [
