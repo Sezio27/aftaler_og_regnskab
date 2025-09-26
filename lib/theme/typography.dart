@@ -38,18 +38,19 @@ class AppTypography {
   static final TextStyle nav1 = _raleway(14, FontWeight.w800);
   static final TextStyle nav2 = _raleway(14, FontWeight.w500);
   static final TextStyle button1 = _raleway(17, FontWeight.w700);
-  static final TextStyle button2 = _raleway(16, FontWeight.w600);
+  static final TextStyle button2 = _raleway(15, FontWeight.w500);
   static final TextStyle num1 = _inter(16, FontWeight.w400);
   static final TextStyle phoneInput = _inter(16, FontWeight.w400, letter: 0.3);
   static final TextStyle num2 = _inter(15, FontWeight.w500);
+  static final TextStyle num3 = _inter(15, FontWeight.w400);
   static final TextStyle numBig = _inter(24, FontWeight.w600);
   static final TextStyle numStat = _inter(20, FontWeight.w500);
 
   static final TextStyle bold = _inter(17, FontWeight.w800);
 
-  static final TextStyle acTtitle = _inter(14, FontWeight.w700);
-  static final TextStyle acSubtitle = _inter(12, FontWeight.w400);
-  static final TextStyle f1 = _inter(11, FontWeight.w500);
+  static final TextStyle acTtitle = _inter(16, FontWeight.w700);
+  static final TextStyle acSubtitle = _inter(14, FontWeight.w400);
+  static final TextStyle f1 = _inter(12, FontWeight.w400);
 
   static TextStyle onSurface(BuildContext c, TextStyle s) =>
       s.copyWith(color: Theme.of(c).colorScheme.onSurface);

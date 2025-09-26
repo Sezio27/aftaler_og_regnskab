@@ -114,7 +114,7 @@ class _HomeDashboard extends StatelessWidget {
                   subtitle: "Denne måned",
                   stat: "12.750 kr.",
                   constraints: const BoxConstraints(
-                    minHeight: 200,
+                    minHeight: 190,
                     minWidth: 180,
                   ),
                   icon: Container(
@@ -136,7 +136,7 @@ class _HomeDashboard extends StatelessWidget {
                   subtitle: "Denne måned",
                   stat: "8",
                   constraints: const BoxConstraints(
-                    minHeight: 200,
+                    minHeight: 190,
                     minWidth: 180,
                   ),
                   icon: Container(
@@ -155,20 +155,20 @@ class _HomeDashboard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 26),
             CustomButton(
               text: "Ny aftale",
-              icon: Icon(Icons.add, size: 20, color: Colors.black),
+              icon: Icon(Icons.add, size: 18, color: Colors.black),
               color: Colors.white,
-              width: 180,
-              borderRadius: 20,
+              width: 170,
+              borderRadius: 18,
               textStyle: AppTypography.button2.copyWith(color: Colors.black),
               borderStroke: Border.all(color: AppColors.peach, width: 1),
               onTap: () {},
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 26),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -177,16 +177,16 @@ class _HomeDashboard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Column(
                 children: [
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
                   AppointmentCard(title: "Sarah Johnson"),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
                   AppointmentCard(title: "Emma Nielsen"),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 6),
                   AppointmentCard(title: "Lisa Wang"),
                 ],
               ),

@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/material.dart';
@@ -27,24 +28,15 @@ class AppointmentCard extends StatelessWidget {
   });
 
   Widget _timeBlock() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center, // icon centers to text-column
-        children: [
-          const Icon(Icons.schedule, size: 17),
-          const SizedBox(width: 6),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('16/10', style: AppTypography.f1),
-              Text('11:00', style: AppTypography.f1),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      spacing: 4,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Icon(Icons.schedule, size: 16),
+        Text('16/10', style: AppTypography.f1),
+        Text('11:00', style: AppTypography.f1),
+      ],
     );
   }
 
@@ -54,27 +46,121 @@ class AppointmentCard extends StatelessWidget {
       width: double.infinity,
       constraints: BoxConstraints(minHeight: 91),
       field: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        child: IntrinsicHeight(
-          child: Row(
-            spacing: 20,
-            children: [
-              if (leadingIcon != null) ...[
-                leadingIcon!,
-                const SizedBox(width: 10),
-              ],
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
 
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          //mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (leadingIcon != null) ...[
+              leadingIcon!,
+              const SizedBox(width: 10),
+            ],
+
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Sarah Johnson", style: AppTypography.acTtitle),
-                  Text("Bryllups Makeup", style: AppTypography.acSubtitle),
+                  //Top row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Sarah Johnson",
+                          style: AppTypography.acTtitle,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      Text("2,500 DKK", style: AppTypography.num3),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  //Bottom row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Service (flex 5)
+                      Expanded(
+                        flex: 5,
+                        child: Text(
+                          "Bryllups Makeup",
+                          style: AppTypography.acSubtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      // spacer (flex 1)
+                      const Expanded(flex: 1, child: SizedBox.shrink()),
+
+                      // timeblock (flex 2)
+                      Expanded(
+                        flex: 2,
+                        child: FittedBox(
+                          // allows this chunk to shrink without overflow
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.schedule, size: 16),
+                              const SizedBox(width: 6),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('16/10', style: AppTypography.f1),
+                                  Text('11:00', style: AppTypography.f1),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // spacer (flex 1)
+                      const Expanded(flex: 1, child: SizedBox.shrink()),
+
+                      // phone + text (flex 3)
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          children: const [
+                            // phone (flex 1)
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Icon(
+                                  Icons.phone_outlined,
+                                  size: 24,
+                                  color: AppColors.peach,
+                                ),
+                              ),
+                            ),
+                            // empty space (flex 1)
+                            Expanded(child: SizedBox.shrink()),
+                            // text (flex 1)
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: Icon(
+                                  Icons.chat_bubble_outline,
+                                  color: AppColors.peach,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-
-              _timeBlock(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
