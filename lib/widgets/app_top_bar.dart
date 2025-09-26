@@ -2,6 +2,7 @@ import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -37,8 +38,24 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (showBackButton) ...[
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                  const SizedBox(width: 20),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    splashRadius: 24,
+                    onPressed: () async {
+                      HapticFeedback.selectionClick();
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        // Fallback when there is no stack to pop
+                        context.go('/home');
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 10),
                 ],
                 // Title + (optional) subtitle
                 Expanded(

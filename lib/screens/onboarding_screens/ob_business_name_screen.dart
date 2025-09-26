@@ -1,8 +1,10 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/ob_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class ObBusinessNameScreen extends StatefulWidget {
@@ -53,7 +55,7 @@ class _ObForretningNavnScreenState extends State<ObBusinessNameScreen> {
       ],
       enabled: canContinue,
       onContinue: () {
-        Navigator.pushNamed(context, ObBusinessLocationScreen.routeName);
+        context.goNamed(AppRoute.onboardingBusinessLocation.name);
       },
     );
   }

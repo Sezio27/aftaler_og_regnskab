@@ -1,9 +1,11 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -49,10 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         context.read<OnboardingViewModel>().setAttemptLogin(
                           true,
                         );
-                        Navigator.pushNamed(
-                          context,
-                          ObEnterPhoneScreen.routeName,
-                        );
+                        context.goNamed(AppRoute.onboardingPhone.name);
                       },
                       text: 'Login',
                       textStyle: AppTypography.button1,
@@ -69,10 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         context.read<OnboardingViewModel>().setAttemptLogin(
                           false,
                         );
-                        Navigator.pushNamed(
-                          context,
-                          ObEnterPhoneScreen.routeName,
-                        );
+                        context.goNamed(AppRoute.onboardingPhone.name);
                       },
                       text: 'Tilmeld',
                       textStyle: AppTypography.button1,

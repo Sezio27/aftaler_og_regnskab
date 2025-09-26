@@ -4,6 +4,7 @@ import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/step__bar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class OnboardingStepPage extends StatelessWidget {
   final double progress;
@@ -44,7 +45,13 @@ class OnboardingStepPage extends StatelessWidget {
               //Back button
               IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/login');
+                  }
+                },
               ),
 
               const SizedBox(height: 12),

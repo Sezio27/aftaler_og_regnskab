@@ -1,9 +1,11 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/ob_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class ObNameScreen extends StatefulWidget {
@@ -71,7 +73,7 @@ class _ObNameScreenState extends State<ObNameScreen> {
       ],
       enabled: canContinue,
       onContinue: () {
-        Navigator.pushNamed(context, ObBusinessNameScreen.routeName);
+        context.goNamed(AppRoute.onboardingBusinessName.name);
       },
     );
   }

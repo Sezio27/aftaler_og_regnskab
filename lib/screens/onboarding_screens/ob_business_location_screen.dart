@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/screens/home_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
@@ -6,6 +7,7 @@ import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class ObBusinessLocationScreen extends StatefulWidget {
@@ -81,11 +83,7 @@ class _ObForretningNavnScreenState extends State<ObBusinessLocationScreen> {
       debugPrint('Save OK');
 
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        HomeScreen.routeName,
-        (_) => false,
-      );
+      context.goNamed(AppRoute.home.name);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

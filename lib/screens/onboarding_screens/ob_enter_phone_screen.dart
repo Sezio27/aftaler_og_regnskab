@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 
@@ -10,6 +11,7 @@ import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class ObEnterPhoneScreen extends StatefulWidget {
@@ -53,8 +55,7 @@ class _ObEnterPhoneScreenState extends State<ObEnterPhoneScreen> {
 
       await vm.startPhoneVerification(context.read<FirebaseAuthMethods>());
       if (!mounted) return;
-
-      Navigator.pushNamed(context, ObValidatePhoneScreen.routeName);
+      context.goNamed(AppRoute.onboardingPhoneValidate.name);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));

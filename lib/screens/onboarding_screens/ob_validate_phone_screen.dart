@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/screens/home_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.dart';
@@ -9,6 +10,7 @@ import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import 'package:provider/provider.dart';
 
@@ -72,20 +74,15 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
       smsCode: ctrl.text,
       auth: auth,
       goHome: () async {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          HomeScreen.routeName,
-          (_) => false,
-        );
+        if (!mounted) return;
+        context.goNamed(AppRoute.home.name);
       },
       goOnboarding: () async {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          ObEmailScreen.routeName,
-          (_) => false,
-        );
+        if (!mounted) return;
+        context.goNamed(AppRoute.onboardingEmail.name);
       },
       loginNoAccount: () async {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Telefonnummeret er ikke tilknyttet en bruger.'),
@@ -93,13 +90,9 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
         );
         await Future.delayed(const Duration(milliseconds: 300));
         await vm.signOut();
-        if (!context.mounted) return;
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          LoginScreen.routeName,
-          (_) => false,
-        );
+        if (!mounted) return;
         vm.setAttemptLogin(false);
+        context.goNamed(AppRoute.login.name);
       },
       onError: (err) async {
         if (!mounted) return;
