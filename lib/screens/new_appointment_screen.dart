@@ -1,8 +1,8 @@
+import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/theme/colors.dart';
 
 class NewAppointmentScreen extends StatelessWidget {
   const NewAppointmentScreen({super.key});
@@ -11,77 +11,67 @@ class NewAppointmentScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: const AppTopBar(title: 'Ny Aftale', showBackButton: true),
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Lightweight top row (since there’s no AppBar)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Ny aftale',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ],
+    return Column(
+      children: [
+        // Lightweight top row (since there’s no AppBar)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                'Ny aftale',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ],
+          ),
+        ),
 
-            // Scrollable content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: const _NewAppointmentForm(),
+        // Scrollable content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: const _NewAppointmentForm(),
+            ),
+          ),
+        ),
+
+        // Sticky bottom actions
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            boxShadow: [
+              BoxShadow(blurRadius: 10, color: Colors.black.withOpacity(0.06)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Annuller'),
                 ),
               ),
-            ),
-
-            // Sticky bottom actions
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 10,
-                    color: Colors.black.withOpacity(0.06),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    // TODO: validate + save
+                  },
+                  child: const Text('Opret aftale'),
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => context.pop(),
-                      child: const Text('Annuller'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () {
-                        // TODO: validate + save
-                      },
-                      child: const Text('Opret aftale'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

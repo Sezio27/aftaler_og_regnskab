@@ -7,7 +7,6 @@ class StatCard extends StatelessWidget {
   final Widget? icon;
   final String? subtitle;
   final String? stat;
-  final BoxConstraints? constraints;
 
   const StatCard({
     super.key,
@@ -15,53 +14,67 @@ class StatCard extends StatelessWidget {
     this.icon,
     this.subtitle,
     this.stat,
-    this.constraints,
   });
 
   @override
   Widget build(BuildContext context) {
-    return CustomCard(
-      constraints: constraints,
-      blurRadius: 2,
-      field: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[icon!, const SizedBox(height: 16)],
+    final cs = Theme.of(context).colorScheme;
 
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: AppTypography.h3,
-              overflow: TextOverflow.ellipsis,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Scale factor from available width; clamp to keep it sensible.
+        final s = (constraints.maxWidth / 320).clamp(1.0, 1.35);
+
+        final vPad = 10.0 * s;
+        final hPad = 16.0 * s;
+        final gapIcon = 16.0 * s;
+        final gapSubtitleTop = 20.0 * s;
+        final gapStatTop = 6.0 * s;
+
+        return CustomCard(
+          blurRadius: 2,
+          field: Padding(
+            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[icon!, SizedBox(height: gapIcon)],
+
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  // Optional: bump font a touch with s if you want
+                  style: AppTypography.h3.copyWith(color: cs.onPrimary),
+                ),
+
+                if (subtitle != null) ...[
+                  SizedBox(height: gapSubtitleTop),
+                  Text(
+                    subtitle!,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.b2.copyWith(color: cs.onPrimary),
+                  ),
+                ],
+
+                if (stat != null) ...[
+                  SizedBox(height: gapStatTop),
+                  Text(
+                    stat!,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.numStat.copyWith(color: cs.onPrimary),
+                  ),
+                ],
+              ],
             ),
-
-            if (subtitle != null) ...[
-              const SizedBox(height: 20),
-              Text(
-                subtitle!,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                style: AppTypography.b2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-
-            if (stat != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                stat!,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                style: AppTypography.numStat,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

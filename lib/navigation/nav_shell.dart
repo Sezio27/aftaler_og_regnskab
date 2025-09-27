@@ -1,4 +1,5 @@
 // lib/navigation/nav_shell.dart
+import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/widgets/app_bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'tab_config.dart';
@@ -12,15 +13,7 @@ class NavShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final idx = indexForLocation(location);
-
-    return Scaffold(
-      appBar: buildTopBarForIndex(idx),
-      extendBody: true,
-      body: child,
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: idx,
-        onItemSelected: (i) => goToTab(context, i),
-      ),
-    );
+    final hideNav = location.startsWith('/appointments/');
+    return AppLayout(idx: idx, showNavBar: !hideNav, child: child);
   }
 }

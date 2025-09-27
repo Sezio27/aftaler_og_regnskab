@@ -24,49 +24,45 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                StatCard(
-                  title: "Omsætning",
-                  subtitle: "Denne måned",
-                  stat: "12.750 kr.",
-                  constraints: const BoxConstraints(
-                    minHeight: 190,
-                    minWidth: 180,
-                  ),
-                  icon: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: AppColors.greenBackground,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.attach_money,
-                      size: 20,
-                      color: AppColors.greenMain,
+                Expanded(
+                  child: StatCard(
+                    title: "Omsætning",
+                    subtitle: "Denne måned",
+                    stat: "12.750 kr.",
+                    icon: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: AppColors.greenBackground,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.attach_money,
+                        size: 20,
+                        color: AppColors.greenMain,
+                      ),
                     ),
                   ),
                 ),
-                StatCard(
-                  title: "Aftaler",
-                  subtitle: "Denne måned",
-                  stat: "8",
-                  constraints: const BoxConstraints(
-                    minHeight: 190,
-                    minWidth: 180,
-                  ),
-                  icon: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: AppColors.peachBackground,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.calendar_today_outlined,
-                      size: 20,
-                      color: AppColors.peach,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: StatCard(
+                    title: "Aftaler",
+                    subtitle: "Denne måned",
+                    stat: "8",
+                    icon: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: AppColors.peachBackground,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 20,
+                        color: AppColors.peach,
+                      ),
                     ),
                   ),
                 ),

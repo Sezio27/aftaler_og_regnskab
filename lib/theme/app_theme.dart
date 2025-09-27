@@ -7,17 +7,33 @@ class AppTheme {
 
   static final ColorScheme _lightScheme =
       ColorScheme.fromSeed(
-        seedColor: const Color(0xFF6750A4),
+        seedColor: const Color(0xFFFF9C86), // your peach
         brightness: Brightness.light,
       ).copyWith(
-        onPrimary: Colors.white, //
+        primary: const Color(0xFFFF9C86),
+        onPrimary: Colors.white,
+        surface: const Color(0xFFF8F4F1),
+        onSurface: const Color(0xFF1E1E1E),
+        secondary: const Color(0xFF6E6E6E),
+        onSecondary: Colors.white,
+        error: const Color(0xFFB00020),
+        onError: Colors.white,
       );
 
-  static final ColorScheme _darkScheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF6750A4),
-    brightness: Brightness.dark,
-  ).copyWith(onPrimary: Colors.white);
-
+  static final ColorScheme _darkScheme =
+      ColorScheme.fromSeed(
+        seedColor: const Color(0xFFFF9C86),
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: const Color(0xFFFF9C86),
+        onPrimary: Colors.black, // often better in dark for contrast
+        surface: const Color(0xFF131313),
+        onSurface: const Color(0xFFEDEDED),
+        secondary: const Color(0xFFB8B8B8),
+        onSecondary: Colors.black,
+        error: const Color(0xFFFFB4AB),
+        onError: const Color(0xFF690005),
+      );
   static ThemeData light = ThemeData(
     useMaterial3: true,
     colorScheme: _lightScheme,

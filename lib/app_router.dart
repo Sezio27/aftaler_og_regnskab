@@ -1,5 +1,7 @@
 // lib/app_router.dart
-import 'package:aftaler_og_regnskab/screens/navigation/nav_shell.dart';
+import 'package:aftaler_og_regnskab/app_layout.dart';
+import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
+import 'package:aftaler_og_regnskab/navigation/tab_config.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
@@ -38,7 +40,7 @@ enum AppRoute {
 
 GoRouter createRouter() {
   return GoRouter(
-    initialLocation: '/gate',
+    initialLocation: '/home',
     routes: [
       GoRoute(
         path: '/gate',
@@ -88,10 +90,9 @@ GoRouter createRouter() {
         ],
       ),
 
-      // Bottom-nav shell (uses NavShell widget)
       ShellRoute(
         builder: (context, state, child) =>
-            NavShell(child: child, location: state.uri.toString()),
+            NavShell(location: state.uri.toString(), child: child),
         routes: [
           GoRoute(
             path: '/home',
@@ -118,14 +119,12 @@ GoRouter createRouter() {
             name: AppRoute.settings.name,
             builder: (_, __) => const SettingsScreen(),
           ),
+          GoRoute(
+            path: '/appointments/new',
+            name: AppRoute.newAppointment.name,
+            builder: (_, __) => const NewAppointmentScreen(),
+          ),
         ],
-      ),
-
-      // Full-screen flow (keeps slide transition + its own top bar)
-      GoRoute(
-        path: '/appointments/new',
-        name: AppRoute.newAppointment.name,
-        builder: (_, __) => const NewAppointmentScreen(),
       ),
     ],
   );
