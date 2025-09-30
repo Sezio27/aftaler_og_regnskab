@@ -55,6 +55,12 @@ class AppTypography {
   static final TextStyle acTtitle = _inter(16, FontWeight.w700);
   static final TextStyle acSubtitle = _inter(14, FontWeight.w400);
   static final TextStyle f1 = _inter(12, FontWeight.w400);
+  static final TextStyle segActive = _raleway(14, FontWeight.w600);
+  static final TextStyle segPassive = _raleway(14, FontWeight.w500);
+
+  static final TextStyle settingsTitle = _raleway(17, FontWeight.w700);
+  static final TextStyle settingsLabel = _raleway(14, FontWeight.w600);
+  static final TextStyle settingsValue = _raleway(14, FontWeight.w400);
 
   static TextStyle onSurface(BuildContext c, TextStyle s) =>
       s.copyWith(color: Theme.of(c).colorScheme.onSurface);

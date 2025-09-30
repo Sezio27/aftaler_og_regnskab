@@ -42,13 +42,14 @@ PreferredSizeWidget buildTopBarForIndex(
     case 3:
       return AppTopBar(
         title: 'Forretning',
-        subtitle: 'Administrer services',
+        subtitle: 'Administrer dine services og checklister',
         width: maxContentWidth,
         height: fixedHeight,
       );
     case 4:
       return AppTopBar(
         title: 'Indstillinger',
+        subtitle: "Administrer dine indstillinger",
         width: maxContentWidth,
         height: fixedHeight,
       );
