@@ -8,6 +8,7 @@ class CustomButton extends StatelessWidget {
   final double height;
   final double? width;
   final double borderRadius;
+  final double elevation;
 
   final Color? color;
   final Gradient? gradient;
@@ -30,6 +31,7 @@ class CustomButton extends StatelessWidget {
     this.textStyle,
     this.icon,
     this.borderStroke,
+    this.elevation = 1,
   });
 
   @override
@@ -47,12 +49,12 @@ class CustomButton extends StatelessWidget {
         TextStyle(color: cs.onPrimary);
 
     return Material(
-      elevation: 1,
+      elevation: elevation,
       color: Colors.transparent,
       borderRadius: radius,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: radius,
+        //borderRadius: radius,
         onTap: onTap,
         child: Ink(
           height: height,

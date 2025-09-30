@@ -1,9 +1,7 @@
 // lib/navigation/nav_shell.dart
 import 'package:aftaler_og_regnskab/app_layout.dart';
-import 'package:aftaler_og_regnskab/widgets/app_bottom_nav_bar.dart';
 import 'package:flutter/material.dart';
 import 'tab_config.dart';
-import 'topbar_builder.dart';
 
 class NavShell extends StatelessWidget {
   const NavShell({super.key, required this.child, required this.location});
@@ -14,6 +12,12 @@ class NavShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final idx = indexForLocation(location);
     final hideNav = location.startsWith('/appointments/');
-    return AppLayout(idx: idx, showNavBar: !hideNav, child: child);
+    final hideTop = location.startsWith('/appointments/');
+    return AppLayout(
+      idx: idx,
+      showNavBar: !hideNav,
+      showTopBar: !hideTop,
+      child: child,
+    );
   }
 }

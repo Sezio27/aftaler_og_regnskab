@@ -10,11 +10,13 @@ class AppLayout extends StatelessWidget {
     required this.idx, // selected tab index (for topbar + nav highlight)
     required this.child, // routed page content
     this.showNavBar = true,
+    this.showTopBar = true,
   });
 
   final int idx;
   final Widget child;
   final bool showNavBar;
+  final bool showTopBar;
 
   // ---- exact values you specified ----
   static const double tabletBreakpoint = 600;
@@ -44,25 +46,21 @@ class AppLayout extends StatelessWidget {
     final navH = _navBarHeight(context);
 
     return Scaffold(
-      appBar: buildTopBarForIndex(
-        idx,
-        maxContentWidth:
-            maxW, // top bar spans full width; inner content clamped
-        fixedHeight: topH, // 16% phone, 180 tablet
-      ),
+      appBar: showTopBar
+          ? buildTopBarForIndex(
+              idx,
+              maxContentWidth:
+                  maxW, // top bar spans full width; inner content clamped
+              fixedHeight: topH, // 16% phone, 180 tablet
+            )
+          : null,
       extendBody: true,
 
       // Horizontal: 1 | 10 | 1
       body: Row(
         children: [
           const Expanded(flex: 1, child: SizedBox()),
-          Expanded(
-            flex: 10,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: child,
-            ),
-          ),
+          Expanded(flex: 18, child: child),
           const Expanded(flex: 1, child: SizedBox()),
         ],
       ),

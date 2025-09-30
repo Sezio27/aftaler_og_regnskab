@@ -1,0 +1,188 @@
+import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+class AddChecklistPanel extends StatefulWidget {
+  const AddChecklistPanel({super.key});
+
+  @override
+  State<AddChecklistPanel> createState() => _AddServicePanelState();
+}
+
+class _AddServicePanelState extends State<AddChecklistPanel> {
+  int? _active;
+  final nameCtrl = TextEditingController();
+  final descCtrl = TextEditingController();
+  final List<TextEditingController> _points = [TextEditingController()];
+
+  void _clearFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _active = null);
+  }
+
+  void _addPoint() {
+    setState(() => _points.add(TextEditingController()));
+  }
+
+  void _removePoint(int i) {
+    final c = _points.removeAt(i);
+    c.dispose();
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    descCtrl.dispose();
+    for (final c in _points) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return TapRegion(
+      onTapInside: (_) => _clearFocus(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          spacing: 14,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Center(
+                    child: Text(
+                      'Tilføj ny checkliste',
+                      style: AppTypography.b1.copyWith(color: cs.onSurface),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => context.pop(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Text(
+              'Opret en ny checkliste til brug under aftaler',
+              style: AppTypography.b4.copyWith(color: cs.onSurface),
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 4),
+
+            SoftTextField(
+              title: 'Checkliste navn',
+              hintText: "F.eks. Bryllups makeup",
+              showStroke: _active == 0,
+              onTap: () => setState(() => _active = 0),
+            ),
+
+            SoftTextField(
+              title: 'Beskrivelse',
+              hintText: "Kort beskrivelse af checklisten...",
+              keyboardType: TextInputType.phone,
+              maxLines: 5,
+              showStroke: _active == 1,
+              onTap: () => setState(() => _active = 1),
+            ),
+
+            // Punkter
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Punkter',
+                    style: AppTypography.b3.copyWith(color: cs.onSurface),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _addPoint,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Tilføj punkt'),
+                ),
+              ],
+            ),
+
+            ...List.generate(_points.length, (i) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Number
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, right: 8),
+                    child: Text(
+                      '${i + 1}.',
+                      style: AppTypography.input1.copyWith(color: cs.onSurface),
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SoftTextField(
+                      controller: _points[i],
+                      hintText: 'Checkliste punkt…',
+                      showStroke: _active == (100 + i),
+                      onTap: () => setState(() => _active = 100 + i),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  if (_points.length > 1)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _removePoint(i),
+                      icon: const Icon(Icons.close, size: 18),
+                      tooltip: 'Fjern punkt',
+                    ),
+                ],
+              );
+            }),
+
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton(
+                    text: "Annuller",
+                    color: cs.onPrimary,
+                    borderStroke: Border.all(
+                      color: cs.onSurface.withAlpha(100),
+                      width: 0.6,
+                    ),
+                    elevation: 0,
+                    borderRadius: 14,
+                    textStyle: AppTypography.b2.copyWith(color: cs.onSurface),
+                    onTap: () => context.pop(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomButton(
+                    text: "Tilføj service",
+                    borderRadius: 14,
+                    textStyle: AppTypography.b3,
+                    onTap: () => context.pop(),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
