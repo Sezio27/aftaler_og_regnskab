@@ -2,6 +2,7 @@
 import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
 import 'package:aftaler_og_regnskab/navigation/tab_config.dart';
+import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
@@ -36,6 +37,7 @@ enum AppRoute {
   services,
   settings,
   newAppointment,
+  clients,
 }
 
 GoRouter createRouter() {
@@ -123,6 +125,11 @@ GoRouter createRouter() {
             path: '/appointments/new',
             name: AppRoute.newAppointment.name,
             builder: (_, __) => const NewAppointmentScreen(),
+          ),
+          GoRoute(
+            path: '/clients',
+            name: AppRoute.clients.name,
+            builder: (_, __) => const ClientsScreen(),
           ),
         ],
       ),

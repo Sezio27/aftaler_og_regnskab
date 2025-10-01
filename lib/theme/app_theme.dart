@@ -13,7 +13,7 @@ class AppTheme {
         onPrimary: Colors.white,
         surface: AppColors.backgroundLight,
         onSurface: Colors.black,
-        secondary: const Color(0xFF6E6E6E),
+        secondary: AppColors.peach2,
         onSecondary: Colors.white,
         error: const Color(0xFFB00020),
         onError: Colors.white,

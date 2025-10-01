@@ -40,7 +40,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 CupertinoSlidingSegmentedControl<Tabs>(
                   groupValue: _tab,
                   backgroundColor: cs.onPrimary,
-                  thumbColor: cs.primary,
+                  thumbColor: cs.secondary,
                   onValueChanged: (v) => setState(() => _tab = v!),
                   children: {
                     Tabs.services: _SegItem(
@@ -120,7 +120,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               },
               elevation: 2,
               shape: const CircleBorder(),
-              backgroundColor: cs.primary,
+              backgroundColor: cs.secondary,
               foregroundColor: cs.onPrimary,
               child: const Icon(Icons.add),
             ),
@@ -146,7 +146,7 @@ class _SegItem extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final fg = active ? cs.onPrimary : cs.onSurface;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

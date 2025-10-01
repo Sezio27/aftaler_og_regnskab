@@ -17,6 +17,7 @@ int indexForLocation(String loc) {
   if (loc.startsWith('/services')) return 3;
   if (loc.startsWith('/settings')) return 4;
   if (loc.startsWith('/appointments')) return 5;
+  if (loc.startsWith('/clients')) return 6;
   return 0;
 }
 

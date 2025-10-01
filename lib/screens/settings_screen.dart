@@ -1,7 +1,9 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -42,15 +44,18 @@ class SettingsScreen extends StatelessWidget {
     var clients = [
       Text("Klienter", style: titleStyle),
       const SizedBox(height: 26),
-      Padding(
-        padding: const EdgeInsets.only(left: 12),
-        child: Row(
-          children: [
-            Icon(Icons.people_outline_outlined),
-            SizedBox(width: 12),
-            Text("Se klienter", style: labelStyle),
-          ],
-        ),
+      Row(
+        children: [
+          Icon(Icons.people_outline_outlined),
+          SizedBox(width: 12),
+          InkWell(
+            onTap: () => context.pushNamed(AppRoute.clients.name),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Text("Se klienter", style: labelStyle),
+            ),
+          ),
+        ],
       ),
     ];
 

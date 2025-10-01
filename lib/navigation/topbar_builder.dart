@@ -62,6 +62,14 @@ PreferredSizeWidget buildTopBarForIndex(
         height: fixedHeight,
       );
 
+    case 6:
+      return AppTopBar(
+        title: 'Klienter',
+        showBackButton: true,
+        width: maxContentWidth,
+        height: fixedHeight,
+      );
+
     default:
       return AppTopBar(
         title: 'Indstillinger',
