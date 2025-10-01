@@ -99,37 +99,44 @@ GoRouter createRouter() {
           GoRoute(
             path: '/home',
             name: AppRoute.home.name,
-            builder: (_, __) => const HomeScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: HomeScreen()),
           ),
           GoRoute(
             path: '/calendar',
             name: AppRoute.calendar.name,
-            builder: (_, __) => const CalendarScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: CalendarScreen()),
           ),
           GoRoute(
             path: '/finance',
             name: AppRoute.finance.name,
-            builder: (_, __) => const FinanceScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: FinanceScreen()),
           ),
           GoRoute(
             path: '/services',
             name: AppRoute.services.name,
-            builder: (_, __) => const ServicesScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: ServicesScreen()),
           ),
           GoRoute(
             path: '/settings',
             name: AppRoute.settings.name,
-            builder: (_, __) => const SettingsScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: SettingsScreen()),
           ),
           GoRoute(
             path: '/appointments/new',
             name: AppRoute.newAppointment.name,
-            builder: (_, __) => const NewAppointmentScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: NewAppointmentScreen()),
           ),
           GoRoute(
             path: '/clients',
             name: AppRoute.clients.name,
-            builder: (_, __) => const ClientsScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: ClientsScreen()),
           ),
         ],
       ),
