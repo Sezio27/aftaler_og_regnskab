@@ -31,7 +31,7 @@ class CustomButton extends StatelessWidget {
     this.textStyle,
     this.icon,
     this.borderStroke,
-    this.elevation = 1,
+    this.elevation = 0.5,
   });
 
   @override

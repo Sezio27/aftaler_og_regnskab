@@ -2,6 +2,7 @@
 import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
 import 'package:aftaler_og_regnskab/navigation/tab_config.dart';
+import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
 import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
@@ -37,6 +38,7 @@ enum AppRoute {
   services,
   settings,
   newAppointment,
+  allAppointments,
   clients,
 }
 
@@ -131,6 +133,12 @@ GoRouter createRouter() {
             name: AppRoute.newAppointment.name,
             pageBuilder: (_, state) =>
                 const NoTransitionPage(child: NewAppointmentScreen()),
+          ),
+          GoRoute(
+            path: '/appointments/all',
+            name: AppRoute.allAppointments.name,
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: AllAppointmentsScreen()),
           ),
           GoRoute(
             path: '/clients',

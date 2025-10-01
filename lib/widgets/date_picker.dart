@@ -1,7 +1,9 @@
+// lib/widgets/date_picker.dart
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+/// Minimal, reusable button-style date picker (kept for places where you want a control).
 class DatePicker extends StatelessWidget {
   const DatePicker({
     super.key,
@@ -20,61 +22,6 @@ class DatePicker extends StatelessWidget {
   final double modalHeight;
   final String Function(DateTime date)? displayFormat;
 
-  Future<DateTime?> _showWheelDatePicker(
-    BuildContext context,
-    DateTime initial,
-  ) async {
-    DateTime temp = initial;
-
-    return showCupertinoModalPopup<DateTime>(
-      context: context,
-      builder: (popupContext) => Localizations.override(
-        context: popupContext,
-        locale: const Locale('da'),
-
-        child: Material(
-          color: Colors.white,
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: modalHeight,
-              child: Column(
-                children: [
-                  // Action bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(popupContext).pop(),
-                        child: const Text('Annuller'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(popupContext).pop(temp),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 0),
-                  // Wheel
-                  Expanded(
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.date,
-                      initialDateTime: initial,
-
-                      minimumDate: minimumDate,
-                      maximumDate: maximumDate,
-                      onDateTimeChanged: (dt) => temp = dt,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     String defaultLabel(DateTime d) =>
@@ -85,7 +32,12 @@ class DatePicker extends StatelessWidget {
       height: 40,
       child: OutlinedButton(
         onPressed: () async {
-          final picked = await _showWheelDatePicker(context, value);
+          final picked = await context.pickCupertinoDate(
+            initial: value,
+            minimumDate: minimumDate,
+            maximumDate: maximumDate,
+            modalHeight: modalHeight,
+          );
           if (picked != null) onChanged(picked);
         },
         style: OutlinedButton.styleFrom(
@@ -99,6 +51,67 @@ class DatePicker extends StatelessWidget {
           foregroundColor: Theme.of(context).colorScheme.onSurface,
         ),
         child: Text(label, style: AppTypography.num3),
+      ),
+    );
+  }
+}
+
+extension DatePickerContextExt on BuildContext {
+  Future<DateTime?> pickCupertinoDate({
+    required DateTime initial,
+    DateTime? minimumDate,
+    DateTime? maximumDate,
+    double modalHeight = 300,
+    Locale locale = const Locale('da'),
+  }) async {
+    DateTime temp = initial;
+
+    return showCupertinoModalPopup<DateTime>(
+      context: this,
+      builder: (popupContext) => Localizations.override(
+        context: popupContext,
+        locale: locale,
+        child: Material(
+          color: Colors.white,
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: modalHeight,
+              child: Column(
+                children: [
+                  // Toolbar
+                  SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(popupContext).pop(),
+                          child: const Text('Annuller'),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => Navigator.of(popupContext).pop(temp),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 0),
+                  // Wheel
+                  Expanded(
+                    child: CupertinoDatePicker(
+                      mode: CupertinoDatePickerMode.date,
+                      initialDateTime: initial,
+                      minimumDate: minimumDate,
+                      maximumDate: maximumDate,
+                      onDateTimeChanged: (dt) => temp = dt,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

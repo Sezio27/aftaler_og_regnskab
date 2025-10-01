@@ -11,8 +11,8 @@ class NavShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final idx = indexForLocation(location);
-    final hideNav = location.startsWith('/appointments/');
-    final hideTop = location.startsWith('/appointments/');
+    final hideNav = location.startsWith('/appointments/new');
+    final hideTop = location.startsWith('/appointments/new');
     return AppLayout(
       idx: idx,
       showNavBar: !hideNav,

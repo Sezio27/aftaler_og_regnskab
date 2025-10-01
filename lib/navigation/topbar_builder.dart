@@ -71,6 +71,14 @@ PreferredSizeWidget buildTopBarForIndex(
         height: fixedHeight,
       );
 
+    case 7:
+      return AppTopBar(
+        title: 'Alle aftaler',
+        showBackButton: true,
+        width: maxContentWidth,
+        height: fixedHeight,
+      );
+
     default:
       return AppTopBar(
         title: 'Indstillinger',
