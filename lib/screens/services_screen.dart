@@ -3,6 +3,7 @@ import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -43,12 +44,12 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   thumbColor: cs.secondary,
                   onValueChanged: (v) => setState(() => _tab = v!),
                   children: {
-                    Tabs.services: _SegItem(
+                    Tabs.services: SegItem(
                       icon: Icons.face_retouching_natural,
                       text: 'Services',
                       active: _tab == Tabs.services,
                     ),
-                    Tabs.checklists: _SegItem(
+                    Tabs.checklists: SegItem(
                       icon: Icons.event_note_outlined,
                       text: 'Checklister',
                       active: _tab == Tabs.checklists,
@@ -124,39 +125,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
               foregroundColor: cs.onPrimary,
               child: const Icon(Icons.add),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegItem extends StatelessWidget {
-  const _SegItem({
-    required this.icon,
-    required this.text,
-    required this.active,
-  });
-  final IconData icon;
-  final String text;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final fg = active ? cs.onPrimary : cs.onSurface;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: fg),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: active
-                ? AppTypography.segActive.copyWith(color: fg)
-                : AppTypography.segPassive.copyWith(color: fg),
           ),
         ],
       ),

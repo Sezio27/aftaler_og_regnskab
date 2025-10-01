@@ -38,6 +38,7 @@ class AppTypography {
   static final TextStyle b3 = _raleway(15, FontWeight.w600);
   static final TextStyle b4 = _raleway(14, FontWeight.w300);
   static final TextStyle b5 = _raleway(14, FontWeight.w500);
+  static final TextStyle b6 = _raleway(13, FontWeight.w400);
   static final TextStyle nav1 = _raleway(13, FontWeight.w800);
   static final TextStyle nav2 = _raleway(13, FontWeight.w500);
   static final TextStyle button1 = _raleway(17, FontWeight.w700);
@@ -46,6 +47,8 @@ class AppTypography {
   static final TextStyle phoneInput = _inter(16, FontWeight.w400, letter: 0.3);
   static final TextStyle num2 = _inter(15, FontWeight.w500);
   static final TextStyle num3 = _inter(15, FontWeight.w400);
+  static final TextStyle num4 = _inter(16, FontWeight.w700);
+  static final TextStyle num5 = _inter(13, FontWeight.w600);
   static final TextStyle numBig = _inter(24, FontWeight.w600);
   static final TextStyle numStat = _inter(20, FontWeight.w500);
   static final TextStyle input1 = _inter(14, FontWeight.w500);

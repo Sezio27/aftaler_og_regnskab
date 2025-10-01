@@ -4,6 +4,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -44,15 +45,17 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   thumbColor: cs.secondary,
                   onValueChanged: (v) => setState(() => _tab = v!),
                   children: {
-                    Tabs.private: _SegItem(
+                    Tabs.private: SegItem(
                       icon: Icons.person_3_outlined,
                       text: 'Privat',
                       active: _tab == Tabs.private,
+                      amount: "5",
                     ),
-                    Tabs.business: _SegItem(
+                    Tabs.business: SegItem(
                       icon: Icons.business_outlined,
                       text: 'Erhverv',
                       active: _tab == Tabs.business,
+                      amount: "5",
                     ),
                   },
                 ),
@@ -118,50 +121,6 @@ class _ClientsScreenState extends State<ClientsScreen> {
               foregroundColor: cs.onPrimary,
               child: const Icon(Icons.add),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegItem extends StatelessWidget {
-  const _SegItem({
-    required this.icon,
-    required this.text,
-    required this.active,
-  });
-  final IconData icon;
-  final String text;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final fg = active ? cs.onPrimary : cs.onSurface;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 30),
-      child: Column(
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: fg),
-              const SizedBox(width: 8),
-              Text(
-                text,
-                style: active
-                    ? AppTypography.segActive.copyWith(color: fg)
-                    : AppTypography.segPassive.copyWith(color: fg),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "5",
-            style: active
-                ? AppTypography.segActiveNumber.copyWith(color: fg)
-                : AppTypography.segPassiveNumber.copyWith(color: fg),
           ),
         ],
       ),

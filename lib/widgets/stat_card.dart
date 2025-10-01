@@ -22,7 +22,6 @@ class StatCard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Scale factor from available width; clamp to keep it sensible.
         final s = (constraints.maxWidth / 320).clamp(1.0, 1.35);
 
         final vPad = 10.0 * s;
@@ -46,7 +45,7 @@ class StatCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   // Optional: bump font a touch with s if you want
-                  style: AppTypography.h3.copyWith(color: cs.onPrimary),
+                  style: AppTypography.h3,
                 ),
 
                 if (subtitle != null) ...[
@@ -56,7 +55,7 @@ class StatCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.b2.copyWith(color: cs.onPrimary),
+                    style: AppTypography.b2,
                   ),
                 ],
 
@@ -67,7 +66,7 @@ class StatCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.numStat.copyWith(color: cs.onPrimary),
+                    style: AppTypography.numStat,
                   ),
                 ],
               ],

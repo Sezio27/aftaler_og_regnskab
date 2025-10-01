@@ -36,6 +36,7 @@ PreferredSizeWidget buildTopBarForIndex(
     case 2:
       return AppTopBar(
         title: 'Regnskab',
+        subtitle: "Oversigt over indtægter og aftaler",
         width: maxContentWidth,
         height: fixedHeight,
       );
