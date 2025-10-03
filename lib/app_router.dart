@@ -44,7 +44,7 @@ enum AppRoute {
 
 GoRouter createRouter() {
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/gate',
     routes: [
       GoRoute(
         path: '/gate',

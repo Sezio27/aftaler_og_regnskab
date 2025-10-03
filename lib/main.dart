@@ -1,17 +1,12 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
+﻿import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/firebase_options.dart';
-import 'package:aftaler_og_regnskab/screens/home_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
-import 'package:aftaler_og_regnskab/services/user_repository.dart';
+import 'package:aftaler_og_regnskab/data/user_repository.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -36,12 +31,26 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<UserRepository>(create: (_) => UserRepository()),
+        Provider<FirebaseAuth>(create: (_) => FirebaseAuth.instance),
+        Provider<FirebaseFirestore>(create: (_) => FirebaseFirestore.instance),
+        ProxyProvider<FirebaseAuth, FirebaseAuthMethods>(
+          update: (_, auth, __) => FirebaseAuthMethods(auth),
+        ),
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, UserRepository>(
+          update: (_, auth, db, __) =>
+              UserRepository(auth: auth, firestore: db),
+        ),
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, ClientRepository>(
+          update: (_, auth, db, __) =>
+              ClientRepository(auth: auth, firestore: db),
+        ),
+
+        //Provider<UserRepository>(create: (_) => UserRepository()),
         ChangeNotifierProvider<OnboardingViewModel>(
           create: (ctx) => OnboardingViewModel(ctx.read<UserRepository>()),
         ),
-        Provider<FirebaseAuthMethods>(
-          create: (_) => FirebaseAuthMethods(FirebaseAuth.instance),
+        ChangeNotifierProvider<ClientViewModel>(
+          create: (ctx) => ClientViewModel(ctx.read<ClientRepository>()),
         ),
       ],
       child: MaterialApp.router(

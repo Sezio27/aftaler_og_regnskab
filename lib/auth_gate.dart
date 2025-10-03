@@ -1,6 +1,4 @@
-import 'package:aftaler_og_regnskab/screens/home_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
-import 'package:aftaler_og_regnskab/services/user_repository.dart';
+import 'package:aftaler_og_regnskab/data/user_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

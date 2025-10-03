@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/photo_circle.dart';
@@ -7,6 +7,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 class AddClientPanel extends StatefulWidget {
   const AddClientPanel({super.key});
@@ -18,7 +19,25 @@ class AddClientPanel extends StatefulWidget {
 class _AddClientPanelState extends State<AddClientPanel> {
   XFile? _photo;
   int? _active;
-  final nameCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
+  final _postalCtrl = TextEditingController();
+  final _cvrCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _addressCtrl.dispose();
+    _cityCtrl.dispose();
+    _postalCtrl.dispose();
+    _cvrCtrl.dispose();
+    super.dispose();
+  }
 
   void _clearFocus() {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -43,6 +62,8 @@ class _AddClientPanelState extends State<AddClientPanel> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final vm = context.watch<ClientViewModel>();
+
     return TapRegion(
       onTapInside: (_) => _clearFocus(),
       child: SingleChildScrollView(
@@ -77,6 +98,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
             SoftTextField(
               title: 'Fulde navn',
               hintText: "F.eks. Sarah Johnson",
+              controller: _nameCtrl,
               showStroke: _active == 0,
               onTap: () => setState(() => _active = 0),
             ),
@@ -84,6 +106,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
             SoftTextField(
               title: 'Telefon',
               hintText: "+45xxxxxxxx",
+              controller: _phoneCtrl,
               hintStyle: AppTypography.input2.copyWith(
                 color: cs.onSurface.withAlpha(200),
               ),
@@ -95,6 +118,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
             SoftTextField(
               title: 'E-mail',
               hintText: "Indtast e-mail",
+              controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
               showStroke: _active == 2,
               onTap: () => setState(() => _active = 2),
@@ -103,6 +127,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
             SoftTextField(
               title: 'Adresse',
               hintText: "Indtast adresse",
+              controller: _addressCtrl,
               showStroke: _active == 3,
               onTap: () => setState(() => _active = 3),
             ),
@@ -110,6 +135,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
             SoftTextField(
               title: 'CVR',
               hintText: "Indtast CVR",
+              controller: _cvrCtrl,
               showStroke: _active == 4,
               keyboardType: TextInputType.number,
               onTap: () => setState(() => _active = 4),
@@ -125,6 +151,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
                       SoftTextField(
                         title: 'By',
                         hintText: "Indtast by",
+                        controller: _cityCtrl,
                         showStroke: _active == 5,
                         onTap: () => setState(() => _active = 5),
                       ),
@@ -132,6 +159,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
                       SoftTextField(
                         title: 'Postnummer',
                         hintText: "Indtast postnummer",
+                        controller: _postalCtrl,
                         keyboardType: TextInputType.number,
                         showStroke: _active == 6,
                         onTap: () => setState(() => _active = 6),
@@ -152,6 +180,12 @@ class _AddClientPanelState extends State<AddClientPanel> {
               ],
             ),
 
+            if (vm.error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(vm.error!, style: TextStyle(color: cs.error)),
+              ),
+
             const SizedBox(height: 8),
             Row(
               children: [
@@ -166,16 +200,47 @@ class _AddClientPanelState extends State<AddClientPanel> {
                     elevation: 0,
                     borderRadius: 14,
                     textStyle: AppTypography.b2.copyWith(color: cs.onSurface),
-                    onTap: () => context.pop(),
+                    onTap: vm.saving ? () {} : () => context.pop(),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: CustomButton(
-                    text: "Tilføj klient",
+                    text: vm.saving ? "Tilføjer..." : "Tilføj klient",
                     borderRadius: 14,
                     textStyle: AppTypography.b3,
-                    onTap: () => context.pop(),
+                    onTap: vm.saving
+                        ? () {}
+                        : () async {
+                            // Let the VM do the work
+                            final created = await context
+                                .read<ClientViewModel>()
+                                .addClient(
+                                  name: _nameCtrl.text,
+                                  phone: _phoneCtrl.text,
+                                  email: _emailCtrl.text,
+                                  address: _addressCtrl.text,
+                                  city: _cityCtrl.text,
+                                  postal: _postalCtrl.text,
+                                  cvr: _cvrCtrl.text,
+                                  //imageUrl: _photo, // ignored for now; use later for Storage
+                                );
+
+                            if (!mounted) return;
+
+                            if (created) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Klient tilføjet'),
+                                ),
+                              );
+                              context.pop(); // close panel
+                            } else if (vm.error != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(vm.error!)),
+                              );
+                            }
+                          },
                   ),
                 ),
               ],
