@@ -63,7 +63,7 @@ class _SmallClientList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const tileH = 90.0, sepH = 6.0;
-    final visible = items.length > 3 ? 2.5 : items.length;
+    final visible = items.length > 3 ? 2.7 : items.length;
     final boxH = visible * tileH + (visible - 1) * sepH;
     return Column(
       children: [

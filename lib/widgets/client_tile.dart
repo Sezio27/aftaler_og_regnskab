@@ -35,7 +35,7 @@ class ClientTile extends StatelessWidget {
         child: Row(
           children: [
             Avatar(imageUrl: c.image, name: c.name),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +51,7 @@ class ClientTile extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _Info(icon: Icons.phone, text: c.phone),
-                      _Info(icon: Icons.mail_outline, text: c.email),
+                      _Info(icon: Icons.mail, text: c.email),
                     ],
                   ),
                 ],
@@ -75,14 +75,14 @@ class _Info extends StatelessWidget {
     return Row(
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 16, color: cs.onSurface.withAlpha(150)),
+          Icon(icon, size: 16, color: cs.primary),
           const SizedBox(width: 6),
         ],
         Text(
           text ?? '---',
           maxLines: 1,
           style: AppTypography.num6.copyWith(
-            color: cs.onSurface.withAlpha(200),
+            color: cs.onSurface.withAlpha(230),
           ),
           overflow: TextOverflow.ellipsis,
         ),

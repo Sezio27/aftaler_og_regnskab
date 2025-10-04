@@ -97,6 +97,7 @@ class NewAppointmentForm extends StatefulWidget {
 }
 
 class _NewAppointmentFormState extends State<NewAppointmentForm> {
+  late final ClientViewModel _vm;
   late final TextEditingController clientSearchCtrl;
   late final TextEditingController serviceSearchCtrl;
   String? _selectedClientId;
@@ -109,16 +110,17 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
   @override
   void initState() {
     super.initState();
+    _vm = context.read<ClientViewModel>();
     clientSearchCtrl = TextEditingController();
     serviceSearchCtrl = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ClientViewModel>().initClientFilters();
+      _vm.initClientFilters();
     });
   }
 
   @override
   void dispose() {
-    context.read<ClientViewModel>().clearSearch();
+    _vm.clearSearch();
     clientSearchCtrl.dispose();
     serviceSearchCtrl.dispose();
     super.dispose();
@@ -163,6 +165,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
                       context: context,
                       child: const AddClientPanel(),
                     );
+                    if (!mounted) return;
                   },
                   icon: const Icon(Icons.add),
                   label: Text(
@@ -186,6 +189,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
                       context: context,
                       child: const AddServicePanel(),
                     );
+                    if (!mounted) return;
                   },
                   icon: const Icon(Icons.add),
                   label: Text(

@@ -3,6 +3,7 @@ import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/firebase_options.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
+import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         ProxyProvider<FirebaseAuth, FirebaseAuthMethods>(
           update: (_, auth, __) => FirebaseAuthMethods(auth),
         ),
+
         ProxyProvider2<FirebaseAuth, FirebaseFirestore, UserRepository>(
           update: (_, auth, db, __) =>
               UserRepository(auth: auth, firestore: db),
@@ -44,13 +46,17 @@ class MyApp extends StatelessWidget {
           update: (_, auth, db, __) =>
               ClientRepository(auth: auth, firestore: db),
         ),
+        Provider(create: (_) => ImageStorage()),
 
+        ChangeNotifierProvider(
+          create: (ctx) => ClientViewModel(
+            ctx.read<ClientRepository>(),
+            ctx.read<ImageStorage>(),
+          ),
+        ),
         //Provider<UserRepository>(create: (_) => UserRepository()),
         ChangeNotifierProvider<OnboardingViewModel>(
           create: (ctx) => OnboardingViewModel(ctx.read<UserRepository>()),
-        ),
-        ChangeNotifierProvider<ClientViewModel>(
-          create: (ctx) => ClientViewModel(ctx.read<ClientRepository>()),
         ),
       ],
       child: MaterialApp.router(

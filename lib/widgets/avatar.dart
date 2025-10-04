@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, this.imageUrl, this.name, this.size = 40});
+  const Avatar({super.key, this.imageUrl, this.name, this.size = 60});
   final String? imageUrl;
   final String? name;
   final double size;

@@ -63,6 +63,17 @@ class ClientRepository {
     return model.copyWith(id: doc.id);
   }
 
+  DocumentReference<Map<String, dynamic>> newClientRef() {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc(); // generates clientId
+  }
+
+  Future<void> createClientWithId(String id, ClientModel model) async {
+    final uid = _uidOrThrow;
+    final payload = _toFirestore(model.copyWith(id: id), isCreate: true);
+    await _collection(uid).doc(id).set(payload);
+  }
+
   // ---------- UPDATE (PATCH) ----------
 
   /// Patch fields on an existing client (pass only what changed).

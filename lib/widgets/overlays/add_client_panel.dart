@@ -223,7 +223,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
                                   city: _cityCtrl.text,
                                   postal: _postalCtrl.text,
                                   cvr: _cvrCtrl.text,
-                                  //imageUrl: _photo, // ignored for now; use later for Storage
+                                  image: _photo,
                                 );
 
                             if (!mounted) return;

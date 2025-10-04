@@ -2,11 +2,14 @@ import 'dart:async';
 
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
+import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ClientViewModel extends ChangeNotifier {
-  ClientViewModel(this._repo);
+  ClientViewModel(this._repo, this._imageStorage);
   final ClientRepository _repo;
+  final ImageStorage _imageStorage;
 
   StreamSubscription<List<ClientModel>>? _sub;
 
@@ -104,7 +107,7 @@ class ClientViewModel extends ChangeNotifier {
     String? city,
     String? postal,
     String? cvr,
-    String? imageUrl, // keep as URL string (upload to Storage elsewhere)
+    XFile? image, // keep as URL string (upload to Storage elsewhere)
   }) async {
     final nm = (name ?? '').trim();
     final em = (email ?? '').trim();
@@ -119,6 +122,18 @@ class ClientViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final docRef = _repo.newClientRef();
+      String? imageUrl;
+
+      if (image != null) {
+        debugPrint('upload start');
+        imageUrl = await _imageStorage.uploadClientImage(
+          clientId: docRef.id,
+          file: image,
+        );
+        debugPrint('upload done: $imageUrl');
+      }
+
       final model = ClientModel(
         name: nm.isEmpty ? null : nm,
         phone: (phone ?? '').trim().isEmpty ? null : phone!.trim(),
@@ -129,12 +144,32 @@ class ClientViewModel extends ChangeNotifier {
         cvr: (cvr ?? '').trim().isEmpty ? null : cvr!.trim(),
         image: imageUrl,
       );
+      await _repo.createClientWithId(docRef.id, model);
 
-      final created = await _repo.addClient(model);
-      _lastAdded = created;
+      _lastAdded = model;
       return true;
     } catch (e) {
       _error = 'Kunne ikke tilføje klient: ${e.toString()}';
+      return false;
+    } finally {
+      _saving = false;
+      notifyListeners();
+    }
+  }
+
+  // Optional: for changing a client’s photo later
+  Future<bool> updateClientPhoto(String clientId, XFile photo) async {
+    try {
+      _saving = true;
+      notifyListeners();
+      final url = await _imageStorage.uploadClientImage(
+        clientId: clientId,
+        file: photo,
+      );
+      await _repo.updateClient(clientId, fields: {'image': url});
+      return true;
+    } catch (e) {
+      _error = 'Kunne ikke opdatere billede: $e';
       return false;
     } finally {
       _saving = false;
