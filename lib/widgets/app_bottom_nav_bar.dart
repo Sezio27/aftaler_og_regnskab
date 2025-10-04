@@ -12,7 +12,7 @@ class AppBottomNavBar extends StatelessWidget {
     this.iconSize = 24,
   });
 
-  final int currentIndex;
+  final int? currentIndex;
   final ValueChanged<int> onItemSelected;
   final double maxContentWidth;
   final double fixedHeight; // ⬅ NEW

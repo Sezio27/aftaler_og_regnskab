@@ -23,6 +23,14 @@ class ClientRepository {
   CollectionReference<Map<String, dynamic>> _collection(String uid) =>
       _db.collection('users').doc(uid).collection('clients');
 
+  Stream<ClientModel?> watchClient(String id) {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc(id).snapshots().map((d) {
+      if (!d.exists) return null;
+      return _fromDoc(d);
+    });
+  }
+
   /// Live stream of all clients for the signed-in user.
   /// Ordered by createdAt (server time). Falls back safely if missing.
   Stream<List<ClientModel>> watchClients() {

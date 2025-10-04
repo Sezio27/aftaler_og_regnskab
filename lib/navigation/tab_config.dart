@@ -11,15 +11,39 @@ const _paths = {
   TabItem.settings: '/settings',
 };
 
-int indexForLocation(String loc) {
-  if (loc.startsWith('/calendar')) return 1;
-  if (loc.startsWith('/finance')) return 2;
-  if (loc.startsWith('/services')) return 3;
-  if (loc.startsWith('/settings')) return 4;
-  if (loc.startsWith('/appointments/new')) return 5;
-  if (loc.startsWith('/clients')) return 6;
-  if (loc.startsWith('/appointments/all')) return 7;
-  return 0;
+int? tabIndexForRouteName(String? name) {
+  switch (name) {
+    case 'home':
+      return 0;
+    case 'calendar':
+      return 1;
+    case 'finance':
+      return 2;
+    case 'services':
+      return 3;
+    case 'settings':
+      return 4;
+    default:
+      return null;
+  }
+}
+
+// Derive a leaf route name from the URL if state.name is null
+String? routeNameFromLocation(String loc) {
+  if (loc.startsWith('/appointments/new')) return 'newAppointment';
+  if (loc.startsWith('/appointments/all')) return 'allAppointments';
+
+  if (loc.startsWith('/clients')) {
+    if (loc == "/clients/all") return "allClients";
+    return 'clientDetails';
+  }
+
+  if (loc.startsWith('/calendar')) return 'calendar';
+  if (loc.startsWith('/finance')) return 'finance';
+  if (loc.startsWith('/services')) return 'services';
+  if (loc.startsWith('/settings')) return 'settings';
+  if (loc.startsWith('/home')) return 'home';
+  return null;
 }
 
 void goToTab(BuildContext context, int i) {

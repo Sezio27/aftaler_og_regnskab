@@ -1,4 +1,5 @@
 // lib/app_layout.dart
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:flutter/material.dart';
 import 'navigation/tab_config.dart';
 import 'navigation/topbar_builder.dart';
@@ -7,13 +8,15 @@ import 'widgets/app_bottom_nav_bar.dart';
 class AppLayout extends StatelessWidget {
   const AppLayout({
     super.key,
-    required this.idx, // selected tab index (for topbar + nav highlight)
+    this.routeName,
+    required this.idx,
     required this.child, // routed page content
     this.showNavBar = true,
     this.showTopBar = true,
   });
 
-  final int idx;
+  final String? routeName;
+  final int? idx;
   final Widget child;
   final bool showNavBar;
   final bool showTopBar;
@@ -47,8 +50,8 @@ class AppLayout extends StatelessWidget {
 
     return Scaffold(
       appBar: showTopBar
-          ? buildTopBarForIndex(
-              idx,
+          ? buildTopBarForRouteName(
+              routeName,
               maxContentWidth:
                   maxW, // top bar spans full width; inner content clamped
               fixedHeight: topH, // 16% phone, 180 tablet

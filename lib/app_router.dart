@@ -3,6 +3,7 @@ import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
 import 'package:aftaler_og_regnskab/navigation/tab_config.dart';
 import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
+import 'package:aftaler_og_regnskab/screens/client_details_screen.dart';
 import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
@@ -39,7 +40,8 @@ enum AppRoute {
   settings,
   newAppointment,
   allAppointments,
-  clients,
+  allClients,
+  clientDetails,
 }
 
 GoRouter createRouter() {
@@ -95,8 +97,11 @@ GoRouter createRouter() {
       ),
 
       ShellRoute(
-        builder: (context, state, child) =>
-            NavShell(location: state.uri.toString(), child: child),
+        builder: (context, state, child) => NavShell(
+          location: state.uri.toString(),
+          routeName: state.name,
+          child: child,
+        ),
         routes: [
           GoRoute(
             path: '/home',
@@ -141,10 +146,16 @@ GoRouter createRouter() {
                 const NoTransitionPage(child: AllAppointmentsScreen()),
           ),
           GoRoute(
-            path: '/clients',
-            name: AppRoute.clients.name,
+            path: '/clients/all',
+            name: AppRoute.allClients.name,
             pageBuilder: (_, state) =>
                 const NoTransitionPage(child: ClientsScreen()),
+          ),
+          GoRoute(
+            name: AppRoute.clientDetails.name,
+            path: '/clients/:id',
+            builder: (context, state) =>
+                ClientDetailsScreen(clientId: state.pathParameters['id']!),
           ),
         ],
       ),

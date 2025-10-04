@@ -50,6 +50,7 @@ class AppTypography {
   static final TextStyle num3 = _inter(15, FontWeight.w400);
   static final TextStyle num4 = _inter(16, FontWeight.w700);
   static final TextStyle num5 = _inter(13, FontWeight.w600);
+  static final TextStyle num6 = _inter(13, FontWeight.w400);
   static final TextStyle numBig = _inter(24, FontWeight.w600);
   static final TextStyle numStat = _inter(20, FontWeight.w500);
   static final TextStyle input1 = _inter(14, FontWeight.w500);

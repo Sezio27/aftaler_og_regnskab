@@ -3,22 +3,22 @@ import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-PreferredSizeWidget buildTopBarForIndex(
-  int index, {
+String _subtitleDate() {
+  final now = DateTime.now();
+  String cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  return '${cap(DateFormat('EEEE', 'da').format(now))} den ${now.day}. ${cap(DateFormat('MMMM', 'da').format(now))}';
+}
+
+PreferredSizeWidget buildTopBarForRouteName(
+  String? routeName, {
   required double maxContentWidth,
   required double fixedHeight,
 }) {
-  String subtitleDate() {
-    final now = DateTime.now();
-    String cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-    return '${cap(DateFormat('EEEE', 'da').format(now))} den ${now.day}. ${cap(DateFormat('MMMM', 'da').format(now))}';
-  }
-
-  switch (index) {
-    case 0:
+  switch (routeName) {
+    case 'home':
       return AppTopBar(
         title: 'Godmorgen Jakob',
-        subtitle: subtitleDate(),
+        subtitle: _subtitleDate(),
         action: SizedBox(
           width: 140,
           child: Image.asset('assets/logo_white.png', fit: BoxFit.fitWidth),
@@ -26,36 +26,36 @@ PreferredSizeWidget buildTopBarForIndex(
         width: maxContentWidth,
         height: fixedHeight,
       );
-    case 1:
+    case 'calendar':
       return AppTopBar(
         title: 'Kalender',
         subtitle: 'Ugeoversigt',
         width: maxContentWidth,
         height: fixedHeight,
       );
-    case 2:
+    case 'finance':
       return AppTopBar(
         title: 'Regnskab',
-        subtitle: "Oversigt over indtægter og aftaler",
+        subtitle: 'Oversigt over indtægter og aftaler',
         width: maxContentWidth,
         height: fixedHeight,
       );
-    case 3:
+    case 'services':
       return AppTopBar(
         title: 'Forretning',
         subtitle: 'Administrer dine services og checklister',
         width: maxContentWidth,
         height: fixedHeight,
       );
-    case 4:
+    case 'settings':
       return AppTopBar(
         title: 'Indstillinger',
-        subtitle: "Administrer dine indstillinger",
+        subtitle: 'Administrer dine indstillinger',
         width: maxContentWidth,
         height: fixedHeight,
       );
 
-    case 5:
+    case 'newAppointment':
       return AppTopBar(
         title: 'Ny aftale',
         showBackButton: true,
@@ -63,7 +63,7 @@ PreferredSizeWidget buildTopBarForIndex(
         height: fixedHeight,
       );
 
-    case 6:
+    case 'allClients':
       return AppTopBar(
         title: 'Klienter',
         showBackButton: true,
@@ -71,7 +71,15 @@ PreferredSizeWidget buildTopBarForIndex(
         height: fixedHeight,
       );
 
-    case 7:
+    case 'clientDetails':
+      return AppTopBar(
+        title: 'Klient detaljer',
+        showBackButton: true,
+        width: maxContentWidth,
+        height: fixedHeight,
+      );
+
+    case 'allAppointments':
       return AppTopBar(
         title: 'Alle aftaler',
         showBackButton: true,

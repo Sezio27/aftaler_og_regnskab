@@ -49,7 +49,7 @@ class SettingsScreen extends StatelessWidget {
           Icon(Icons.people_outline_outlined),
           SizedBox(width: 12),
           InkWell(
-            onTap: () => context.pushNamed(AppRoute.clients.name),
+            onTap: () => context.pushNamed(AppRoute.allClients.name),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Text("Se klienter", style: labelStyle),
