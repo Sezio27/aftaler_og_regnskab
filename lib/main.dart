@@ -1,5 +1,6 @@
 ﻿import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
+import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/firebase_options.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
@@ -7,6 +8,7 @@ import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -46,6 +48,10 @@ class MyApp extends StatelessWidget {
           update: (_, auth, db, __) =>
               ClientRepository(auth: auth, firestore: db),
         ),
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, ServiceRepository>(
+          update: (_, auth, db, __) =>
+              ServiceRepository(auth: auth, firestore: db),
+        ),
         Provider(create: (_) => ImageStorage()),
 
         ChangeNotifierProvider(
@@ -54,7 +60,12 @@ class MyApp extends StatelessWidget {
             ctx.read<ImageStorage>(),
           ),
         ),
-        //Provider<UserRepository>(create: (_) => UserRepository()),
+        ChangeNotifierProvider(
+          create: (ctx) => ServiceViewModel(
+            ctx.read<ServiceRepository>(),
+            ctx.read<ImageStorage>(),
+          ),
+        ),
         ChangeNotifierProvider<OnboardingViewModel>(
           create: (ctx) => OnboardingViewModel(ctx.read<UserRepository>()),
         ),

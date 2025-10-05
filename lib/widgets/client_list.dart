@@ -2,6 +2,7 @@ import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/client_tile.dart';
+import 'package:aftaler_og_regnskab/widgets/small_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -12,12 +13,14 @@ class ClientList extends StatelessWidget {
     required this.onPick,
     this.smallList = true,
     this.hasCvr,
+    this.collapseWhenSelected = true,
   });
 
   final String? selectedId;
   final ValueChanged<ClientModel> onPick;
   final bool smallList;
   final bool? hasCvr;
+  final bool collapseWhenSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -41,51 +44,67 @@ class ClientList extends StatelessWidget {
       );
     }
 
-    return smallList
-        ? _SmallClientList(items: items, selectedId: selectedId, onPick: onPick)
-        : _FullClientList(items: items, selectedId: selectedId, onPick: onPick);
-  }
-}
+    ClientModel? selectedItem;
+    if (collapseWhenSelected && selectedId != null) {
+      for (final c in items) {
+        if (c.id == selectedId) {
+          selectedItem = c;
+          break;
+        }
+      }
+    }
 
-class _SmallClientList extends StatelessWidget {
-  const _SmallClientList({
-    required this.items,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (child, animation) {
+        final size = CurvedAnimation(
+          parent: animation,
+          curve: Curves.elasticOut,
+          reverseCurve: Curves.easeIn,
+        );
 
-    required this.selectedId,
-    required this.onPick,
-  });
+        final fade = CurvedAnimation(
+          parent: animation,
+          curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+          reverseCurve: const Interval(0.0, 0.01, curve: Curves.easeIn),
+        );
 
-  final List<ClientModel> items;
+        return SizeTransition(
+          sizeFactor: size,
+          axisAlignment: -1.0,
+          child: FadeTransition(opacity: fade, child: child),
+        );
+      },
 
-  final String? selectedId;
-  final ValueChanged<ClientModel> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    const tileH = 90.0, sepH = 6.0;
-    final visible = items.length > 3 ? 2.7 : items.length;
-    final boxH = visible * tileH + (visible - 1) * sepH;
-    return Column(
-      children: [
-        SizedBox(
-          height: boxH,
-          child: ListView.separated(
-            itemCount: items.length,
-            physics: const ClampingScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemBuilder: (_, i) => SizedBox(
-              height: tileH,
-              child: ClientTile(
-                c: items[i],
-                selected: items[i].id == selectedId,
-                onTap: () => onPick(items[i]),
-              ),
+      child: (selectedItem != null)
+          ? SizedBox(
+              key: ValueKey('selected_${selectedItem!.id}'),
+              height: 90,
+              child: ClientTile(c: selectedItem!, selected: true),
+            )
+          : KeyedSubtree(
+              key: const ValueKey('list'),
+              child: smallList
+                  ? SmallList<ClientModel>(
+                      items: items,
+                      selectedId: selectedId,
+                      onPick: onPick,
+                      idOf: (c) => c.id ?? '',
+                      tileBuilder: (ctx, c, selected, onTap) => SizedBox(
+                        height: 90,
+                        child: ClientTile(
+                          c: c,
+                          selected: selected,
+                          onTap: onTap,
+                        ),
+                      ),
+                    )
+                  : _FullClientList(
+                      items: items,
+                      selectedId: selectedId,
+                      onPick: onPick,
+                    ),
             ),
-            separatorBuilder: (_, __) => const SizedBox(height: sepH),
-          ),
-        ),
-        Divider(),
-      ],
     );
   }
 }

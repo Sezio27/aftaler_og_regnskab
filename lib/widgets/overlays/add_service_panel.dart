@@ -1,4 +1,5 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/photo_circle.dart';
@@ -6,6 +7,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 class AddServicePanel extends StatefulWidget {
   const AddServicePanel({super.key});
@@ -17,7 +19,19 @@ class AddServicePanel extends StatefulWidget {
 class _AddServicePanelState extends State<AddServicePanel> {
   int? _active;
   XFile? _photo;
-  final nameCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _durCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    _durCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
 
   void _clearFocus() {
     FocusManager.instance.primaryFocus?.unfocus();
@@ -42,6 +56,7 @@ class _AddServicePanelState extends State<AddServicePanel> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final vm = context.watch<ServiceViewModel>();
 
     return TapRegion(
       onTapInside: (_) => _clearFocus(),
@@ -76,6 +91,7 @@ class _AddServicePanelState extends State<AddServicePanel> {
             SoftTextField(
               title: 'Service navn',
               hintText: "F.eks. Bryllups makeup",
+              controller: _nameCtrl,
               showStroke: _active == 0,
               onTap: () => setState(() => _active = 0),
             ),
@@ -83,7 +99,7 @@ class _AddServicePanelState extends State<AddServicePanel> {
             SoftTextField(
               title: 'Beskrivelse',
               hintText: "Kort beskrivelse af servicen...",
-              keyboardType: TextInputType.phone,
+              controller: _descCtrl,
               maxLines: 3,
               showStroke: _active == 1,
               onTap: () => setState(() => _active = 1),
@@ -105,6 +121,7 @@ class _AddServicePanelState extends State<AddServicePanel> {
                         ),
                         showStroke: _active == 3,
                         keyboardType: TextInputType.number,
+                        controller: _durCtrl,
                         onTap: () => setState(() => _active = 3),
                       ),
                       SizedBox(height: 12),
@@ -116,13 +133,14 @@ class _AddServicePanelState extends State<AddServicePanel> {
                         ),
                         showStroke: _active == 4,
                         keyboardType: TextInputType.number,
+                        controller: _priceCtrl,
                         onTap: () => setState(() => _active = 4),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 20),
-                // Photo picker circle
+
                 PhotoCircle(
                   image: _photo,
                   showStroke: _active == 5,
@@ -133,6 +151,12 @@ class _AddServicePanelState extends State<AddServicePanel> {
                 ),
               ],
             ),
+
+            if (vm.error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(vm.error!, style: TextStyle(color: cs.error)),
+              ),
 
             const SizedBox(height: 4),
             Row(
@@ -148,7 +172,7 @@ class _AddServicePanelState extends State<AddServicePanel> {
                     elevation: 0,
                     borderRadius: 14,
                     textStyle: AppTypography.b2.copyWith(color: cs.onSurface),
-                    onTap: () => context.pop(),
+                    onTap: vm.saving ? () {} : () => context.pop(),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -157,7 +181,34 @@ class _AddServicePanelState extends State<AddServicePanel> {
                     text: "Tilføj service",
                     borderRadius: 14,
                     textStyle: AppTypography.b3,
-                    onTap: () => context.pop(),
+                    onTap: vm.saving
+                        ? () {}
+                        : () async {
+                            final created = await context
+                                .read<ServiceViewModel>()
+                                .addService(
+                                  name: _nameCtrl.text,
+                                  description: _descCtrl.text,
+                                  duration: _durCtrl.text,
+                                  price: _priceCtrl.text,
+                                  image: _photo,
+                                );
+
+                            if (!mounted) return;
+
+                            if (created) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Service tilføjet'),
+                                ),
+                              );
+                              context.pop();
+                            } else if (vm.error != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(vm.error!)),
+                              );
+                            }
+                          },
                   ),
                 ),
               ],

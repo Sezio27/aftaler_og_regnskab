@@ -1,5 +1,6 @@
 ﻿import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/client_list.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
@@ -9,6 +10,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
+import 'package:aftaler_og_regnskab/widgets/service_list.dart';
 import 'package:aftaler_og_regnskab/widgets/time_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -97,10 +99,12 @@ class NewAppointmentForm extends StatefulWidget {
 }
 
 class _NewAppointmentFormState extends State<NewAppointmentForm> {
-  late final ClientViewModel _vm;
+  late final ClientViewModel _clientVM;
+  late final ServiceViewModel _serviceVM;
   late final TextEditingController clientSearchCtrl;
   late final TextEditingController serviceSearchCtrl;
   String? _selectedClientId;
+  String? _selectedServiceId;
 
   DateTime _date = DateTime.now();
   TimeOfDay _time = const TimeOfDay(hour: 12, minute: 0);
@@ -110,17 +114,20 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
   @override
   void initState() {
     super.initState();
-    _vm = context.read<ClientViewModel>();
+    _clientVM = context.read<ClientViewModel>();
+    _serviceVM = context.read<ServiceViewModel>();
     clientSearchCtrl = TextEditingController();
     serviceSearchCtrl = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _vm.initClientFilters();
+      _clientVM.initClientFilters();
+      _serviceVM.initServiceFilters();
     });
   }
 
   @override
   void dispose() {
-    _vm.clearSearch();
+    _clientVM.clearSearch();
+    _serviceVM.clearSearch();
     clientSearchCtrl.dispose();
     serviceSearchCtrl.dispose();
     super.dispose();
@@ -134,7 +141,8 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final vm = context.read<ClientViewModel>();
+    final clientVM = context.read<ClientViewModel>();
+    final serviceVM = context.read<ServiceViewModel>();
 
     return TapRegion(
       onTapOutside: (_) => _clearFocus(),
@@ -147,7 +155,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               children: [
                 CustomSearchBar(
                   controller: clientSearchCtrl,
-                  onChanged: vm.setClientSearch,
+                  onChanged: clientVM.setClientSearch,
                 ),
                 const SizedBox(height: 10),
 
@@ -159,19 +167,34 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
                   },
                 ),
                 const SizedBox(height: 6),
-                TextButton.icon(
-                  onPressed: () async {
-                    await showOverlayPanel(
-                      context: context,
-                      child: const AddClientPanel(),
-                    );
-                    if (!mounted) return;
-                  },
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    'Tilføj ny klient',
-                    style: AppTypography.b3.copyWith(color: cs.primary),
-                  ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: _selectedClientId != null
+                      ? TextButton.icon(
+                          onPressed: () {
+                            setState(() => _selectedClientId = null);
+                          },
+                          label: Text(
+                            'Fotryd',
+                            style: AppTypography.b3.copyWith(
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        )
+                      : TextButton.icon(
+                          onPressed: () async {
+                            await showOverlayPanel(
+                              context: context,
+                              child: const AddClientPanel(),
+                            );
+                            if (!mounted) return;
+                          },
+                          icon: const Icon(Icons.add),
+                          label: Text(
+                            'Tilføj ny klient',
+                            style: AppTypography.b3.copyWith(color: cs.primary),
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -181,8 +204,22 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
             title: 'Vælg service',
             child: Column(
               children: [
-                CustomSearchBar(controller: serviceSearchCtrl),
-                const SizedBox(height: 4),
+                CustomSearchBar(
+                  controller: serviceSearchCtrl,
+                  onChanged: serviceVM.setServiceSearch,
+                ),
+                const SizedBox(height: 10),
+
+                //Her
+                ServiceList(
+                  selectedId: _selectedServiceId,
+                  onPick: (s) {
+                    setState(() => _selectedServiceId = s.id);
+                    // TODO: store c (or id) on the appointment draft if needed
+                  },
+                ),
+
+                const SizedBox(height: 6),
                 TextButton.icon(
                   onPressed: () async {
                     await showOverlayPanel(

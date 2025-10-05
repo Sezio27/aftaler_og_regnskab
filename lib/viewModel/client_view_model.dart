@@ -13,16 +13,13 @@ class ClientViewModel extends ChangeNotifier {
 
   StreamSubscription<List<ClientModel>>? _sub;
 
-  // UI input
   String _query = '';
 
-  // Derived lists (already filtered by search & CVR)
   List<ClientModel> _all = const [];
   List<ClientModel> _allFiltered = const [];
   List<ClientModel> _private = const [];
   List<ClientModel> _business = const [];
 
-  // Public getters (read-only views)
   List<ClientModel> get allClients => _allFiltered;
   List<ClientModel> get privateClients => _private;
   List<ClientModel> get businessClients => _business;
@@ -46,7 +43,6 @@ class ClientViewModel extends ChangeNotifier {
     });
   }
 
-  // ---- UI actions ----
   void setClientSearch(String q) {
     final nq = q.trim();
     if (nq == _query) return;
@@ -61,7 +57,6 @@ class ClientViewModel extends ChangeNotifier {
   }
 
   void _recompute() {
-    // 1) search
     final q = _query.toLowerCase();
     bool m(String? v) => (v ?? '').toLowerCase().contains(q);
 
@@ -97,7 +92,6 @@ class ClientViewModel extends ChangeNotifier {
   bool get saving => _saving;
   String? get error => _error;
   ClientModel? get lastAdded => _lastAdded;
-  bool _hasCvr(ClientModel c) => (c.cvr ?? '').trim().isNotEmpty;
 
   Future<bool> addClient({
     required String? name,
@@ -208,23 +202,6 @@ class ClientViewModel extends ChangeNotifier {
       _saving = false;
       notifyListeners();
     }
-  }
-
-  Stream<List<ClientModel>> filteredClients(String query, {bool? hasCvr}) {
-    final q = query.trim().toLowerCase();
-    return clientsStream.map((items) {
-      bool m(String? v) => (v ?? '').toLowerCase().contains(q);
-      var result = q.isEmpty
-          ? items
-          : items.where((c) => m(c.name) || m(c.phone) || m(c.email)).toList();
-      bool _hasCvr(ClientModel c) => (c.cvr ?? '').trim().isNotEmpty;
-      if (hasCvr != null) {
-        result = result
-            .where((c) => hasCvr ? _hasCvr(c) : !_hasCvr(c))
-            .toList();
-      }
-      return result;
-    });
   }
 
   Future<void> delete(String id, String? imageUrl) async {
