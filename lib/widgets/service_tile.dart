@@ -22,6 +22,7 @@ class ServiceTile extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      splashFactory: NoSplash.splashFactory,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(12),

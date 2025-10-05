@@ -4,6 +4,7 @@ import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/client_list.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
+import 'package:aftaler_og_regnskab/widgets/expandable_section.dart';
 import 'package:aftaler_og_regnskab/widgets/images_picker_grid.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
@@ -149,7 +150,8 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Section(
+          ExpandableSection(
+            initiallyExpanded: true,
             title: 'Vælg klient',
             child: Column(
               children: [
@@ -200,10 +202,13 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
             ),
           ),
           const SizedBox(height: 16),
-          _Section(
+
+          ExpandableSection(
             title: 'Vælg service',
+            initiallyExpanded: false,
             child: Column(
               children: [
+                const SizedBox(height: 6),
                 CustomSearchBar(
                   controller: serviceSearchCtrl,
                   onChanged: serviceVM.setServiceSearch,
@@ -218,32 +223,48 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
                     // TODO: store c (or id) on the appointment draft if needed
                   },
                 ),
-
                 const SizedBox(height: 6),
-                TextButton.icon(
-                  onPressed: () async {
-                    await showOverlayPanel(
-                      context: context,
-                      child: const AddServicePanel(),
-                    );
-                    if (!mounted) return;
-                  },
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    'Tilføj ny service',
-                    style: AppTypography.b3.copyWith(color: cs.primary),
-                  ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: _selectedServiceId != null
+                      ? TextButton.icon(
+                          onPressed: () {
+                            setState(() => _selectedServiceId = null);
+                          },
+                          label: Text(
+                            'Fotryd',
+                            style: AppTypography.b3.copyWith(
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        )
+                      : TextButton.icon(
+                          onPressed: () async {
+                            await showOverlayPanel(
+                              context: context,
+                              child: const AddServicePanel(),
+                            );
+                            if (!mounted) return;
+                          },
+                          icon: const Icon(Icons.add),
+                          label: Text(
+                            'Tilføj ny service',
+                            style: AppTypography.b3.copyWith(color: cs.primary),
+                          ),
+                        ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          _Section(
+          const SizedBox(height: 20),
+          ExpandableSection(
             title: 'Tilknyt checklister',
             child: Column(
               children: [
                 CustomSearchBar(controller: serviceSearchCtrl),
-                const SizedBox(height: 4),
+
+                //TODO
+                const SizedBox(height: 6),
                 TextButton.icon(
                   onPressed: () async {
                     await showOverlayPanel(
@@ -291,7 +312,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           _Section(
             title: 'Vælg lokation',
             child: SoftTextField(
@@ -306,7 +327,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onTap: () => setState(() => _active = 0),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           _Section(
             title: 'Tilpas pris (valgfri)',
             child: SoftTextField(
@@ -322,7 +343,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onTap: () => setState(() => _active = 1),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           _Section(
             title: 'Billeder',
             child: ImagesPickerGrid(
@@ -330,7 +351,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onChanged: (files) => setState(() => _images = files),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           _Section(
             title: 'Note (valgfri)',
             child: SoftTextField(
