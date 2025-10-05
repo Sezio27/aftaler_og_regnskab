@@ -15,8 +15,8 @@ class AppBottomNavBar extends StatelessWidget {
   final int? currentIndex;
   final ValueChanged<int> onItemSelected;
   final double maxContentWidth;
-  final double fixedHeight; // ⬅ NEW
-  final double iconSize; // ⬅ NEW
+  final double fixedHeight;
+  final double iconSize;
 
   static const _items = <_BottomNavItem>[
     _BottomNavItem(icon: Icons.home_outlined, label: 'Hjem'),

@@ -154,8 +154,9 @@ GoRouter createRouter() {
           GoRoute(
             name: AppRoute.clientDetails.name,
             path: '/clients/:id',
-            builder: (context, state) =>
-                ClientDetailsScreen(clientId: state.pathParameters['id']!),
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: ClientDetailsScreen(clientId: state.pathParameters['id']!),
+            ),
           ),
         ],
       ),

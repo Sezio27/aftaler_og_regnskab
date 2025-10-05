@@ -48,4 +48,16 @@ class ImageStorage {
       throw Exception('Storage-fejl: ${e.code} ${e.message ?? ""}'.trim());
     }
   }
+
+  Future<void> deleteClientImage(String clientId) async {
+    final uid = _uidOrThrow;
+    final ref = _storage.ref('users/$uid/clients/$clientId/image');
+    try {
+      await ref.delete();
+    } on FirebaseException catch (e) {
+      // If there isn't an object to delete, treat it as already gone.
+      if (e.code == 'object-not-found') return;
+      rethrow;
+    }
+  }
 }

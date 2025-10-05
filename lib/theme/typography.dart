@@ -39,6 +39,9 @@ class AppTypography {
   static final TextStyle b4 = _raleway(14, FontWeight.w300);
   static final TextStyle b5 = _raleway(14, FontWeight.w500);
   static final TextStyle b6 = _raleway(13, FontWeight.w400);
+  static final TextStyle b7 = _raleway(15, FontWeight.w700);
+  static final TextStyle b8 = _raleway(14, FontWeight.w700);
+
   static final TextStyle nav1 = _raleway(13, FontWeight.w800);
   static final TextStyle nav2 = _raleway(13, FontWeight.w500);
   static final TextStyle button1 = _raleway(17, FontWeight.w700);

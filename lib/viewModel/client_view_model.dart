@@ -194,5 +194,10 @@ class ClientViewModel extends ChangeNotifier {
     });
   }
 
-  Future<void> delete(String id) => _repo.deleteClient(id);
+  Future<void> delete(String id, String? imageUrl) async {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      await _imageStorage.deleteClientImage(id);
+    }
+    await _repo.deleteClient(id);
+  }
 }
