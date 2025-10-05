@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 Future<ImageSource?> showImageSourceSheet(BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<ImageSource>(
     context: context,
-    backgroundColor: Colors.white,
+    useRootNavigator: true,
+    isScrollControlled: false,
+    backgroundColor: cs.onPrimary,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -15,12 +19,12 @@ Future<ImageSource?> showImageSourceSheet(BuildContext context) {
           ListTile(
             leading: const Icon(Icons.photo_library_outlined),
             title: const Text('Vælg fra bibliotek'),
-            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            onTap: () => ctx.pop(ImageSource.gallery),
           ),
           ListTile(
             leading: const Icon(Icons.photo_camera_outlined),
             title: const Text('Tag et billede'),
-            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            onTap: () => ctx.pop(ImageSource.camera),
           ),
         ],
       ),

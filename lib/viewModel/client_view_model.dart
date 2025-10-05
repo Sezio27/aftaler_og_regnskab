@@ -157,19 +157,52 @@ class ClientViewModel extends ChangeNotifier {
     }
   }
 
-  // Optional: for changing a client’s photo later
-  Future<bool> updateClientPhoto(String clientId, XFile photo) async {
+  Future<bool> updateClientFields(
+    String id, {
+    String? name,
+    String? phone,
+    String? email,
+    String? address,
+    String? city,
+    String? postal,
+    String? cvr,
+    XFile? newImage,
+  }) async {
     try {
       _saving = true;
+      _error = null;
       notifyListeners();
-      final url = await _imageStorage.uploadClientImage(
-        clientId: clientId,
-        file: photo,
-      );
-      await _repo.updateClient(clientId, fields: {'image': url});
+
+      final fields = <String, Object?>{};
+
+      void put(String k, String? v) {
+        if (v == null) return;
+        final t = v.trim();
+        fields[k] = t.isEmpty ? null : t;
+      }
+
+      put('name', name);
+      put('phone', phone);
+      put('email', email);
+      put('address', address);
+      put('city', city);
+      put('postal', postal);
+      put('cvr', cvr);
+
+      if (newImage != null) {
+        final url = await _imageStorage.uploadClientImage(
+          clientId: id,
+          file: newImage,
+        );
+        fields['image'] = url;
+      }
+
+      if (fields.isNotEmpty) {
+        await _repo.updateClient(id, fields: fields);
+      }
       return true;
     } catch (e) {
-      _error = 'Kunne ikke opdatere billede: $e';
+      _error = 'Kunne ikke opdatere: $e';
       return false;
     } finally {
       _saving = false;

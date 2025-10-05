@@ -40,12 +40,11 @@ class AppLayout extends StatelessWidget {
       extendBody: true,
 
       // Horizontal: 1 | 10 | 1
-      body: Row(
-        children: [
-          const Expanded(flex: 1, child: SizedBox()),
-          Expanded(flex: 18, child: child),
-          const Expanded(flex: 1, child: SizedBox()),
-        ],
+      body: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: LayoutMetrics.horizontalPadding(context),
+        ),
+        child: child,
       ),
 
       // Nav bar spans full width; inner content clamped; fixed sizes per your rule
