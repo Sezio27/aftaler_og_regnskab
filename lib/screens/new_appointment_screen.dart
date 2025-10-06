@@ -1,8 +1,22 @@
-import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
+﻿import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
+import 'package:aftaler_og_regnskab/widgets/client_list.dart';
+import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
+import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
+import 'package:aftaler_og_regnskab/widgets/expandable_section.dart';
+import 'package:aftaler_og_regnskab/widgets/images_picker_grid.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
+import 'package:aftaler_og_regnskab/widgets/service_list.dart';
+import 'package:aftaler_og_regnskab/widgets/time_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 class NewAppointmentScreen extends StatelessWidget {
   const NewAppointmentScreen({super.key});
@@ -11,151 +25,353 @@ class NewAppointmentScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: const AppTopBar(title: 'Ny Aftale', showBackButton: true),
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Lightweight top row (since there’s no AppBar)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Ny aftale',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ],
-              ),
-            ),
-
-            // Scrollable content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: const _NewAppointmentForm(),
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text('Ny aftale', style: AppTypography.h2),
+              ],
             ),
+          ),
+          const SizedBox(height: 16),
 
-            // Sticky bottom actions
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-              decoration: BoxDecoration(
-                color: cs.surface,
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 10,
-                    color: Colors.black.withOpacity(0.06),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => context.pop(),
-                      child: const Text('Annuller'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () {
-                        // TODO: validate + save
-                      },
-                      child: const Text('Opret aftale'),
-                    ),
-                  ),
-                ],
+          // Scrollable content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: const NewAppointmentForm(),
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Sticky bottom actions
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: 10,
+                  color: Colors.black.withOpacity(0.06),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Annuller'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      // TODO: validate + save
+                    },
+                    child: const Text('Opret aftale'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NewAppointmentForm extends StatelessWidget {
-  const _NewAppointmentForm();
+class NewAppointmentForm extends StatefulWidget {
+  const NewAppointmentForm({super.key});
+
+  @override
+  State<NewAppointmentForm> createState() => _NewAppointmentFormState();
+}
+
+class _NewAppointmentFormState extends State<NewAppointmentForm> {
+  late final ClientViewModel _clientVM;
+  late final ServiceViewModel _serviceVM;
+  late final TextEditingController clientSearchCtrl;
+  late final TextEditingController serviceSearchCtrl;
+  String? _selectedClientId;
+  String? _selectedServiceId;
+
+  DateTime _date = DateTime.now();
+  TimeOfDay _time = const TimeOfDay(hour: 12, minute: 0);
+  int? _active;
+  List<XFile> _images = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _clientVM = context.read<ClientViewModel>();
+    _serviceVM = context.read<ServiceViewModel>();
+    clientSearchCtrl = TextEditingController();
+    serviceSearchCtrl = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _clientVM.initClientFilters();
+      _serviceVM.initServiceFilters();
+    });
+  }
+
+  @override
+  void dispose() {
+    _clientVM.clearSearch();
+    _serviceVM.clearSearch();
+    clientSearchCtrl.dispose();
+    serviceSearchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _clearFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _active = null);
+  }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Wire up controllers + state management later.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _Section(
-          title: 'Kunde',
-          child: _CardWrap(
+    final cs = Theme.of(context).colorScheme;
+    final clientVM = context.read<ClientViewModel>();
+    final serviceVM = context.read<ServiceViewModel>();
+
+    return TapRegion(
+      onTapOutside: (_) => _clearFocus(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExpandableSection(
+            initiallyExpanded: true,
+            title: 'Vælg klient',
             child: Column(
-              children: const [
-                _FieldPlaceholder(label: 'Vælg eksisterende kunde / Opret ny'),
+              children: [
+                CustomSearchBar(
+                  controller: clientSearchCtrl,
+                  onChanged: clientVM.setClientSearch,
+                ),
+                const SizedBox(height: 10),
+
+                ClientList(
+                  selectedId: _selectedClientId,
+                  onPick: (c) {
+                    setState(() => _selectedClientId = c.id);
+                    // TODO: store c (or id) on the appointment draft if needed
+                  },
+                ),
+                const SizedBox(height: 6),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: _selectedClientId != null
+                      ? TextButton.icon(
+                          onPressed: () {
+                            setState(() => _selectedClientId = null);
+                          },
+                          label: Text(
+                            'Fotryd',
+                            style: AppTypography.b3.copyWith(
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        )
+                      : TextButton.icon(
+                          onPressed: () async {
+                            await showOverlayPanel(
+                              context: context,
+                              child: const AddClientPanel(),
+                            );
+                            if (!mounted) return;
+                          },
+                          icon: const Icon(Icons.add),
+                          label: Text(
+                            'Tilføj ny klient',
+                            style: AppTypography.b3.copyWith(color: cs.primary),
+                          ),
+                        ),
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _Section(
-          title: 'Service',
-          child: _CardWrap(
+          const SizedBox(height: 16),
+
+          ExpandableSection(
+            title: 'Vælg service',
+            initiallyExpanded: false,
             child: Column(
-              children: const [
-                _FieldPlaceholder(label: 'Vælg service(r)'),
-                _FieldPlaceholder(label: 'Noter (valgfrit)'),
+              children: [
+                const SizedBox(height: 6),
+                CustomSearchBar(
+                  controller: serviceSearchCtrl,
+                  onChanged: serviceVM.setServiceSearch,
+                ),
+                const SizedBox(height: 10),
+
+                //Her
+                ServiceList(
+                  selectedId: _selectedServiceId,
+                  onPick: (s) {
+                    setState(() => _selectedServiceId = s.id);
+                    // TODO: store c (or id) on the appointment draft if needed
+                  },
+                ),
+                const SizedBox(height: 6),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: _selectedServiceId != null
+                      ? TextButton.icon(
+                          onPressed: () {
+                            setState(() => _selectedServiceId = null);
+                          },
+                          label: Text(
+                            'Fotryd',
+                            style: AppTypography.b3.copyWith(
+                              color: cs.onSurface,
+                            ),
+                          ),
+                        )
+                      : TextButton.icon(
+                          onPressed: () async {
+                            await showOverlayPanel(
+                              context: context,
+                              child: const AddServicePanel(),
+                            );
+                            if (!mounted) return;
+                          },
+                          icon: const Icon(Icons.add),
+                          label: Text(
+                            'Tilføj ny service',
+                            style: AppTypography.b3.copyWith(color: cs.primary),
+                          ),
+                        ),
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _Section(
-          title: 'Tid & Sted',
-          child: _CardWrap(
+          const SizedBox(height: 20),
+          ExpandableSection(
+            title: 'Tilknyt checklister',
             child: Column(
-              children: const [
-                _FieldPlaceholder(label: 'Dato'),
-                _FieldPlaceholder(label: 'Starttid'),
-                _FieldPlaceholder(label: 'Varighed'),
-                _FieldPlaceholder(label: 'Adresse / On-site'),
+              children: [
+                CustomSearchBar(controller: serviceSearchCtrl),
+
+                //TODO
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: () async {
+                    await showOverlayPanel(
+                      context: context,
+                      child: const AddChecklistPanel(),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    'Tilføj ny checkliste',
+                    style: AppTypography.b3.copyWith(color: cs.primary),
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _Section(
-          title: 'Betaling',
-          child: _CardWrap(
-            child: Column(
-              children: const [
-                _FieldPlaceholder(label: 'Pris'),
-                _FieldPlaceholder(label: 'Depositum'),
-                _FieldPlaceholder(label: 'Faktura / MobilePay'),
+          const SizedBox(height: 16),
+          _Section(
+            title: 'Vælg tidspunkt',
+            child: Row(
+              children: [
+                Text("Dato:", style: AppTypography.button2),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 5,
+                  child: DatePicker(
+                    value: _date,
+                    minimumDate: DateTime(2000),
+                    maximumDate: DateTime(2100),
+                    onChanged: (d) => setState(() => _date = d),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Text("Tid:", style: AppTypography.button2),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 4,
+                  child: TimePicker(
+                    value: _time,
+                    onChanged: (t) => setState(() => _time = t),
+                    use24h: true,
+                    modalHeight: 320,
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 24),
-        // Extra long content placeholder to ensure scrolling works well
-        const _FieldPlaceholder(
-          label: '— ekstra plads til fremtidige felter —',
-          minHeight: 120,
-        ),
-      ],
+          const SizedBox(height: 30),
+          _Section(
+            title: 'Vælg lokation',
+            child: SoftTextField(
+              hintText: "Indtast addresse",
+              fill: cs.onPrimary,
+              strokeColor: _active != 0
+                  ? cs.onSurface.withAlpha(50)
+                  : cs.primary,
+              strokeWidth: _active != 0 ? 1 : 1.5,
+              borderRadius: 8,
+              showStroke: true,
+              onTap: () => setState(() => _active = 0),
+            ),
+          ),
+          const SizedBox(height: 30),
+          _Section(
+            title: 'Tilpas pris (valgfri)',
+            child: SoftTextField(
+              hintText:
+                  "Standard pris: ", //insert price of service if selected otherwise "indtast pris"
+              fill: cs.onPrimary,
+              strokeColor: _active != 1
+                  ? cs.onSurface.withAlpha(50)
+                  : cs.primary,
+              strokeWidth: _active != 1 ? 1 : 1.5,
+              borderRadius: 8,
+              showStroke: true,
+              onTap: () => setState(() => _active = 1),
+            ),
+          ),
+          const SizedBox(height: 30),
+          _Section(
+            title: 'Billeder',
+            child: ImagesPickerGrid(
+              initial: _images,
+              onChanged: (files) => setState(() => _images = files),
+            ),
+          ),
+          const SizedBox(height: 30),
+          _Section(
+            title: 'Note (valgfri)',
+            child: SoftTextField(
+              hintText: "Tilføj note til denne aftale",
+              maxLines: 3,
+              fill: cs.onPrimary,
+              strokeColor: _active != 2
+                  ? cs.onSurface.withAlpha(50)
+                  : cs.primary,
+              strokeWidth: _active != 2 ? 1 : 1.5,
+              borderRadius: 8,
+              showStroke: true,
+              onTap: () => setState(() => _active = 2),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-// ——— UI helpers (simple skeleton styling) ———
 
 class _Section extends StatelessWidget {
   const _Section({required this.title, required this.child});
@@ -167,54 +383,10 @@ class _Section extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppTypography.b1),
-        const SizedBox(height: 8),
+        Text(title, style: AppTypography.h3),
+        const SizedBox(height: 12),
         child,
       ],
-    );
-  }
-}
-
-class _CardWrap extends StatelessWidget {
-  const _CardWrap({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: cs
-            .surfaceContainerHighest, // or AppColors.peachBackground if you prefer
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Padding(padding: const EdgeInsets.all(12), child: child),
-    );
-  }
-}
-
-class _FieldPlaceholder extends StatelessWidget {
-  const _FieldPlaceholder({required this.label, this.minHeight = 52});
-  final String label;
-  final double minHeight;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      height: minHeight,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.num1, //.copyWith(color: AppColors.textLight),
-      ),
     );
   }
 }

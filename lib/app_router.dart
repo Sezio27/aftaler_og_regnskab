@@ -1,5 +1,10 @@
 // lib/app_router.dart
-import 'package:aftaler_og_regnskab/screens/navigation/nav_shell.dart';
+import 'package:aftaler_og_regnskab/app_layout.dart';
+import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
+import 'package:aftaler_og_regnskab/navigation/tab_config.dart';
+import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
+import 'package:aftaler_og_regnskab/screens/client_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
@@ -34,6 +39,9 @@ enum AppRoute {
   services,
   settings,
   newAppointment,
+  allAppointments,
+  allClients,
+  clientDetails,
 }
 
 GoRouter createRouter() {
@@ -88,44 +96,69 @@ GoRouter createRouter() {
         ],
       ),
 
-      // Bottom-nav shell (uses NavShell widget)
       ShellRoute(
-        builder: (context, state, child) =>
-            NavShell(child: child, location: state.uri.toString()),
+        builder: (context, state, child) => NavShell(
+          location: state.uri.toString(),
+          routeName: state.name,
+          child: child,
+        ),
         routes: [
           GoRoute(
             path: '/home',
             name: AppRoute.home.name,
-            builder: (_, __) => const HomeScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: HomeScreen()),
           ),
           GoRoute(
             path: '/calendar',
             name: AppRoute.calendar.name,
-            builder: (_, __) => const CalendarScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: CalendarScreen()),
           ),
           GoRoute(
             path: '/finance',
             name: AppRoute.finance.name,
-            builder: (_, __) => const FinanceScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: FinanceScreen()),
           ),
           GoRoute(
             path: '/services',
             name: AppRoute.services.name,
-            builder: (_, __) => const ServicesScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: ServicesScreen()),
           ),
           GoRoute(
             path: '/settings',
             name: AppRoute.settings.name,
-            builder: (_, __) => const SettingsScreen(),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: SettingsScreen()),
+          ),
+          GoRoute(
+            path: '/appointments/new',
+            name: AppRoute.newAppointment.name,
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: NewAppointmentScreen()),
+          ),
+          GoRoute(
+            path: '/appointments/all',
+            name: AppRoute.allAppointments.name,
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: AllAppointmentsScreen()),
+          ),
+          GoRoute(
+            path: '/clients/all',
+            name: AppRoute.allClients.name,
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: ClientsScreen()),
+          ),
+          GoRoute(
+            name: AppRoute.clientDetails.name,
+            path: '/clients/:id',
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: ClientDetailsScreen(clientId: state.pathParameters['id']!),
+            ),
           ),
         ],
-      ),
-
-      // Full-screen flow (keeps slide transition + its own top bar)
-      GoRoute(
-        path: '/appointments/new',
-        name: AppRoute.newAppointment.name,
-        builder: (_, __) => const NewAppointmentScreen(),
       ),
     ],
   );

@@ -1,0 +1,111 @@
+// lib/services/client_repository.dart
+import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+/// Repository = the app's data facade for Clients.
+/// - Hides Firestore specifics (FieldValue, Timestamp, paths).
+/// - Exposes typed methods the rest of the app can call.
+class ServiceRepository {
+  ServiceRepository({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _db = firestore ?? FirebaseFirestore.instance;
+
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _db;
+
+  String get _uidOrThrow {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) throw StateError('Not signed in');
+    return uid;
+  }
+
+  CollectionReference<Map<String, dynamic>> _collection(String uid) =>
+      _db.collection('users').doc(uid).collection('services');
+
+  Stream<ServiceModel?> watchService(String id) {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc(id).snapshots().map((d) {
+      if (!d.exists) return null;
+      return _fromDoc(d);
+    });
+  }
+
+  Stream<List<ServiceModel>> watchServices() {
+    final uid = _uidOrThrow;
+    return _collection(uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((q) => q.docs.map(_fromDoc).toList());
+  }
+
+  Future<ServiceModel?> getServiceOnce(String id) async {
+    final uid = _uidOrThrow;
+    final snap = await _collection(uid).doc(id).get();
+    if (!snap.exists) return null;
+    return _fromDoc(snap);
+  }
+
+  Future<ServiceModel> addService(ServiceModel model) async {
+    final uid = _uidOrThrow;
+    final doc = _collection(uid).doc();
+    final payload = _toFirestore(model.copyWith(id: doc.id), isCreate: true);
+    await doc.set(payload);
+
+    return model.copyWith(id: doc.id);
+  }
+
+  DocumentReference<Map<String, dynamic>> newServiceRef() {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc();
+  }
+
+  Future<void> createServiceWithId(String id, ServiceModel model) async {
+    final uid = _uidOrThrow;
+    final payload = _toFirestore(model.copyWith(id: id), isCreate: true);
+    await _collection(uid).doc(id).set(payload);
+  }
+
+  Future<void> updateService(
+    String id, {
+    ServiceModel? patch,
+    Map<String, Object?>? fields,
+  }) async {
+    final uid = _uidOrThrow;
+    final data = fields ?? _toFirestore(patch!, isCreate: false);
+    final withMeta = {...data, 'updatedAt': FieldValue.serverTimestamp()}
+      ..removeWhere((k, v) => v == null);
+    await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
+  }
+
+  Future<void> deleteService(String id) async {
+    final uid = _uidOrThrow;
+    await _collection(uid).doc(id).delete();
+  }
+
+  ServiceModel _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
+    final data = d.data() ?? const <String, dynamic>{};
+    return ServiceModel(
+      id: d.id,
+      name: data['name'] as String?,
+      description: data['description'] as String?,
+      duration: data['duration'] as String?,
+      price: data['price'] as String?,
+      image: data['image'] as String?,
+    );
+  }
+
+  Map<String, dynamic> _toFirestore(ServiceModel m, {required bool isCreate}) {
+    final map = <String, dynamic>{
+      'name': m.name,
+      'description': m.description,
+      'duration': m.duration,
+      'price': m.price,
+      'image': m.image,
+      if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    map.removeWhere((_, v) => v == null);
+    return map;
+  }
+}

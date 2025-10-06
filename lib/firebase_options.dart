@@ -4,24 +4,12 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] for use with your Firebase apps.
-///
-/// Example:
-/// ```dart
-/// import 'firebase_options.dart';
-/// // ...
-/// await Firebase.initializeApp(
-///   options: DefaultFirebaseOptions.currentPlatform,
-/// );
-/// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web; // ✅ use web config on Flutter Web
     }
+
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
@@ -46,6 +34,17 @@ class DefaultFirebaseOptions {
     }
   }
 
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: "AIzaSyDfsXKi9Cx9JkOd6jpZUG1eRolsn16XBo0",
+    authDomain: "aftaler-og-regnskab.firebaseapp.com",
+    databaseURL:
+        "https://aftaler-og-regnskab-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "aftaler-og-regnskab",
+    storageBucket: "aftaler-og-regnskab.firebasestorage.app",
+    messagingSenderId: "496768958985",
+    appId: "1:496768958985:web:8e6b6efae30a1988dbaed8",
+    measurementId: "G-0VGLWCL65K",
+  );
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBP7YibJkKPdcGDtNL6c-QxHuvfFOYhINc',
     appId: '1:496768958985:android:574057967846c4d8dbaed8',

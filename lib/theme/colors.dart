@@ -27,6 +27,8 @@ class AppColors {
   static const Color peachSoft = Color(0xFFFDDBCD);
   static const Color peachDeep = Color(0xFFEBA39A);
   static const Color peachLight = Color(0xFFFDEFD2);
+
+  static const Color accent1 = Color(0xFFE6AA6A);
 }
 
 /// Convert a CSS/Figma angle (0 deg = up, 90 deg = right) to Flutter radians.

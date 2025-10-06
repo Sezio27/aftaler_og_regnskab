@@ -2,7 +2,7 @@ import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../model/onboardingModel.dart';
-import '../services/user_repository.dart';
+import '../data/user_repository.dart';
 
 /// ViewModel (ChangeNotifier) that the UI listens to.
 /// - Holds current [OnboardingModel] state

@@ -7,10 +7,16 @@ class AppBottomNavBar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.onItemSelected,
+    this.maxContentWidth = 900,
+    this.fixedHeight = 64,
+    this.iconSize = 24,
   });
 
-  final int currentIndex;
+  final int? currentIndex;
   final ValueChanged<int> onItemSelected;
+  final double maxContentWidth;
+  final double fixedHeight;
+  final double iconSize;
 
   static const _items = <_BottomNavItem>[
     _BottomNavItem(icon: Icons.home_outlined, label: 'Hjem'),
@@ -22,23 +28,16 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      decoration: BoxDecoration(gradient: AppGradients.peach3),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(
-            left: 10,
-            right: 10,
-            top: 12,
-            bottom: 2,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+    return SizedBox(
+      height: fixedHeight,
+      child: Container(
+        decoration: BoxDecoration(gradient: AppGradients.peach3),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 2, 16, 2),
+              child: Row(
                 children: [
                   for (var i = 0; i < _items.length; i++)
                     Expanded(
@@ -46,12 +45,13 @@ class AppBottomNavBar extends StatelessWidget {
                         item: _items[i],
                         isSelected: currentIndex == i,
                         onTap: () => onItemSelected(i),
-                        activeColor: colorScheme.onPrimary,
+                        activeColor: Colors.white,
+                        iconSize: iconSize,
                       ),
                     ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -65,12 +65,14 @@ class _NavButton extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.activeColor,
+    required this.iconSize,
   });
 
   final _BottomNavItem item;
   final bool isSelected;
   final VoidCallback onTap;
   final Color activeColor;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +86,7 @@ class _NavButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
                 ? Colors.white.withOpacity(0.18)
@@ -97,9 +99,9 @@ class _NavButton extends StatelessWidget {
               Icon(
                 item.icon,
                 color: isSelected ? activeColor : inactiveColor,
-                size: 28,
+                size: iconSize,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               FittedBox(
                 fit: BoxFit.none,
                 child: Text(
@@ -108,8 +110,8 @@ class _NavButton extends StatelessWidget {
                   maxLines: 1,
                   softWrap: false,
                   style: isSelected
-                      ? AppTypography.onPrimary(context, AppTypography.nav1)
-                      : AppTypography.onPrimary(context, AppTypography.nav2),
+                      ? AppTypography.nav1.copyWith(color: Colors.white)
+                      : AppTypography.nav2.copyWith(color: Colors.white),
                 ),
               ),
             ],

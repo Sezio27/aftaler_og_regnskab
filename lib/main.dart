@@ -1,23 +1,22 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
+﻿import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/data/client_repository.dart';
+import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/firebase_options.dart';
-import 'package:aftaler_og_regnskab/screens/home_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
-import 'package:aftaler_og_regnskab/services/user_repository.dart';
+import 'package:aftaler_og_regnskab/data/user_repository.dart';
+import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,15 +34,49 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<UserRepository>(create: (_) => UserRepository()),
+        Provider<FirebaseAuth>(create: (_) => FirebaseAuth.instance),
+        Provider<FirebaseFirestore>(create: (_) => FirebaseFirestore.instance),
+        ProxyProvider<FirebaseAuth, FirebaseAuthMethods>(
+          update: (_, auth, __) => FirebaseAuthMethods(auth),
+        ),
+
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, UserRepository>(
+          update: (_, auth, db, __) =>
+              UserRepository(auth: auth, firestore: db),
+        ),
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, ClientRepository>(
+          update: (_, auth, db, __) =>
+              ClientRepository(auth: auth, firestore: db),
+        ),
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, ServiceRepository>(
+          update: (_, auth, db, __) =>
+              ServiceRepository(auth: auth, firestore: db),
+        ),
+        Provider(create: (_) => ImageStorage()),
+
+        ChangeNotifierProvider(
+          create: (ctx) => ClientViewModel(
+            ctx.read<ClientRepository>(),
+            ctx.read<ImageStorage>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => ServiceViewModel(
+            ctx.read<ServiceRepository>(),
+            ctx.read<ImageStorage>(),
+          ),
+        ),
         ChangeNotifierProvider<OnboardingViewModel>(
           create: (ctx) => OnboardingViewModel(ctx.read<UserRepository>()),
         ),
-        Provider<FirebaseAuthMethods>(
-          create: (_) => FirebaseAuthMethods(FirebaseAuth.instance),
-        ),
       ],
       child: MaterialApp.router(
+        locale: const Locale('da'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         debugShowCheckedModeBanner: false,
         title: 'Aftaler & Regnskab',
         theme: AppTheme.light,
