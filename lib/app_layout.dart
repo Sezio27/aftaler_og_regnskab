@@ -1,4 +1,5 @@
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'navigation/tab_config.dart';
 import 'navigation/topbar_builder.dart';
@@ -32,7 +33,17 @@ class AppLayout extends StatelessWidget {
       fixedHeight: topH,
     );
 
-    final contentSliver = _ensureSliver(child);
+    final sliverExtraction = _extractSlivers(child);
+    final scrollViewConfig = sliverExtraction.config;
+
+    final contentSlivers = sliverExtraction.slivers
+        .map(
+          (sliver) => SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+            sliver: sliver,
+          ),
+        )
+        .toList(growable: false);
 
 
     return Scaffold(
@@ -41,12 +52,26 @@ class AppLayout extends StatelessWidget {
 
       // Horizontal: 1 | 10 | 1
       body: CustomScrollView(
+        scrollDirection: scrollViewConfig?.scrollDirection ?? Axis.vertical,
+        reverse: scrollViewConfig?.reverse ?? false,
+        controller: scrollViewConfig?.controller,
+        primary: scrollViewConfig?.primary,
+        physics: scrollViewConfig?.physics,
+        shrinkWrap: scrollViewConfig?.shrinkWrap ?? false,
+        cacheExtent: scrollViewConfig?.cacheExtent,
+        anchor: scrollViewConfig?.anchor ?? 0.0,
+        center: scrollViewConfig?.center,
+        semanticChildCount: scrollViewConfig?.semanticChildCount,
+        dragStartBehavior:
+            scrollViewConfig?.dragStartBehavior ?? DragStartBehavior.start,
+        keyboardDismissBehavior: scrollViewConfig?.keyboardDismissBehavior ??
+            ScrollViewKeyboardDismissBehavior.manual,
+        restorationId: scrollViewConfig?.restorationId,
+        clipBehavior: scrollViewConfig?.clipBehavior ?? Clip.hardEdge,
+        scrollBehavior: scrollViewConfig?.scrollBehavior,
         slivers: [
           topBarSliver,
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-            sliver: contentSliver,
-          ),
+          ...contentSlivers,
         ],
       ),
 
@@ -62,36 +87,81 @@ class AppLayout extends StatelessWidget {
     );
   }
 
-  Widget _ensureSliver(Widget sliverCandidate) {
-    final isKnownSliver = sliverCandidate is Sliver ||
-        sliverCandidate is SliverPersistentHeader ||
-        sliverCandidate is SliverPadding ||
-        sliverCandidate is SliverToBoxAdapter ||
-        sliverCandidate is SliverWithKeepAliveWidget ||
-        sliverCandidate is SliverMultiBoxAdaptorWidget ||
-        sliverCandidate is SliverFillRemaining ||
-        sliverCandidate is SliverList ||
-        sliverCandidate is SliverGrid ||
-        sliverCandidate is SliverFixedExtentList ||
-        sliverCandidate is SliverPrototypeExtentList ||
-        sliverCandidate is SliverFillViewport ||
-        sliverCandidate is SliverLayoutBuilder ||
-        sliverCandidate is SliverAnimatedList;
-
-    assert(() {
-      if (!isKnownSliver) {
-        debugPrint(
-          'AppLayout expected a sliver child but received '
-          '${sliverCandidate.runtimeType}. Wrapping it in a SliverToBoxAdapter.',
-        );
-      }
-      return true;
-    }());
-
-    if (isKnownSliver) {
-      return sliverCandidate;
+  _SliverExtractionResult _extractSlivers(Widget sliverCandidate) {
+    if (sliverCandidate is CustomScrollView) {
+      return _SliverExtractionResult(
+        slivers: List<Widget>.from(sliverCandidate.slivers, growable: false),
+        config: _ScrollViewConfig(
+          scrollDirection: sliverCandidate.scrollDirection,
+          reverse: sliverCandidate.reverse,
+          controller: sliverCandidate.controller,
+          primary: sliverCandidate.primary,
+          physics: sliverCandidate.physics,
+          shrinkWrap: sliverCandidate.shrinkWrap,
+          cacheExtent: sliverCandidate.cacheExtent,
+          anchor: sliverCandidate.anchor,
+          center: sliverCandidate.center,
+          semanticChildCount: sliverCandidate.semanticChildCount,
+          dragStartBehavior: sliverCandidate.dragStartBehavior,
+          keyboardDismissBehavior:
+              sliverCandidate.keyboardDismissBehavior,
+          restorationId: sliverCandidate.restorationId,
+          clipBehavior: sliverCandidate.clipBehavior,
+          scrollBehavior: sliverCandidate.scrollBehavior,
+        ),
+      );
     }
 
-    return SliverToBoxAdapter(child: sliverCandidate);
+    return _SliverExtractionResult(
+      slivers: <Widget>[
+        SliverToBoxAdapter(child: sliverCandidate),
+      ],
+    );
   }
+}
+
+class _SliverExtractionResult {
+  const _SliverExtractionResult({
+    required this.slivers,
+    this.config,
+  });
+
+  final List<Widget> slivers;
+  final _ScrollViewConfig? config;
+}
+
+class _ScrollViewConfig {
+  const _ScrollViewConfig({
+    required this.scrollDirection,
+    required this.reverse,
+    required this.controller,
+    required this.primary,
+    required this.physics,
+    required this.shrinkWrap,
+    required this.cacheExtent,
+    required this.anchor,
+    required this.center,
+    required this.semanticChildCount,
+    required this.dragStartBehavior,
+    required this.keyboardDismissBehavior,
+    required this.restorationId,
+    required this.clipBehavior,
+    required this.scrollBehavior,
+  });
+
+  final Axis scrollDirection;
+  final bool reverse;
+  final ScrollController? controller;
+  final bool? primary;
+  final ScrollPhysics? physics;
+  final bool shrinkWrap;
+  final double? cacheExtent;
+  final double anchor;
+  final Key? center;
+  final int? semanticChildCount;
+  final DragStartBehavior dragStartBehavior;
+  final ScrollViewKeyboardDismissBehavior keyboardDismissBehavior;
+  final String? restorationId;
+  final Clip clipBehavior;
+  final ScrollBehavior? scrollBehavior;
 }
