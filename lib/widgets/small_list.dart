@@ -24,29 +24,24 @@ class SmallList<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const tileH = 90.0, sepH = 6.0;
-    final visible = items.length > 3 ? 2.7 : items.length;
-    final boxH = visible * tileH + (visible - 1) * sepH;
     return Column(
       children: [
-        SizedBox(
-          height: boxH,
-          child: ListView.separated(
-            itemCount: items.length,
-            physics: const ClampingScrollPhysics(),
-            padding: EdgeInsets.zero,
-            itemBuilder: (ctx, i) {
-              final item = items[i];
-              final sel = idOf(item) == selectedId;
-              return SizedBox(
-                height: tileH,
-                child: tileBuilder(ctx, item, sel, () => onPick(item)),
-              );
-            },
-            separatorBuilder: (_, __) => const SizedBox(height: sepH),
-          ),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          itemCount: items.length,
+          itemBuilder: (ctx, i) {
+            final item = items[i];
+            final sel = idOf(item) == selectedId;
+            return SizedBox(
+              height: 90,
+              child: tileBuilder(ctx, item, sel, () => onPick(item)),
+            );
+          },
+          separatorBuilder: (_, __) => const SizedBox(height: 6),
         ),
-        Divider(),
+        const Divider(),
       ],
     );
   }
