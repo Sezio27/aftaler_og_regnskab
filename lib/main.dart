@@ -1,4 +1,5 @@
 ﻿import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
@@ -7,6 +8,7 @@ import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
+import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
@@ -16,6 +18,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -58,6 +61,10 @@ class MyApp extends StatelessWidget {
           update: (_, auth, db, __) =>
               ChecklistRepository(auth: auth, firestore: db),
         ),
+        ProxyProvider2<FirebaseAuth, FirebaseFirestore, AppointmentRepository>(
+          update: (_, auth, db, __) =>
+              AppointmentRepository(auth: auth, firestore: db),
+        ),
         Provider(create: (_) => ImageStorage()),
 
         ChangeNotifierProvider(
@@ -75,6 +82,36 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider<ChecklistViewModel>(
           create: (ctx) => ChecklistViewModel(ctx.read<ChecklistRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final apptRepo = ctx.read<AppointmentRepository>();
+            final serviceRepo = ctx.read<ServiceRepository>();
+            final storage = ctx.read<ImageStorage>();
+
+            return AppointmentViewModel(
+              apptRepo,
+              fetchServicePrice: (id) async {
+                final s = await serviceRepo.getServiceOnce(id);
+                final p = (s?.price ?? '').trim();
+                return p.isEmpty ? null : p;
+              },
+              uploadImages:
+                  ({
+                    required String appointmentId,
+                    required List<XFile> files,
+                  }) {
+                    return storage.uploadAppointmentImages(
+                      appointmentId: appointmentId,
+                      files: files,
+                    );
+                  },
+              deleteImages: (appointmentId) {
+                return storage.deleteAppointmentImages(appointmentId);
+              },
+            )..init();
+          },
+        ),
+
         ChangeNotifierProvider<OnboardingViewModel>(
           create: (ctx) => OnboardingViewModel(ctx.read<UserRepository>()),
         ),

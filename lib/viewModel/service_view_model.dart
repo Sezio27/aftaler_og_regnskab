@@ -171,6 +171,18 @@ class ServiceViewModel extends ChangeNotifier {
     }
   }
 
+  // in ServiceViewModel
+  String? priceFor(String? id) {
+    if (id == null) return null;
+    for (final s in _all) {
+      if (s.id == id) {
+        final p = (s.price ?? '').trim();
+        return p.isEmpty ? null : p;
+      }
+    }
+    return null;
+  }
+
   Future<void> delete(String id, String? imageUrl) async {
     if (imageUrl != null && imageUrl.isNotEmpty) {
       await _imageStorage.deleteServiceImage(id);

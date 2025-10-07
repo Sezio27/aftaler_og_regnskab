@@ -1,4 +1,5 @@
 ﻿import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
@@ -20,8 +21,15 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-class NewAppointmentScreen extends StatelessWidget {
+class NewAppointmentScreen extends StatefulWidget {
   const NewAppointmentScreen({super.key});
+
+  @override
+  State<NewAppointmentScreen> createState() => _NewAppointmentScreenState();
+}
+
+class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
+  final _formKey = GlobalKey<_NewAppointmentFormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +59,7 @@ class NewAppointmentScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
-                child: const NewAppointmentForm(),
+                child: NewAppointmentForm(key: _formKey),
               ),
             ),
           ),
@@ -79,8 +87,25 @@ class NewAppointmentScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () {
-                      // TODO: validate + save
+                    onPressed: () async {
+                      final ok =
+                          await _formKey.currentState?.submit(context) ??
+                          false; // <-- call form
+                      if (!context.mounted) return;
+
+                      if (ok) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Aftale oprettet')),
+                        );
+                        context.pop();
+                      } else {
+                        final err =
+                            context.read<AppointmentViewModel>().error ??
+                            'Ukendt fejl';
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(err)));
+                      }
                     },
                     child: const Text('Opret aftale'),
                   ),
@@ -109,6 +134,18 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
   late final TextEditingController clientSearchCtrl;
   late final TextEditingController serviceSearchCtrl;
   late final TextEditingController checklistSearchCtrl;
+  final _locationCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+  final _customPriceCtrl = TextEditingController();
+
+  static const List<String> _statusList = [
+    'Betalt',
+    'Afventer',
+    'Forfalden',
+    'Ufaktureret',
+  ];
+  String _status = 'Ufaktureret';
+
   String? _selectedClientId;
   String? _selectedServiceId;
 
@@ -143,6 +180,9 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
     clientSearchCtrl.dispose();
     serviceSearchCtrl.dispose();
     checklistSearchCtrl.dispose();
+    _locationCtrl.dispose();
+    _noteCtrl.dispose();
+    _customPriceCtrl.dispose();
     super.dispose();
   }
 
@@ -151,12 +191,40 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
     setState(() => _active = null);
   }
 
+  DateTime _combine(DateTime d, TimeOfDay t) =>
+      DateTime(d.year, d.month, d.day, t.hour, t.minute);
+
+  Future<bool> submit(BuildContext context) async {
+    final dateTime = _combine(_date, _time);
+
+    // call the VM that resolves the final price etc.
+    return await context.read<AppointmentViewModel>().addAppointment(
+      clientId: _selectedClientId,
+      serviceId: _selectedServiceId, // may be null
+      dateTime: dateTime,
+      checklistIds: _selectedChecklistIds.toList(),
+      location: _locationCtrl.text,
+      note: _noteCtrl.text,
+      customPriceText: _customPriceCtrl.text, // UI override (optional)
+      images: _images,
+      status: _status, // Danish string from dropdown
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final clientVM = context.read<ClientViewModel>();
     final serviceVM = context.read<ServiceViewModel>();
     final checklistVM = context.read<ChecklistViewModel>();
+
+    final servicePrice = context.select<ServiceViewModel, String?>(
+      (vm) => vm.priceFor(_selectedServiceId),
+    );
+
+    final priceHint = servicePrice != null && servicePrice.isNotEmpty
+        ? 'Standard pris: $servicePrice'
+        : 'Indtast pris';
 
     return TapRegion(
       onTapOutside: (_) => _clearFocus(),
@@ -346,6 +414,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
             title: 'Vælg lokation',
             child: SoftTextField(
               hintText: "Indtast addresse",
+              controller: _locationCtrl,
               fill: cs.onPrimary,
               strokeColor: _active != 0
                   ? cs.onSurface.withAlpha(50)
@@ -360,8 +429,8 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
           _Section(
             title: 'Tilpas pris (valgfri)',
             child: SoftTextField(
-              hintText:
-                  "Standard pris: ", //insert price of service if selected otherwise "indtast pris"
+              hintText: priceHint,
+              controller: _customPriceCtrl,
               fill: cs.onPrimary,
               strokeColor: _active != 1
                   ? cs.onSurface.withAlpha(50)
@@ -385,6 +454,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
             title: 'Note (valgfri)',
             child: SoftTextField(
               hintText: "Tilføj note til denne aftale",
+              controller: _noteCtrl,
               maxLines: 3,
               fill: cs.onPrimary,
               strokeColor: _active != 2
@@ -394,6 +464,49 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               borderRadius: 8,
               showStroke: true,
               onTap: () => setState(() => _active = 2),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          _Section(
+            title:
+                'Vælg tidspunkt', // keep your section title, this row mirrors DatePicker
+            child: Row(
+              children: [
+                Text("Status:", style: AppTypography.button2),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _status,
+                    items: _statusList
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _status = v ?? _status),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    isDense: true,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.onPrimary,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(50),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

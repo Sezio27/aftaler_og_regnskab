@@ -75,6 +75,43 @@ class ImageStorage {
     }
   }
 
+  Future<List<String>> uploadAppointmentImages({
+    required String appointmentId,
+    required List<XFile> files,
+  }) async {
+    if (files.isEmpty) return const [];
+
+    final uid = _uidOrThrow;
+    final folder = _storage.ref('users/$uid/appointments/$appointmentId');
+
+    final uploads = <Future<String>>[];
+    for (final file in files) {
+      final name = '${DateTime.now().microsecondsSinceEpoch}_${file.name}';
+      final ref = folder.child(name);
+
+      final meta = SettableMetadata(
+        contentType: file.mimeType ?? 'image/jpeg',
+        cacheControl: 'public,max-age=3600',
+      );
+
+      uploads.add(() async {
+        final bytes = await file.readAsBytes();
+        try {
+          final snap = await ref
+              .putData(bytes, meta)
+              .timeout(const Duration(seconds: 20));
+          return await snap.ref.getDownloadURL();
+        } on TimeoutException {
+          throw Exception('Billedupload tog for lang tid. Tjek netværk.');
+        } on FirebaseException catch (e) {
+          throw Exception('Storage-fejl: ${e.code} ${e.message ?? ""}'.trim());
+        }
+      }());
+    }
+
+    return Future.wait(uploads); // <- returns all download URLs
+  }
+
   Future<void> deleteClientImage(String clientId) async {
     final uid = _uidOrThrow;
     final ref = _storage.ref('users/$uid/clients/$clientId/image');
@@ -94,6 +131,23 @@ class ImageStorage {
       await ref.delete();
     } on FirebaseException catch (e) {
       if (e.code == 'object-not-found') return;
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAppointmentImages(String appointmentId) async {
+    final uid = _uidOrThrow;
+    final folder = _storage.ref('users/$uid/appointments/$appointmentId');
+    try {
+      final list = await folder.listAll();
+      // delete all files in the folder
+      for (final item in list.items) {
+        await item.delete();
+      }
+      // (optional) try deleting the (now empty) folder:
+      // Firebase Storage treats folders virtually, so nothing else to do.
+    } on FirebaseException catch (e) {
+      if (e.code == 'object-not-found') return; // nothing to delete
       rethrow;
     }
   }
