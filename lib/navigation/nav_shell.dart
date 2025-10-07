@@ -22,11 +22,11 @@ class NavShell extends StatelessWidget {
     final hideBars = effectiveName == 'newAppointment';
 
     return AppLayout(
-      idx: idx, // bottom tab index
+      idx: idx,
       showNavBar: !hideBars,
       showTopBar: !hideBars,
       routeName:
-          effectiveName, // <-- pass to AppLayout so it can build the top bar
+          effectiveName,
       child: child,
     );
   }

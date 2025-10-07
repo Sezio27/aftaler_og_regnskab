@@ -128,7 +128,7 @@ class ServiceThumb extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.accent1.withAlpha(100),
+        color: AppColors.greyBackground.withAlpha(200),
         borderRadius: BorderRadius.circular(radius),
       ),
       child: Icon(

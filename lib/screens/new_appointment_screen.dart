@@ -1,4 +1,6 @@
-﻿import 'package:aftaler_og_regnskab/theme/typography.dart';
+﻿import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
@@ -16,6 +18,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/service_list.dart';
 import 'package:aftaler_og_regnskab/widgets/time_picker.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -29,105 +32,7 @@ class NewAppointmentScreen extends StatefulWidget {
 }
 
 class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
-  final _formKey = GlobalKey<_NewAppointmentFormState>();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => context.pop(),
-                ),
-                const SizedBox(width: 8),
-                Text('Ny aftale', style: AppTypography.h2),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Scrollable content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: NewAppointmentForm(key: _formKey),
-              ),
-            ),
-          ),
-
-          // Sticky bottom actions
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-            decoration: BoxDecoration(
-              color: cs.surface,
-              boxShadow: [
-                BoxShadow(
-                  blurRadius: 10,
-                  color: Colors.black.withOpacity(0.06),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Annuller'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () async {
-                      final ok =
-                          await _formKey.currentState?.submit(context) ??
-                          false; // <-- call form
-                      if (!context.mounted) return;
-
-                      if (ok) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Aftale oprettet')),
-                        );
-                        context.pop();
-                      } else {
-                        final err =
-                            context.read<AppointmentViewModel>().error ??
-                            'Ukendt fejl';
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(err)));
-                      }
-                    },
-                    child: const Text('Opret aftale'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class NewAppointmentForm extends StatefulWidget {
-  const NewAppointmentForm({super.key});
-
-  @override
-  State<NewAppointmentForm> createState() => _NewAppointmentFormState();
-}
-
-class _NewAppointmentFormState extends State<NewAppointmentForm> {
-  late final ClientViewModel _clientVM;
+    late final ClientViewModel _clientVM;
   late final ServiceViewModel _serviceVM;
   late final ChecklistViewModel _checklistVM;
 
@@ -138,13 +43,8 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
   final _noteCtrl = TextEditingController();
   final _customPriceCtrl = TextEditingController();
 
-  static const List<String> _statusList = [
-    'Betalt',
-    'Afventer',
-    'Forfalden',
-    'Ufaktureret',
-  ];
   String _status = 'Ufaktureret';
+
 
   String? _selectedClientId;
   String? _selectedServiceId;
@@ -211,6 +111,36 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
     );
   }
 
+
+  Widget _statusChoice(BuildContext context, String label, Color color) {
+  final cs = Theme.of(context).colorScheme;
+  final selected = _status == label;
+
+  return Expanded(
+    child: Container(
+      decoration: BoxDecoration(
+        color: selected ? color : cs.onPrimary,              // filled vs unfilled
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: selected ? color: cs.onSurface.withAlpha(80),
+          width: 0.6,
+        ),
+      ),
+      child: CupertinoButton(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        borderRadius: BorderRadius.circular(12),
+        onPressed: () => setState(() => _status = label),
+        child: Text(
+          label,
+          style: AppTypography.button2.copyWith(
+            color: selected ? cs.onPrimary : cs.onSurface,         // text color
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -223,33 +153,55 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
     );
 
     final priceHint = servicePrice != null && servicePrice.isNotEmpty
-        ? 'Standard pris: $servicePrice'
+        ? servicePrice
         : 'Indtast pris';
 
-    return TapRegion(
+    return SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
+                ),
+                const SizedBox(width: 8),
+                Text('Ny aftale', style: AppTypography.h2),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Scrollable content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: LayoutMetrics.horizontalPadding(context)),
+                child: 
+
+TapRegion(
       onTapOutside: (_) => _clearFocus(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ExpandableSection(
-            initiallyExpanded: true,
             title: 'Vælg klient',
             child: Column(
               children: [
-                CustomSearchBar(
+                if (_selectedClientId == null) ...[CustomSearchBar(
                   controller: clientSearchCtrl,
                   onChanged: clientVM.setClientSearch,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 10),],
 
                 ClientList(
                   selectedId: _selectedClientId,
                   onPick: (c) {
                     setState(() => _selectedClientId = c.id);
-                    // TODO: store c (or id) on the appointment draft if needed
                   },
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   child: _selectedClientId != null
@@ -282,29 +234,29 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
 
           ExpandableSection(
             title: 'Vælg service',
-            initiallyExpanded: false,
             child: Column(
               children: [
                 const SizedBox(height: 6),
+                if (_selectedServiceId == null) ...[
                 CustomSearchBar(
                   controller: serviceSearchCtrl,
                   onChanged: serviceVM.setServiceSearch,
                 ),
                 const SizedBox(height: 10),
-
+                ],
                 //Her
                 ServiceList(
                   selectedId: _selectedServiceId,
                   onPick: (s) {
                     setState(() => _selectedServiceId = s.id);
-                    // TODO: store c (or id) on the appointment draft if needed
+                    
                   },
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   child: _selectedServiceId != null
@@ -337,7 +289,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           ExpandableSection(
             title: 'Tilknyt checklister',
             child: Column(
@@ -361,7 +313,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
                     });
                   },
                 ),
-
+const SizedBox(height: 10),
                 TextButton.icon(
                   onPressed: () async {
                     await showOverlayPanel(
@@ -378,7 +330,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 30),
           _Section(
             title: 'Vælg tidspunkt',
             child: Row(
@@ -409,7 +361,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               ],
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 45),
           _Section(
             title: 'Vælg lokation',
             child: SoftTextField(
@@ -425,11 +377,14 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onTap: () => setState(() => _active = 0),
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 45),
           _Section(
             title: 'Tilpas pris (valgfri)',
             child: SoftTextField(
               hintText: priceHint,
+              suffixText: "DKK",
+              keyboardType: TextInputType.number,
+              hintStyle: AppTypography.num6,
               controller: _customPriceCtrl,
               fill: cs.onPrimary,
               strokeColor: _active != 1
@@ -441,7 +396,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onTap: () => setState(() => _active = 1),
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 45),
           _Section(
             title: 'Billeder',
             child: ImagesPickerGrid(
@@ -449,7 +404,38 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onChanged: (files) => setState(() => _images = files),
             ),
           ),
-          const SizedBox(height: 30),
+          
+
+          const SizedBox(height: 45),
+          _Section(
+            title:
+                'Vælg status', // keep your section title, this row mirrors DatePicker
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Column(
+                children: [
+                  Row(
+                      children: [
+                        _statusChoice(context, 'Betalt', AppColors.greenMain),
+                        const SizedBox(width: 8),
+                        _statusChoice(context, 'Afventer', AppColors.orangeMain),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _statusChoice(context, 'Forfalden', AppColors.redMain),
+                        const SizedBox(width: 8),
+                        _statusChoice(context, 'Ufaktureret', AppColors.greyMain), // ← default will start as filled
+                      ],
+                    ),
+                  
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 45),
           _Section(
             title: 'Note (valgfri)',
             child: SoftTextField(
@@ -466,54 +452,98 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
               onTap: () => setState(() => _active = 2),
             ),
           ),
-
-          const SizedBox(height: 16),
-          _Section(
-            title:
-                'Vælg tidspunkt', // keep your section title, this row mirrors DatePicker
+const SizedBox(height: 40,),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(25, 0, 25, 50),
             child: Row(
               children: [
-                Text("Status:", style: AppTypography.button2),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: _status,
-                    items: _statusList
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _status = v ?? _status),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                    isDense: true,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.onPrimary,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      border: OutlineInputBorder(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color : cs.onPrimary,              // filled vs unfilled
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                color:  cs.onSurface.withAlpha(80),
+                width: 0.6,
+                        ),
                       ),
-                      enabledBorder: OutlineInputBorder(
+                      child: CupertinoButton(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(50),
-                          width: 1,
+                        onPressed: () => context.pop(),
+                        child: Text(
+                'Annuller',
+                style: AppTypography.button2.copyWith(
+                  color: cs.primary          // text color
+                ),
                         ),
                       ),
                     ),
                   ),
+
+                  const SizedBox(width: 12,),
+ Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color : cs.primary,              // filled vs unfilled
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                color:  cs.primary,
+                width: 0.6,
+                        ),
+                      ),
+                      child: CupertinoButton(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        borderRadius: BorderRadius.circular(12),
+                       onPressed: () async {
+                      final ok = await submit(context);
+                      if (!context.mounted) return;
+
+                      if (ok) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Aftale oprettet')),
+                        );
+                        context.pop();
+                      } else {
+                        final err =
+                            context.read<AppointmentViewModel>().error ??
+                            'Ukendt fejl';
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(err)));
+                      }
+                    },
+                        child: Text(
+                'Opret aftale',
+                style: AppTypography.button2.copyWith(
+                  color: cs.onPrimary          // text color
                 ),
+                        ),
+                      ),
+                    ),
+                  ),
+
               ],
             ),
+          )
+        ],
+      ),
+      
+    )
+
+
+              
+            ),
           ),
+
+         
+          
         ],
       ),
     );
   }
 }
+
 
 class _Section extends StatelessWidget {
   const _Section({required this.title, required this.child});

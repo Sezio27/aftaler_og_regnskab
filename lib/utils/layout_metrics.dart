@@ -18,7 +18,7 @@ class LayoutMetrics {
 
   static double navBarHeight(BuildContext ctx) => isTablet(ctx)
       ? navBarHeightTablet
-      : (MediaQuery.of(ctx).size.height * 0.10);
+      : (MediaQuery.of(ctx).size.height * 0.1);
 
   static double topBarHeight(BuildContext ctx) => isTablet(ctx)
       ? topBarHeightTablet

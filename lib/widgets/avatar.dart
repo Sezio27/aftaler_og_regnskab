@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:flutter/material.dart';
 
 class Avatar extends StatelessWidget {
@@ -14,7 +15,7 @@ class Avatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: cs.secondary.withAlpha(200),
+        color: AppColors.greyBackground.withAlpha(200),
         shape: BoxShape.circle,
       ),
       child: Icon(

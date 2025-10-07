@@ -1,4 +1,5 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:flutter/material.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 
@@ -8,14 +9,12 @@ class AppBottomNavBar extends StatelessWidget {
     required this.currentIndex,
     required this.onItemSelected,
     this.maxContentWidth = 900,
-    this.fixedHeight = 64,
     this.iconSize = 24,
   });
 
   final int? currentIndex;
   final ValueChanged<int> onItemSelected;
   final double maxContentWidth;
-  final double fixedHeight;
   final double iconSize;
 
   static const _items = <_BottomNavItem>[
@@ -29,14 +28,14 @@ class AppBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: fixedHeight,
+      height: LayoutMetrics.navBarHeight(context),
       child: Container(
         decoration: BoxDecoration(gradient: AppGradients.peach3),
         child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxContentWidth),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 2, 16, 2),
+              padding: EdgeInsets.fromLTRB(16, 2, 16, 12),
               child: Row(
                 children: [
                   for (var i = 0; i < _items.length; i++)
@@ -76,7 +75,7 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inactiveColor = Colors.white.withOpacity(0.72);
+    final inactiveColor = Colors.white.withAlpha(235);
 
     return Material(
       color: Colors.transparent,
@@ -86,10 +85,10 @@ class _NavButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.white.withOpacity(0.18)
+                ? Colors.white.withAlpha(45)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
           ),
@@ -101,7 +100,7 @@ class _NavButton extends StatelessWidget {
                 color: isSelected ? activeColor : inactiveColor,
                 size: iconSize,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               FittedBox(
                 fit: BoxFit.none,
                 child: Text(

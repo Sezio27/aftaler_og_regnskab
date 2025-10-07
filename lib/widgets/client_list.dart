@@ -59,14 +59,14 @@ class ClientList extends StatelessWidget {
       transitionBuilder: (child, animation) {
         final size = CurvedAnimation(
           parent: animation,
-          curve: Curves.elasticOut,
-          reverseCurve: Curves.easeIn,
+          curve: Curves.ease,
+          reverseCurve: Curves.easeOut
         );
 
         final fade = CurvedAnimation(
           parent: animation,
-          curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
-          reverseCurve: const Interval(0.0, 0.01, curve: Curves.easeIn),
+          curve: const Interval(0.0, 1, curve: Curves.easeIn),
+          reverseCurve: const Interval(0.0, 1, curve: Curves.easeOut),
         );
 
         return SizeTransition(

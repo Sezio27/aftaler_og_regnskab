@@ -6,7 +6,7 @@ class ExpandableSection extends StatefulWidget {
     super.key,
     required this.title,
     required this.child,
-    this.initiallyExpanded = false,
+    this.initiallyExpanded = true,
   });
 
   final String title;

@@ -15,7 +15,7 @@ class SoftTextField extends StatelessWidget {
     this.hintText,
     this.hintStyle,
     this.borderRadius = 16,
-    this.fill,
+    this.fill, this.suffixText, this.suffixStyle,
   });
 
   final String? title;
@@ -30,6 +30,8 @@ class SoftTextField extends StatelessWidget {
   final TextStyle? hintStyle;
   final double borderRadius;
   final Color? fill;
+  final String? suffixText;  
+  final TextStyle? suffixStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +79,10 @@ class SoftTextField extends StatelessWidget {
         ),
         border: border,
         enabledBorder: border,
-        focusedBorder: border, // we control stroke externally
+        focusedBorder: border,
+        suffixText: suffixText,                         
+        suffixStyle: suffixStyle ??
+            AppTypography.b4.copyWith(color: cs.onSurface.withAlpha(200)),
       ),
     );
 

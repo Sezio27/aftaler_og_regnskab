@@ -26,7 +26,7 @@ class AppLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxW = LayoutMetrics.contentMaxWidth(context);
     final topH = LayoutMetrics.topBarHeight(context);
-    final navH = LayoutMetrics.navBarHeight(context);
+  
 
     return Scaffold(
       appBar: showTopBar
@@ -53,7 +53,6 @@ class AppLayout extends StatelessWidget {
               currentIndex: idx,
               onItemSelected: (i) => goToTab(context, i),
               maxContentWidth: maxW,
-              fixedHeight: navH, // 10% phone, 120 tablet
               iconSize: 24, // keep icon/text size constant across devices
             )
           : null,
