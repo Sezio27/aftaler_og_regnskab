@@ -1,7 +1,6 @@
 import 'package:aftaler_og_regnskab/model/checklistModel.dart';
-import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/widgets/avatar.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class ChecklistTile extends StatelessWidget {
@@ -9,19 +8,19 @@ class ChecklistTile extends StatelessWidget {
     super.key,
     required this.c,
     this.selected = false,
-    this.onTap,
+    required this.onChanged,
   });
 
   final ChecklistModel c;
   final bool selected;
-  final VoidCallback? onTap;
+  final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     return InkWell(
-      onTap: onTap,
+      onTap: () => onChanged(!selected),
       splashFactory: NoSplash.splashFactory,
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -30,13 +29,22 @@ class ChecklistTile extends StatelessWidget {
           color: cs.onPrimary,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? cs.primary : cs.onSurface.withAlpha(50),
+            color: selected ? cs.primary : cs.onSurface.withAlpha(60),
             width: selected ? 1.4 : 1.0,
           ),
         ),
         child: Row(
           children: [
-            const SizedBox(width: 20),
+            Transform.scale(
+              scale: 1.3, // 1.0 = default; try 1.2–1.6
+              child: CupertinoCheckbox(
+                value: selected,
+                onChanged: (v) => onChanged(v ?? false),
+                activeColor: cs.primary,
+                checkColor: CupertinoColors.white,
+              ),
+            ),
+            const SizedBox(width: 4),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,49 +53,23 @@ class ChecklistTile extends StatelessWidget {
                     c.name ?? '—',
                     style: AppTypography.b3.copyWith(color: cs.onSurface),
                   ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 14,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                     // _Info(icon: Icons.phone, text: c.phone),
-                     // _Info(icon: Icons.mail, text: c.email),
-                    ],
-                  ),
+                  if ((c.description ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      c.description!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.num6.copyWith(
+                        color: cs.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _Info extends StatelessWidget {
-  const _Info({this.icon, this.text});
-  final IconData? icon;
-  final String? text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 16, color: cs.primary),
-          const SizedBox(width: 6),
-        ],
-        Text(
-          text ?? '---',
-          maxLines: 1,
-          style: AppTypography.num6.copyWith(
-            color: cs.onSurface.withAlpha(230),
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
     );
   }
 }

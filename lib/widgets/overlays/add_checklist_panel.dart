@@ -1,8 +1,10 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class AddChecklistPanel extends StatefulWidget {
   const AddChecklistPanel({super.key});
@@ -13,8 +15,8 @@ class AddChecklistPanel extends StatefulWidget {
 
 class _AddServicePanelState extends State<AddChecklistPanel> {
   int? _active;
-  final nameCtrl = TextEditingController();
-  final descCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
   final List<TextEditingController> _points = [TextEditingController()];
 
   void _clearFocus() {
@@ -34,8 +36,8 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
 
   @override
   void dispose() {
-    nameCtrl.dispose();
-    descCtrl.dispose();
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
     for (final c in _points) {
       c.dispose();
     }
@@ -45,6 +47,7 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final vm = context.watch<ChecklistViewModel>();
 
     return TapRegion(
       onTapInside: (_) => _clearFocus(),
@@ -87,6 +90,7 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
 
             SoftTextField(
               title: 'Checkliste navn',
+              controller: _nameCtrl,
               hintText: "F.eks. Bryllups makeup",
               showStroke: _active == 0,
               onTap: () => setState(() => _active = 0),
@@ -94,8 +98,8 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
 
             SoftTextField(
               title: 'Beskrivelse',
+              controller: _descCtrl,
               hintText: "Kort beskrivelse af checklisten...",
-              keyboardType: TextInputType.phone,
               maxLines: 5,
               showStroke: _active == 1,
               onTap: () => setState(() => _active = 1),
@@ -172,10 +176,41 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: CustomButton(
-                    text: "Tilføj service",
+                    text: "Tilføj checkliste",
                     borderRadius: 14,
                     textStyle: AppTypography.b3,
-                    onTap: () => context.pop(),
+                    onTap: vm.saving
+                        ? () {}
+                        : () async {
+                            final pointTexts = _points
+                                .map((c) => c.text)
+                                .map((t) => t.trim())
+                                .where((t) => t.isNotEmpty)
+                                .toList();
+                            // Let the VM do the work
+                            final ok = await context
+                                .read<ChecklistViewModel>()
+                                .addChecklist(
+                                  name: _nameCtrl.text,
+                                  description: _descCtrl.text,
+                                  pointTexts: pointTexts,
+                                );
+
+                            if (!mounted) return;
+
+                            if (ok) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Checkliste tilføjet'),
+                                ),
+                              );
+                              context.pop(); // close panel
+                            } else if (vm.error != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(vm.error!)),
+                              );
+                            }
+                          },
                   ),
                 ),
               ],

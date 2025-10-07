@@ -1,32 +1,13 @@
-import 'package:flutter/material.dart';
-
-@immutable
-class ChecklistPoint {
-  final String id;
-  final int number;
-  final String text;
-
-  const ChecklistPoint({
-    required this.id,
-    required this.number,
-    required this.text,
-  });
-
-  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'text': text};
-
-  factory ChecklistPoint.fromJson(Map<String, dynamic> j) => ChecklistPoint(
-    id: j['id'] as String,
-    number: (j['number'] as num?)?.toInt() ?? 0,
-    text: j['text'] as String? ?? '',
-  );
-}
+import 'package:flutter/foundation.dart';
 
 @immutable
 class ChecklistModel {
   final String? id;
   final String? name;
   final String? description;
-  final List<ChecklistPoint> points;
+
+  /// Ordered list of point texts (index = order).
+  final List<String> points;
 
   const ChecklistModel({
     this.id,
@@ -39,7 +20,7 @@ class ChecklistModel {
     String? id,
     String? name,
     String? description,
-    List<ChecklistPoint>? points,
+    List<String>? points,
   }) => ChecklistModel(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -51,7 +32,7 @@ class ChecklistModel {
     if (id != null) 'id': id,
     'name': name,
     'description': description,
-    'points': points.map((p) => p.toJson()).toList(),
+    'points': points,
   };
 
   factory ChecklistModel.fromJson(Map<String, dynamic> json) => ChecklistModel(
@@ -59,9 +40,8 @@ class ChecklistModel {
     name: json['name'] as String?,
     description: json['description'] as String?,
     points: ((json['points'] as List?) ?? const [])
-        .map(
-          (e) => ChecklistPoint.fromJson(Map<String, dynamic>.from(e as Map)),
-        )
+        .map((e) => (e as String?)?.trim() ?? '')
+        .where((s) => s.isNotEmpty)
         .toList(),
   );
 }

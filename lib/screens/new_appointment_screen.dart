@@ -1,6 +1,8 @@
 ﻿import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
+import 'package:aftaler_og_regnskab/widgets/checklist_list.dart';
 import 'package:aftaler_og_regnskab/widgets/client_list.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
@@ -102,10 +104,15 @@ class NewAppointmentForm extends StatefulWidget {
 class _NewAppointmentFormState extends State<NewAppointmentForm> {
   late final ClientViewModel _clientVM;
   late final ServiceViewModel _serviceVM;
+  late final ChecklistViewModel _checklistVM;
+
   late final TextEditingController clientSearchCtrl;
   late final TextEditingController serviceSearchCtrl;
+  late final TextEditingController checklistSearchCtrl;
   String? _selectedClientId;
   String? _selectedServiceId;
+
+  final Set<String> _selectedChecklistIds = {};
 
   DateTime _date = DateTime.now();
   TimeOfDay _time = const TimeOfDay(hour: 12, minute: 0);
@@ -117,11 +124,14 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
     super.initState();
     _clientVM = context.read<ClientViewModel>();
     _serviceVM = context.read<ServiceViewModel>();
+    _checklistVM = context.read<ChecklistViewModel>();
     clientSearchCtrl = TextEditingController();
     serviceSearchCtrl = TextEditingController();
+    checklistSearchCtrl = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _clientVM.initClientFilters();
       _serviceVM.initServiceFilters();
+      _checklistVM.initChecklistFilters();
     });
   }
 
@@ -129,8 +139,10 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
   void dispose() {
     _clientVM.clearSearch();
     _serviceVM.clearSearch();
+    _checklistVM.clearSearch();
     clientSearchCtrl.dispose();
     serviceSearchCtrl.dispose();
+    checklistSearchCtrl.dispose();
     super.dispose();
   }
 
@@ -144,6 +156,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
     final cs = Theme.of(context).colorScheme;
     final clientVM = context.read<ClientViewModel>();
     final serviceVM = context.read<ServiceViewModel>();
+    final checklistVM = context.read<ChecklistViewModel>();
 
     return TapRegion(
       onTapOutside: (_) => _clearFocus(),
@@ -261,10 +274,26 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
             title: 'Tilknyt checklister',
             child: Column(
               children: [
-                CustomSearchBar(controller: serviceSearchCtrl),
-
+                CustomSearchBar(
+                  controller: checklistSearchCtrl,
+                  onChanged: checklistVM.setChecklistSearch,
+                ),
+                const SizedBox(height: 10),
                 //TODO
-                const SizedBox(height: 6),
+                ChecklistList(
+                  selectedIds: _selectedChecklistIds,
+                  onToggle: (item, nowSelected) {
+                    setState(() {
+                      final id = item.id!;
+                      if (nowSelected) {
+                        _selectedChecklistIds.add(id);
+                      } else {
+                        _selectedChecklistIds.remove(id);
+                      }
+                    });
+                  },
+                ),
+
                 TextButton.icon(
                   onPressed: () async {
                     await showOverlayPanel(

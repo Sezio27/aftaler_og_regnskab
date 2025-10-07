@@ -69,7 +69,7 @@ class ChecklistRepository {
     final data = fields ?? _toFirestore(patch!, isCreate: false);
     final withMeta = {
       ...data,
-      'updatedAt': FieldValue.serverTimestamp(), // metadata only in Firestore
+      'updatedAt': FieldValue.serverTimestamp(), // Firestore-only metadata
     }..removeWhere((k, v) => v == null);
 
     await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
@@ -81,29 +81,32 @@ class ChecklistRepository {
   }
 
   // ---- Points: single-write replace strategy ----
-  Future<void> setPoints(
-    String checklistId,
-    List<ChecklistPoint> points,
-  ) async {
+  Future<void> setPoints(String checklistId, List<String> points) async {
     final uid = _uidOrThrow;
-    await _collection(uid).doc(checklistId).set({
-      'points': points.map((p) => p.toJson()).toList(),
-    }, SetOptions(merge: true));
+    // Trim + drop empties just before writing
+    final clean = points
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    await _collection(
+      uid,
+    ).doc(checklistId).set({'points': clean}, SetOptions(merge: true));
   }
 
   // ---- Mapping ----
   ChecklistModel _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final data = d.data() ?? const <String, dynamic>{};
     final rawPoints = (data['points'] as List?) ?? const [];
+    final points = rawPoints
+        .map((e) => (e as String?)?.trim() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
+
     return ChecklistModel(
       id: d.id,
       name: data['name'] as String?,
       description: data['description'] as String?,
-      points: rawPoints
-          .map(
-            (e) => ChecklistPoint.fromJson(Map<String, dynamic>.from(e as Map)),
-          )
-          .toList(),
+      points: points,
     );
   }
 
@@ -114,7 +117,10 @@ class ChecklistRepository {
     final map = <String, dynamic>{
       'name': m.name,
       'description': m.description,
-      'points': m.points.map((p) => p.toJson()).toList(),
+      'points': m.points
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(),
       if (isCreate) 'createdAt': FieldValue.serverTimestamp(), // Firestore-only
       'updatedAt': FieldValue.serverTimestamp(), // Firestore-only
     };

@@ -54,11 +54,9 @@ class ChecklistViewModel extends ChangeNotifier {
   void _recompute() {
     final q = _query.toLowerCase();
     bool m(String? v) => (v ?? '').toLowerCase().contains(q);
-
     final searched = q.isEmpty
         ? _all
         : _all.where((c) => m(c.name) || m(c.description)).toList();
-
     _allFiltered = searched;
     notifyListeners();
   }
@@ -69,13 +67,13 @@ class ChecklistViewModel extends ChangeNotifier {
   /// Latest checklist (repo orders by createdAt in Firestore).
   Stream<ChecklistModel?> watchLatestChecklist() => _repo.watchChecklist();
 
-  /// Convenience: derive a single-doc stream from the list stream (no repo change).
+  /// Derive single-doc stream without repo change.
   Stream<ChecklistModel?> watchChecklistById(String id) => _repo
       .watchChecklists()
       .map(
         (list) => list.firstWhere(
           (c) => c.id == id,
-          orElse: () => const ChecklistModel(), // will have id == null
+          orElse: () => const ChecklistModel(),
         ),
       )
       .map((c) => c.id == null ? null : c);
@@ -83,7 +81,6 @@ class ChecklistViewModel extends ChangeNotifier {
   Future<ChecklistModel?> getChecklist(String id) => _repo.getChecklistOnce(id);
 
   // ------------ Create (single write) ------------
-  /// Create from raw texts (we build full list and write once).
   Future<bool> addChecklist({
     required String? name,
     String? description,
@@ -101,17 +98,16 @@ class ChecklistViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final points = _buildPointsFromTexts(pointTexts ?? const []);
+      final cleanPoints = _normalize(pointTexts ?? const []);
       final created = await _repo.addChecklist(
         ChecklistModel(
           name: nm,
           description: (description ?? '').trim().isEmpty
               ? null
               : description!.trim(),
-          points: points, // Already numbered → one Firestore write
+          points: cleanPoints,
         ),
       );
-
       _lastAdded = created;
       return true;
     } catch (e) {
@@ -123,11 +119,11 @@ class ChecklistViewModel extends ChangeNotifier {
     }
   }
 
-  /// Create when you already have a full list of points.
+  /// Create when you already have a full list (single write).
   Future<bool> addChecklistWithPoints({
     required String? name,
     String? description,
-    required List<ChecklistPoint> points,
+    required List<String> points,
   }) async {
     final nm = (name ?? '').trim();
     if (nm.isEmpty) {
@@ -141,17 +137,16 @@ class ChecklistViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final normalized = _renumber(points);
+      final clean = _normalize(points);
       final created = await _repo.addChecklist(
         ChecklistModel(
           name: nm,
           description: (description ?? '').trim().isEmpty
               ? null
               : description!.trim(),
-          points: normalized,
+          points: clean,
         ),
       );
-
       _lastAdded = created;
       return true;
     } catch (e) {
@@ -210,96 +205,55 @@ class ChecklistViewModel extends ChangeNotifier {
     final m = await _getFromCacheOrFetch(checklistId);
     if (m == null) return;
 
-    final nextNumber = (m.points.isEmpty ? 0 : m.points.last.number) + 1;
-    final updated = [
-      ...m.points,
-      ChecklistPoint(id: _newPointId(), number: nextNumber, text: t),
-    ];
-    await _repo.setPoints(checklistId, updated);
+    final updated = [...m.points, t];
+    await _repo.setPoints(checklistId, _normalize(updated));
   }
 
-  Future<void> updatePointText(
+  Future<void> updatePointAt(
     String checklistId, {
-    required String pointId,
+    required int index,
     required String newText,
   }) async {
     final t = newText.trim();
     final m = await _getFromCacheOrFetch(checklistId);
     if (m == null) return;
 
+    final list = [...m.points];
+    if (index < 0 || index >= list.length) return;
+
     if (t.isEmpty) {
-      await removePoint(checklistId, pointId);
-      return;
+      // treat empty as remove
+      list.removeAt(index);
+    } else {
+      list[index] = t;
     }
-
-    final idx = m.points.indexWhere((p) => p.id == pointId);
-    if (idx < 0) return;
-
-    final p = m.points[idx];
-    final updated = [...m.points]
-      ..[idx] = ChecklistPoint(id: p.id, number: p.number, text: t);
-    await _repo.setPoints(checklistId, updated);
+    await _repo.setPoints(checklistId, _normalize(list));
   }
 
-  Future<void> removePoint(String checklistId, String pointId) async {
+  Future<void> removePointAt(String checklistId, int index) async {
     final m = await _getFromCacheOrFetch(checklistId);
     if (m == null) return;
-
-    final filtered = m.points.where((p) => p.id != pointId).toList();
-    await _repo.setPoints(checklistId, _renumber(filtered));
+    final list = [...m.points];
+    if (index < 0 || index >= list.length) return;
+    list.removeAt(index);
+    await _repo.setPoints(checklistId, _normalize(list));
   }
 
   /// Replace all points at once (e.g., after drag-reorder).
-  Future<void> setPoints(
-    String checklistId,
-    List<ChecklistPoint> points,
-  ) async {
-    await _repo.setPoints(checklistId, _renumber(points));
+  Future<void> setPoints(String checklistId, List<String> points) async {
+    await _repo.setPoints(checklistId, _normalize(points));
   }
 
   // ------------ Utils ------------
   Future<ChecklistModel?> _getFromCacheOrFetch(String id) async {
-    // Try cache first
     final cached = _all.firstWhere(
       (c) => c.id == id,
       orElse: () => const ChecklistModel(),
     );
     if (cached.id != null) return cached;
-
-    // Fallback to Firestore
     return _repo.getChecklistOnce(id);
   }
 
-  String _newPointId() => DateTime.now().microsecondsSinceEpoch.toString();
-
-  List<ChecklistPoint> _buildPointsFromTexts(List<String> texts) {
-    final cleaned = texts.where((t) => t.trim().isNotEmpty).toList();
-    return List.generate(cleaned.length, (i) {
-      final raw = cleaned[i].trim();
-      // Accept "1: Haircolor" or "1) ..." or "1. ..." — else auto-number
-      final m = RegExp(r'^\s*(\d+)\s*[:.)-]?\s*(.*)$').firstMatch(raw);
-      final number = (m != null)
-          ? int.tryParse(m.group(1)!) ?? (i + 1)
-          : (i + 1);
-      final body = (m != null ? m.group(2) : raw)!.trim();
-      return ChecklistPoint(id: _newPointId(), number: number, text: body);
-    }).sortedByNumber(); // keep user numbers if they provided them
-  }
-
-  List<ChecklistPoint> _renumber(List<ChecklistPoint> points) {
-    // Keep current order; enforce 1..N
-    return List.generate(points.length, (i) {
-      final p = points[i];
-      return ChecklistPoint(id: p.id, number: i + 1, text: p.text);
-    });
-  }
-}
-
-// Small local extension to sort by number when building from texts.
-extension _SortPoints on List<ChecklistPoint> {
-  List<ChecklistPoint> sortedByNumber() {
-    final copy = [...this];
-    copy.sort((a, b) => a.number.compareTo(b.number));
-    return copy;
-  }
+  List<String> _normalize(List<String> points) =>
+      points.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 }
