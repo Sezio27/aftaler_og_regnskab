@@ -124,9 +124,10 @@ class _FullClientList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
+      padding: const EdgeInsets.only(bottom: 16),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.only(bottom: 16),
+      primary: false,
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) {

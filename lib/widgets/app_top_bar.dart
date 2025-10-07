@@ -3,24 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
+class AppTopBarContent extends StatelessWidget {
   final String? title;
   final bool showBackButton;
   final Widget? action;
-  final double width;
-  final double height;
+  final double maxContentWidth;
+  final double fixedHeight;
 
-  const AppTopBar({
+  const AppTopBarContent({
     super.key,
     this.title,
     this.showBackButton = false,
     this.action,
-    required this.width,
-    required this.height,
+    required this.maxContentWidth,
+    required this.fixedHeight,
   });
-
-  @override
-  Size get preferredSize => Size.fromHeight(height);
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +31,12 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
         : SizedBox(width: 140, child: Image.asset(logoPath, fit: BoxFit.fitWidth));
 
     return SizedBox(
-      height: height,
+      height: fixedHeight,
       child: SafeArea(
         bottom: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: width),
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -81,6 +78,83 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
+  final String? title;
+  final bool showBackButton;
+  final Widget? action;
+  final double width;
+  final double height;
+
+  const AppTopBar({
+    super.key,
+    this.title,
+    this.showBackButton = false,
+    this.action,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  Size get preferredSize => Size.fromHeight(height);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTopBarContent(
+      title: title,
+      showBackButton: showBackButton,
+      action: action,
+      maxContentWidth: width,
+      fixedHeight: height,
+    );
+  }
+}
+
+class AppTopBarSliver extends StatelessWidget {
+  final String? title;
+  final bool showBackButton;
+  final Widget? action;
+  final double maxContentWidth;
+  final double fixedHeight;
+
+  const AppTopBarSliver({
+    super.key,
+    this.title,
+    this.showBackButton = false,
+    this.action,
+    required this.maxContentWidth,
+    required this.fixedHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = Theme.of(context).colorScheme.surface;
+
+    return SliverAppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: backgroundColor,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      floating: true,
+      snap: true,
+      pinned: false,
+      expandedHeight: fixedHeight,
+      collapsedHeight: fixedHeight,
+      toolbarHeight: fixedHeight,
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.pin,
+        background: AppTopBarContent(
+          title: title,
+          showBackButton: showBackButton,
+          action: action,
+          maxContentWidth: maxContentWidth,
+          fixedHeight: fixedHeight,
         ),
       ),
     );

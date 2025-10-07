@@ -69,105 +69,87 @@ class SettingsScreen extends StatelessWidget {
       Text("Hjælp og suppoort", style: labelStyle),
     ];
 
+    Widget buildSection(List<Widget> section) {
+      return CustomCard(
+        field: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: section,
+          ),
+        ),
+      );
+    }
+
+    final sections = <Widget>[
+      buildSection(businessInfo),
+      buildSection(preferences),
+      buildSection(clients),
+      buildSection(dataPrivacy),
+    ];
+
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Section: Forretningsinformation
-            CustomCard(
-              field: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [...businessInfo],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            CustomCard(
-              field: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [...preferences],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            CustomCard(
-              field: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [...clients],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            CustomCard(
-              field: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [...dataPrivacy],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Align(
-              alignment: Alignment.center,
-              child: Material(
-                color: Colors.transparent,
-                child: Ink(
-                  decoration: ShapeDecoration(
-                    color: Colors.transparent, // or a subtle bg if you want
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: InkWell(
-                    onTap: () {},
-                    customBorder: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ShaderMask(
-                            shaderCallback: (rect) =>
-                                AppGradients.peach3Reverse.createShader(rect),
-                            blendMode: BlendMode.srcIn,
-                            child: Icon(
-                              Icons.logout,
-                              size: 30,
-                              color: Colors.white,
+      child: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 20),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(
+                [
+                  for (var i = 0; i < sections.length; i++) ...[
+                    sections[i],
+                    if (i != sections.length - 1) const SizedBox(height: 16),
+                  ],
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Ink(
+                        decoration: ShapeDecoration(
+                          color: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () {},
+                          customBorder: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ShaderMask(
+                                  shaderCallback: (rect) =>
+                                      AppGradients.peach3Reverse
+                                          .createShader(rect),
+                                  blendMode: BlendMode.srcIn,
+                                  child: Icon(
+                                    Icons.logout,
+                                    size: 30,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text("Log ud", style: AppTypography.b1),
+                              ],
                             ),
                           ),
-                          SizedBox(height: 8),
-                          Text("Log ud", style: AppTypography.b1),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
