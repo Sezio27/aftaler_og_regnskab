@@ -1,5 +1,3 @@
-// lib/app_layout.dart
-import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:flutter/material.dart';
 import 'navigation/tab_config.dart';
@@ -13,14 +11,14 @@ class AppLayout extends StatelessWidget {
     required this.idx,
     required this.child,
     this.showNavBar = true,
-    this.showTopBar = true,
+
   });
 
   final String? routeName;
   final int? idx;
   final Widget child;
   final bool showNavBar;
-  final bool showTopBar;
+
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +27,14 @@ class AppLayout extends StatelessWidget {
   
 
     return Scaffold(
-      appBar: showTopBar
-          ? buildTopBarForRouteName(
+      appBar: 
+           buildTopBarForRouteName(
               routeName,
               maxContentWidth:
-                  maxW, // top bar spans full width; inner content clamped
-              fixedHeight: topH, // 16% phone, 180 tablet
-            )
-          : null,
+                  maxW, 
+              fixedHeight: topH, 
+            ),
+         
       extendBody: true,
 
       // Horizontal: 1 | 10 | 1

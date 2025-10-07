@@ -30,7 +30,7 @@ class AppTypography {
 
   // Headings
   static final TextStyle h1 = _raleway(28, FontWeight.w700);
-  static final TextStyle h2 = _raleway(24, FontWeight.w600);
+  static final TextStyle h2 = _raleway(20, FontWeight.w600);
   static final TextStyle h3 = _raleway(18, FontWeight.w600);
   static final TextStyle h4 = _raleway(16, FontWeight.w600);
   static final TextStyle b1 = _raleway(16, FontWeight.w400);

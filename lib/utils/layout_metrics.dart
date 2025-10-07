@@ -7,7 +7,7 @@ class LayoutMetrics {
   static const double navBarHeightTablet = 120;
   static const double topBarHeightTablet = 180;
 
-  static const double minHPadPhone = 16; // or 20
+  static const double minHPadPhone = 14; // or 20
   static const double minHPadTablet = 32; // or 40
 
   static bool isTablet(BuildContext ctx) =>
@@ -22,7 +22,7 @@ class LayoutMetrics {
 
   static double topBarHeight(BuildContext ctx) => isTablet(ctx)
       ? topBarHeightTablet
-      : (MediaQuery.of(ctx).size.height * 0.16);
+      : (MediaQuery.of(ctx).size.height * 0.14);
 
   static double horizontalPadding(BuildContext ctx) {
     final mq = MediaQuery.of(ctx);

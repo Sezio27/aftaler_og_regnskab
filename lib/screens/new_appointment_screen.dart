@@ -159,21 +159,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     return SafeArea(
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => context.pop(),
-                ),
-                const SizedBox(width: 8),
-                Text('Ny aftale', style: AppTypography.h2),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
+        
+          const SizedBox(height: 20,),
           // Scrollable content
           Expanded(
             child: SingleChildScrollView(

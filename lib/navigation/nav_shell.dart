@@ -24,7 +24,6 @@ class NavShell extends StatelessWidget {
     return AppLayout(
       idx: idx,
       showNavBar: !hideBars,
-      showTopBar: !hideBars,
       routeName:
           effectiveName,
       child: child,
