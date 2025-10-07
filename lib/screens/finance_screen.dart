@@ -22,44 +22,47 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CupertinoSlidingSegmentedControl<Tabs>(
-              groupValue: _tab,
-              backgroundColor: cs.onPrimary,
-              thumbColor: cs.secondary,
-              onValueChanged: (v) => setState(() => _tab = v!),
-              children: {
-                Tabs.week: SegItem(
-                  icon: Icons.face_retouching_natural,
-                  text: 'Uge',
-                  active: _tab == Tabs.week,
-                ),
-                Tabs.month: SegItem(
-                  icon: Icons.event_note_outlined,
-                  text: 'Måned',
-                  active: _tab == Tabs.month,
-                ),
-                Tabs.year: SegItem(
-                  icon: Icons.event_note_outlined,
-                  text: 'År',
-                  active: _tab == Tabs.year,
-                ),
-              },
+      child: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(
+                [
+                  CupertinoSlidingSegmentedControl<Tabs>(
+                    groupValue: _tab,
+                    backgroundColor: cs.onPrimary,
+                    thumbColor: cs.secondary,
+                    onValueChanged: (v) => setState(() => _tab = v!),
+                    children: {
+                      Tabs.week: SegItem(
+                        icon: Icons.face_retouching_natural,
+                        text: 'Uge',
+                        active: _tab == Tabs.week,
+                      ),
+                      Tabs.month: SegItem(
+                        icon: Icons.event_note_outlined,
+                        text: 'Måned',
+                        active: _tab == Tabs.month,
+                      ),
+                      Tabs.year: SegItem(
+                        icon: Icons.event_note_outlined,
+                        text: 'År',
+                        active: _tab == Tabs.year,
+                      ),
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(
+                [
                   const SizedBox(height: 8),
-
-                  // Row 1
                   Row(
                     children: [
                       Expanded(
@@ -87,7 +90,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 16),
                   CustomCard(
                     constraints: const BoxConstraints(minHeight: 145),
@@ -139,62 +141,62 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  Expanded(
-                    child: CustomCard(
-                      field: Padding(
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            sliver: SliverToBoxAdapter(
+              child: CustomCard(
+                field: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 10,
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 20,
                           horizontal: 10,
                         ),
-                        child: Column(
+                        child: Row(
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              child: Row(
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.receipt_long_outlined),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Seneste aftaler',
-                                        style: AppTypography.b2.copyWith(
-                                          color: cs.onSurface,
-                                        ),
-                                      ),
-                                    ],
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.receipt_long_outlined),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Seneste aftaler',
+                                  style: AppTypography.b2.copyWith(
+                                    color: cs.onSurface,
                                   ),
-                                  const Spacer(),
-                                  TextButton(
-                                    onPressed: () => context.pushNamed(
-                                      AppRoute.allAppointments.name,
-                                    ),
-                                    child: Text(
-                                      'Se alle',
-                                      style: AppTypography.b3.copyWith(
-                                        color: cs.onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () =>
+                                  context.pushNamed(AppRoute.allAppointments.name),
+                              child: Text(
+                                'Se alle',
+                                style: AppTypography.b3.copyWith(
+                                  color: cs.onSurface,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
