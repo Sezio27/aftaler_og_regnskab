@@ -1,11 +1,9 @@
 import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/client_list.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
-import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
-import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/material.dart';
@@ -52,125 +50,137 @@ class _ClientsScreenState extends State<ClientsScreen> {
     );
 
     return SafeArea(
-      child: Stack(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(18, 24, 18, 30),
-            child: Column(
-              children: [
-                CupertinoSlidingSegmentedControl<Tabs>(
-                  groupValue: _tab,
-                  backgroundColor: cs.onPrimary,
-                  thumbColor: cs.secondary,
-                  onValueChanged: (v) => setState(() => _tab = v!),
-                  children: {
-                    Tabs.private: SegItem(
-                      icon: Icons.person_3_outlined,
-                      text: 'Privat',
-                      active: _tab == Tabs.private,
-                      amount: '$privateCount',
-                    ),
-                    Tabs.business: SegItem(
-                      icon: Icons.business_outlined,
-                      text: 'Erhverv',
-                      active: _tab == Tabs.business,
-                      amount: '$businessCount',
-                    ),
-                  },
-                ),
-
-                const SizedBox(height: 12),
-
-                //Search
-                CupertinoSearchTextField(
-                  controller: _searchCtrl,
-                  placeholder: 'Søg',
-                  onChanged: vm.setClientSearch,
-                  onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                  itemColor: cs.onSurface.withAlpha(150),
-                  style: AppTypography.b2.copyWith(color: cs.onSurface),
-                  placeholderStyle: AppTypography.b2.copyWith(
-                    color: cs.onSurface.withAlpha(150),
+      child: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(18, 24, 18, 12),
+            sliver: SliverToBoxAdapter(
+              child: CupertinoSlidingSegmentedControl<Tabs>(
+                groupValue: _tab,
+                backgroundColor: cs.onPrimary,
+                thumbColor: cs.secondary,
+                onValueChanged: (v) => setState(() => _tab = v!),
+                children: {
+                  Tabs.private: SegItem(
+                    icon: Icons.person_3_outlined,
+                    text: 'Privat',
+                    active: _tab == Tabs.private,
+                    amount: '$privateCount',
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
+                  Tabs.business: SegItem(
+                    icon: Icons.business_outlined,
+                    text: 'Erhverv',
+                    active: _tab == Tabs.business,
+                    amount: '$businessCount',
                   ),
-                  decoration: BoxDecoration(
-                    color: cs.onPrimary,
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: cs.onSurface.withAlpha(180),
-                        offset: Offset(0, 1),
-                        blurRadius: 0.1,
-                        spreadRadius: 1,
-                        blurStyle: BlurStyle.outer,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    layoutBuilder: (currentChild, previousChildren) {
-                      // Fill the available height instead of centering
-                      return Stack(
-                        fit: StackFit.expand, // <-- important
-                        children: [
-                          // keep previous children for the outgoing animation
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
-                        ],
-                      );
-                    },
-                    child: _tab == Tabs.private
-                        ? ClientList(
-                            onPick: (c) {
-                              final id = c.id;
-                              if (id == null) return;
-                              context.pushNamed(
-                                'clientDetails',
-                                pathParameters: {'id': id},
-                              );
-                            },
-                            smallList: false,
-                            hasCvr: false,
-                          )
-                        : ClientList(
-                            onPick: (c) {
-                              final id = c.id;
-                              if (id == null) return;
-                              context.pushNamed(
-                                'clientDetails',
-                                pathParameters: {'id': id},
-                              );
-                            },
-                            smallList: false,
-                            hasCvr: true,
-                          ),
-                  ),
-                ),
-              ],
+                },
+              ),
             ),
           ),
-
-          Positioned(
-            right: 16,
-            bottom: 36, // keep above your bottom nav
-            child: FloatingActionButton(
-              onPressed: () async {
-                await showOverlayPanel(
-                  context: context,
-                  child: const AddClientPanel(),
-                );
-              },
-              elevation: 2,
-              shape: const CircleBorder(),
-              backgroundColor: cs.secondary,
-              foregroundColor: cs.onPrimary,
-              child: const Icon(Icons.add),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 20),
+            sliver: SliverToBoxAdapter(
+              child: CupertinoSearchTextField(
+                controller: _searchCtrl,
+                placeholder: 'Søg',
+                onChanged: vm.setClientSearch,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                itemColor: cs.onSurface.withAlpha(150),
+                style: AppTypography.b2.copyWith(color: cs.onSurface),
+                placeholderStyle: AppTypography.b2.copyWith(
+                  color: cs.onSurface.withAlpha(150),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: cs.onPrimary,
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: cs.onSurface.withAlpha(180),
+                      offset: const Offset(0, 1),
+                      blurRadius: 0.1,
+                      spreadRadius: 1,
+                      blurStyle: BlurStyle.outer,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              18,
+              0,
+              18,
+              LayoutMetrics.navBarHeight(context) + 16,
+            ),
+            sliver: SliverFillRemaining(
+              hasScrollBody: true,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      layoutBuilder: (currentChild, previousChildren) {
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
+                      child: _tab == Tabs.private
+                          ? ClientList(
+                              onPick: (c) {
+                                final id = c.id;
+                                if (id == null) return;
+                                context.pushNamed(
+                                  'clientDetails',
+                                  pathParameters: {'id': id},
+                                );
+                              },
+                              smallList: false,
+                              hasCvr: false,
+                            )
+                          : ClientList(
+                              onPick: (c) {
+                                final id = c.id;
+                                if (id == null) return;
+                                context.pushNamed(
+                                  'clientDetails',
+                                  pathParameters: {'id': id},
+                                );
+                              },
+                              smallList: false,
+                              hasCvr: true,
+                            ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8, right: 16),
+                      child: FloatingActionButton(
+                        onPressed: () async {
+                          await showOverlayPanel(
+                            context: context,
+                            child: const AddClientPanel(),
+                          );
+                        },
+                        elevation: 2,
+                        shape: const CircleBorder(),
+                        backgroundColor: cs.secondary,
+                        foregroundColor: cs.onPrimary,
+                        child: const Icon(Icons.add),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
