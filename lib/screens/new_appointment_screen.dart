@@ -207,7 +207,7 @@ class _NewAppointmentFormState extends State<NewAppointmentForm> {
       note: _noteCtrl.text,
       customPriceText: _customPriceCtrl.text, // UI override (optional)
       images: _images,
-      status: _status, // Danish string from dropdown
+      status: _status,
     );
   }
 
