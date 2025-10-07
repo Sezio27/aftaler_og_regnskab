@@ -5,11 +5,18 @@ class CalendarScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [Text("Calendar")],
-      ),
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.only(top: 24),
+          sliver: SliverFillRemaining(
+            hasScrollBody: false,
+            child: const Center(
+              child: Text('Calendar'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
