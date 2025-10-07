@@ -2,83 +2,83 @@
 import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
 import 'package:flutter/material.dart';
 
-PreferredSizeWidget buildTopBarForRouteName(
+Widget buildTopBarForRouteName(
   String? routeName, {
   required double maxContentWidth,
   required double fixedHeight,
 }) {
   switch (routeName) {
     case 'home':
-      return AppTopBar(
-        width: maxContentWidth,
-        height: fixedHeight,
+      return AppTopBarSliver(
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
     case 'calendar':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Kalender',
-  
-        width: maxContentWidth,
-        height: fixedHeight,
+
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
     case 'finance':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Regnskab',
 
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
     case 'services':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Forretning',
 
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
     case 'settings':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Indstillinger',
 
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
 
     case 'newAppointment':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Ny aftale',
         showBackButton: true,
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
 
     case 'allClients':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Klienter',
         showBackButton: true,
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
 
     case 'clientDetails':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Klient detaljer',
         showBackButton: true,
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
 
     case 'allAppointments':
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Alle aftaler',
         showBackButton: true,
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
 
     default:
-      return AppTopBar(
+      return AppTopBarSliver(
         title: 'Indstillinger',
-        width: maxContentWidth,
-        height: fixedHeight,
+        maxContentWidth: maxContentWidth,
+        fixedHeight: fixedHeight,
       );
   }
 }
