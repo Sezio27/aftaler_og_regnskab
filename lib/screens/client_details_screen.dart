@@ -40,7 +40,11 @@ class ClientDetailsScreen extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _ClientDetailsView(client: client);
+        return CustomScrollView(
+          slivers: [
+            _ClientDetailsView(client: client),
+          ],
+        );
       },
     );
   }
@@ -117,17 +121,18 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
           : null,
     );
 
-    return Stack(
-      children: [
-        ListView(
-          padding: EdgeInsets.fromLTRB(
-            10,
-            20,
-            10,
-            70 + LayoutMetrics.navBarHeight(context),
-          ),
-          children: [
-            Column(
+    return SliverFillRemaining(
+      hasScrollBody: true,
+      child: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              10,
+              20,
+              10,
+              70 + LayoutMetrics.navBarHeight(context),
+            ),
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -183,7 +188,6 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 CustomCard(
                   field: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -203,7 +207,6 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                           ],
                         ),
                         const SizedBox(height: 10),
-
                         _rowField(
                           context,
                           icon: Icons.phone_outlined,
@@ -217,7 +220,6 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 6),
                         Divider(thickness: 1.2),
                         _rowField(
@@ -233,10 +235,8 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 6),
                         Divider(thickness: 1.2),
-
                         _rowField(
                           context,
                           icon: Icons.map_outlined,
@@ -249,7 +249,6 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                             ),
                           ),
                         ),
-
                         if (!_editing) ...[
                           if (widget.client.postal != null)
                             Align(
@@ -292,7 +291,6 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                             decoration: const InputDecoration(hintText: 'By'),
                           ),
                         ],
-
                         if (widget.client.cvr != null || _editing) ...[
                           const SizedBox(height: 6),
                           const Divider(thickness: 1.2),
@@ -314,7 +312,6 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
 
                 Padding(
@@ -482,15 +479,16 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                 ),
               ],
             ),
-          ],
-        ),
-
-        if (vm.saving)
-          AbsorbPointer(
-            absorbing: true,
-            child: const Center(child: CircularProgressIndicator()),
           ),
-      ],
+          if (vm.saving)
+            Positioned.fill(
+              child: AbsorbPointer(
+                absorbing: true,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
