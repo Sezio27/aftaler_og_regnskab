@@ -114,12 +114,8 @@ GoRouter createRouter() {
           GoRoute(
             path: '/calendar',
             name: AppRoute.calendar.name,
-            pageBuilder: (_, state) => NoTransitionPage(
-              child: ChangeNotifierProvider(
-                create: (_) => CalendarViewModel(),
-                child: const CalendarScreen(),
-              ),
-            ),
+            pageBuilder: (_, state) =>
+                const NoTransitionPage(child: CalendarScreen()),
           ),
           GoRoute(
             path: '/finance',

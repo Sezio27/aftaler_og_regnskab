@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+enum Tabs { month, week }
+
 class CalendarViewModel extends ChangeNotifier {
   CalendarViewModel({DateTime? initial})
     : _visibleMonth = _getMonth(initial ?? DateTime.now());
@@ -35,5 +37,14 @@ class CalendarViewModel extends ChangeNotifier {
     final newYear = y + ((m - 1) ~/ 12);
     final newMonth = ((m - 1) % 12) + 1;
     return DateTime(newYear, newMonth, 1);
+  }
+
+  // ---- Tabs state ----
+  Tabs _tab = Tabs.month;
+  Tabs get tab => _tab;
+  void setTab(Tabs value) {
+    if (_tab == value) return;
+    _tab = value;
+    notifyListeners();
   }
 }

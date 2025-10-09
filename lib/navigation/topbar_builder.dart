@@ -1,4 +1,5 @@
 // lib/navigation/topbar_builder.dart
+import 'package:aftaler_og_regnskab/screens/calendar/calendar_tab_switcher.dart';
 import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -9,16 +10,14 @@ PreferredSizeWidget buildTopBarForRouteName(
 }) {
   switch (routeName) {
     case 'home':
-      return AppTopBar(
-        width: maxContentWidth,
-        height: fixedHeight,
-      );
+      return AppTopBar(width: maxContentWidth, height: fixedHeight);
     case 'calendar':
       return AppTopBar(
         title: 'Kalender',
-  
+        center: false,
         width: maxContentWidth,
         height: fixedHeight,
+        action: SizedBox(width: 220, child: CalendarTabSwitcher()),
       );
     case 'finance':
       return AppTopBar(
