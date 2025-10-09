@@ -12,12 +12,14 @@ import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.d
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
+import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import 'auth_gate.dart';
 import 'screens/home_screen.dart';
-import 'screens/calendar_screen.dart';
+import 'screens/calendar/calendar_screen.dart';
 import 'screens/finance_screen.dart';
 import 'screens/services_screen.dart';
 import 'screens/settings_screen.dart';
@@ -112,8 +114,12 @@ GoRouter createRouter() {
           GoRoute(
             path: '/calendar',
             name: AppRoute.calendar.name,
-            pageBuilder: (_, state) =>
-                const NoTransitionPage(child: CalendarScreen()),
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: ChangeNotifierProvider(
+                create: (_) => CalendarViewModel(),
+                child: const CalendarScreen(),
+              ),
+            ),
           ),
           GoRoute(
             path: '/finance',
