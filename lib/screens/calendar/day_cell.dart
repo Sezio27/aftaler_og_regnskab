@@ -27,8 +27,8 @@ class DayCell extends StatelessWidget {
           children: [
             Text(
               '${date.day}',
-              style: AppTypography.num5.copyWith(
-                color: cs.onSurface.withAlpha(inCurrentMonth ? 255 : 150),
+              style: AppTypography.num6.copyWith(
+                color: cs.onSurface.withAlpha(inCurrentMonth ? 255 : 130),
               ),
             ),
             const SizedBox(height: 6),

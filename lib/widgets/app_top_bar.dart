@@ -36,7 +36,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
     final Widget titleOrLogo = (title != null && title!.isNotEmpty)
         ? Text(title!, style: AppTypography.h2.copyWith(color: cs.onSurface))
         : SizedBox(
-            width: 140,
+            width: 70,
             child: Image.asset(logoPath, fit: BoxFit.fitWidth),
           );
 
@@ -44,11 +44,12 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
     Widget titleBlock({required bool centered}) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: centered
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.start,
+
         children: [
-          titleOrLogo,
+          Padding(
+            padding: EdgeInsets.only(left: center ? 0 : 20),
+            child: titleOrLogo,
+          ),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
@@ -70,65 +71,36 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
       splashRadius: 24,
       onPressed: () {
         HapticFeedback.selectionClick();
-        if (context.canPop())
+        if (context.canPop()) {
           context.pop();
-        else
+        } else {
           context.go('/home');
+        }
       },
     );
 
     return SizedBox(
       height: height,
-      child: SafeArea(
-        bottom: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: width),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: center
-                  // CENTERED layout: keep block exactly centered
-                  ? Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (showBackButton)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 4),
-                              child: backBtn,
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 14),
-                          child: titleBlock(centered: true),
-                        ),
-                        if (action != null)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: action!,
-                            ),
-                          ),
-                      ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: width),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 56, 8, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              showBackButton
+                  ? Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: backBtn,
                     )
-                  // LEFT-ALIGNED layout: back button, then block, action on right
-                  : Row(
-                      children: [
-                        if (showBackButton) ...[
-                          backBtn,
-                          const SizedBox(width: 4),
-                        ],
-                        Padding(
-                          padding: const EdgeInsets.only(top: 14),
-                          child: titleBlock(centered: false),
-                        ),
-                        const Spacer(),
-                        if (action != null) action!,
-                      ],
-                    ),
-            ),
+                  : center
+                  ? Spacer()
+                  : titleBlock(centered: false),
+
+              if (center) titleBlock(centered: true),
+
+              action != null ? action! : Spacer(),
+            ],
           ),
         ),
       ),

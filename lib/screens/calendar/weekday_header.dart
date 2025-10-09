@@ -24,7 +24,7 @@ class WeekdayHeader extends StatelessWidget {
       children: [
         for (final label in labels)
           Expanded(
-            child: Center(child: Text(label, style: AppTypography.b8)),
+            child: Center(child: Text(label, style: AppTypography.b5)),
           ),
       ],
     );

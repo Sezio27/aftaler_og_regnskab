@@ -17,19 +17,19 @@ class CalendarTabSwitcher extends StatelessWidget {
       groupValue: vm.tab,
       padding: const EdgeInsets.all(2),
       backgroundColor: cs.surface,
-      thumbColor: cs.secondaryContainer,
+      thumbColor: cs.secondary,
       onValueChanged: (v) =>
           v != null ? context.read<CalendarViewModel>().setTab(v) : null,
       children: {
-        Tabs.month: SegItem(
-          icon: Icons.calendar_month,
-          text: 'Måned',
-          active: vm.tab == Tabs.month,
-        ),
         Tabs.week: SegItem(
           icon: Icons.view_week,
           text: 'Uge',
           active: vm.tab == Tabs.week,
+        ),
+        Tabs.month: SegItem(
+          icon: Icons.calendar_month,
+          text: 'Måned',
+          active: vm.tab == Tabs.month,
         ),
       },
     );

@@ -1,5 +1,6 @@
 import 'package:aftaler_og_regnskab/screens/calendar/month_grid.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_switcher.dart';
+import 'package:aftaler_og_regnskab/screens/calendar/week_switcher.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/weekday_header.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,7 @@ class _MonthViewBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: const [
-        SizedBox(height: 8),
+        SizedBox(height: 6),
         MonthSwitcher(),
         SizedBox(height: 12),
         WeekdayHeader(),
@@ -51,6 +52,6 @@ class _WeekViewPlaceholder extends StatelessWidget {
   const _WeekViewPlaceholder({super.key});
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Ugevisning kommer…'));
+    return Column(children: [SizedBox(height: 14), WeekSwitcher()]);
   }
 }
