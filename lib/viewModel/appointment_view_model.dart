@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
-import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
+import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
+import 'package:aftaler_og_regnskab/model/clientModel.dart';
+import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-/// If you upload images to storage, inject a storage service like your existing ImageStorage.
-/// For brevity, this VM accepts ready-made `imageUrls` or uploads via an optional callback.
-typedef FetchServicePrice = Future<String?> Function(String serviceId);
 typedef UploadAppointmentImages =
     Future<List<String>> Function({
       required String appointmentId,
@@ -16,21 +15,26 @@ typedef UploadAppointmentImages =
     });
 typedef DeleteAppointmentImages = Future<void> Function(String appointmentId);
 
+typedef FetchClient = Future<ClientModel?> Function(String clientId);
+typedef FetchService = Future<ServiceModel?> Function(String serviceId);
+
 class AppointmentViewModel extends ChangeNotifier {
   AppointmentViewModel(
     this._repo, {
-    required this.fetchServicePrice,
+    required this.fetchClient,
+    required this.fetchService,
     this.uploadImages,
     this.deleteImages,
   });
+
   final AppointmentRepository _repo;
-  final FetchServicePrice fetchServicePrice;
+  final FetchClient fetchClient;
+  final FetchService fetchService;
   final UploadAppointmentImages? uploadImages;
   final DeleteAppointmentImages? deleteImages;
 
   StreamSubscription<List<AppointmentModel>>? _sub;
 
-  // Optional filters/search (add later if you need)
   List<AppointmentModel> _all = const [];
   List<AppointmentModel> get all => _all;
 
@@ -66,6 +70,7 @@ class AppointmentViewModel extends ChangeNotifier {
   Future<AppointmentModel?> getAppointment(String id) =>
       _repo.getAppointmentOnce(id);
 
+  // ---------- Create ----------
   Future<bool> addAppointment({
     required String? clientId,
     required String? serviceId,
@@ -92,16 +97,13 @@ class AppointmentViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      // resolve price
-      String? servicePrice;
-      if ((serviceId ?? '').isNotEmpty) {
-        final sp = await fetchServicePrice(serviceId!);
-        servicePrice = (sp ?? '').trim().isEmpty ? null : sp!.trim();
+      // Prefer custom price; else fall back to service.price
+      String? price = _clean(customPriceText);
+      if ((price == null || price.isEmpty) && (serviceId ?? '').isNotEmpty) {
+        final svc = await fetchService(serviceId!);
+        price = _clean(svc?.price);
       }
-      final custom = (customPriceText ?? '').trim();
-      final price = custom.isNotEmpty ? custom : servicePrice;
 
-      // 1) create appointment with empty imageUrls
       final created = await _repo.addAppointment(
         AppointmentModel(
           clientId: clientId,
@@ -116,7 +118,6 @@ class AppointmentViewModel extends ChangeNotifier {
         ),
       );
 
-      // 2) upload images (if any) and update doc once
       if (uploadImages != null &&
           (images?.isNotEmpty ?? false) &&
           (created.id ?? '').isNotEmpty) {
@@ -147,7 +148,7 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  // ------------ Update (patch fields) ------------
+  // ---------- Update (patch fields) ----------
   Future<bool> updateAppointmentFields(
     String id, {
     String? clientId,
@@ -157,7 +158,7 @@ class AppointmentViewModel extends ChangeNotifier {
     String? location,
     String? note,
     String? customPrice,
-    String? servicePrice,
+    String? servicePrice, // optional direct override
     String? status,
     List<String>? imageUrls,
   }) async {
@@ -165,6 +166,7 @@ class AppointmentViewModel extends ChangeNotifier {
       _saving = true;
       _error = null;
       notifyListeners();
+
       final fields = <String, Object?>{};
       void put(String k, Object? v) {
         if (v != null) fields[k] = v;
@@ -189,9 +191,12 @@ class AppointmentViewModel extends ChangeNotifier {
         );
       }
 
-      if (customPrice != null || servicePrice != null) {
-        put('price', _resolvePrice(servicePrice, customPrice));
-      }
+      // choose customPrice > servicePrice if provided
+      final chosen = _firstNonEmpty([
+        _clean(customPrice),
+        _clean(servicePrice),
+      ]);
+      if (chosen != null) put('price', chosen);
 
       if (fields.isNotEmpty) await _repo.updateAppointment(id, fields: fields);
       return true;
@@ -204,7 +209,7 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  // ---- delete (also remove images in storage) ----
+  // ---------- Delete ----------
   Future<void> delete(String id, {bool deleteStorage = true}) async {
     if (deleteStorage && deleteImages != null) {
       await deleteImages!(id);
@@ -212,17 +217,66 @@ class AppointmentViewModel extends ChangeNotifier {
     await _repo.deleteAppointment(id);
   }
 
-  // ---- helpers ----
-  String? _resolvePrice(String? servicePrice, String? customPrice) {
-    final custom = _clean(customPrice);
-    if (custom != null && custom.isNotEmpty) return custom;
-    final service = _clean(servicePrice);
-    if (service != null && service.isNotEmpty) return service;
-    return null;
+  // ---------- Projection for Calendar UI ----------
+  /// Build *UI-ready* card models for all appointments on [day] (local time).
+  Future<List<AppointmentCardModel>> cardsForDate(DateTime day) async {
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1));
+
+    final todays = _all.where((a) {
+      final dt = a.dateTime;
+      return dt != null && !dt.isBefore(start) && dt.isBefore(end);
+    }).toList()..sort((a, b) => a.dateTime!.compareTo(b.dateTime!));
+
+    return Future.wait(
+      todays.map((appt) async {
+        // Fetch needed fields from related models
+        ClientModel? client;
+        ServiceModel? service;
+
+        if ((appt.clientId ?? '').isNotEmpty) {
+          client = await fetchClient(appt.clientId!);
+        }
+        if ((appt.serviceId ?? '').isNotEmpty) {
+          service = await fetchService(appt.serviceId!);
+        }
+
+        // Prefer stored appointment price, else service price
+        final price = _firstNonEmpty([
+          _clean(appt.price),
+          _clean(service?.price),
+        ]);
+
+        return AppointmentCardModel(
+          clientName: _or(client?.name, 'Klient'),
+          serviceName: _or(service?.name, 'Service'),
+          phone: client?.phone,
+          email: client?.email,
+          time: appt.dateTime!,
+          price: price,
+          duration: service?.duration,
+          status: appt.status ?? 'ufaktureret',
+        );
+      }).toList(),
+    );
   }
 
+  // ---------- helpers ----------
   String? _clean(String? s) {
     final t = (s ?? '').trim();
     return t.isEmpty ? null : t;
+  }
+
+  String? _firstNonEmpty(List<String?> xs) {
+    for (final x in xs) {
+      final t = (x ?? '').trim();
+      if (t.isNotEmpty) return t;
+    }
+    return null;
+  }
+
+  String _or(String? s, String fallback) {
+    final t = (s ?? '').trim();
+    return t.isEmpty ? fallback : t;
   }
 }

@@ -36,7 +36,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
     final Widget titleOrLogo = (title != null && title!.isNotEmpty)
         ? Text(title!, style: AppTypography.h2.copyWith(color: cs.onSurface))
         : SizedBox(
-            width: 70,
+            width: 80,
             child: Image.asset(logoPath, fit: BoxFit.fitWidth),
           );
 

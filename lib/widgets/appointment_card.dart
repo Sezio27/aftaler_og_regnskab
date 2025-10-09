@@ -11,6 +11,7 @@ class AppointmentCard extends StatelessWidget {
   final Widget? mainIcon;
   final Icon? leadingIcon;
   final String? date;
+  final String? time;
   final String? price;
   final Widget? endingIcons;
 
@@ -25,20 +26,8 @@ class AppointmentCard extends StatelessWidget {
     this.price,
     this.endingIcons,
     this.color,
+    this.time,
   });
-
-  Widget _timeBlock() {
-    return Column(
-      spacing: 4,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Icon(Icons.schedule, size: 16),
-        Text('16/10', style: AppTypography.f1),
-        Text('11:00', style: AppTypography.f1),
-      ],
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,13 +56,14 @@ class AppointmentCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          "Sarah Johnson",
+                          title,
                           style: AppTypography.acTtitle,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
 
-                      Text("2,500 DKK", style: AppTypography.num3),
+                      if (price != null)
+                        Text(price!, style: AppTypography.num3),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -86,7 +76,7 @@ class AppointmentCard extends StatelessWidget {
                       Expanded(
                         flex: 5,
                         child: Text(
-                          "Bryllups Makeup",
+                          subtitle ?? "ingen service valgt",
                           style: AppTypography.acSubtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -111,8 +101,8 @@ class AppointmentCard extends StatelessWidget {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('16/10', style: AppTypography.f1),
-                                  Text('11:00', style: AppTypography.f1),
+                                  Text(date ?? '', style: AppTypography.f1),
+                                  Text(time ?? '', style: AppTypography.f1),
                                 ],
                               ),
                             ],

@@ -7,6 +7,25 @@ class CalendarViewModel extends ChangeNotifier {
   CalendarViewModel({DateTime? initial})
     : _visibleMonth = _getMonth(initial ?? DateTime.now()),
       _visibleWeek = _getWeek(initial ?? DateTime.now());
+  DateTime _selectedDay = DateTime.now();
+  DateTime get selectedDay => _selectedDay;
+
+  void selectDay(DateTime day) {
+    // keep only date part
+    final d = DateTime(day.year, day.month, day.day);
+    if (_selectedDay == d) return;
+    _selectedDay = d;
+    // also keep visibleWeek aligned to the selected day
+    _visibleWeek = _getWeek(d);
+    notifyListeners();
+  }
+
+  // OPTIONAL: placeholder event count for dots
+  int eventCountFor(DateTime day) {
+    // replace with your real lookup
+    // e.g. return eventsByDate[DateOnly(day)]?.length ?? 0;
+    return (day.day % 3 == 0) ? 1 : (day.day % 5 == 0 ? 2 : 0);
+  }
 
   // -------- Month state --------
   DateTime _visibleMonth; // first day of visible month

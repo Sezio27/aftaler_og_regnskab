@@ -86,28 +86,20 @@ class MyApp extends StatelessWidget {
           create: (ctx) {
             final apptRepo = ctx.read<AppointmentRepository>();
             final serviceRepo = ctx.read<ServiceRepository>();
+            final clientRepo = ctx.read<ClientRepository>();
             final storage = ctx.read<ImageStorage>();
 
             return AppointmentViewModel(
               apptRepo,
-              fetchServicePrice: (id) async {
-                final s = await serviceRepo.getServiceOnce(id);
-                final p = (s?.price ?? '').trim();
-                return p.isEmpty ? null : p;
-              },
-              uploadImages:
-                  ({
-                    required String appointmentId,
-                    required List<XFile> files,
-                  }) {
-                    return storage.uploadAppointmentImages(
-                      appointmentId: appointmentId,
-                      files: files,
-                    );
-                  },
-              deleteImages: (appointmentId) {
-                return storage.deleteAppointmentImages(appointmentId);
-              },
+              fetchClient: (id) => clientRepo.getClientOnce(id),
+              fetchService: (id) => serviceRepo.getServiceOnce(id),
+              uploadImages: ({required appointmentId, required files}) =>
+                  storage.uploadAppointmentImages(
+                    appointmentId: appointmentId,
+                    files: files,
+                  ),
+              deleteImages: (appointmentId) =>
+                  storage.deleteAppointmentImages(appointmentId),
             )..init();
           },
         ),

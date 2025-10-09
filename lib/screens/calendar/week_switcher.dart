@@ -32,6 +32,7 @@ class WeekSwitcher extends StatelessWidget {
             child: Column(
               children: [
                 Text(title.capitalize(), style: AppTypography.acTtitle),
+                const SizedBox(height: 4),
                 Text(subTitle.capitalize(), style: AppTypography.acSubtitle),
               ],
             ),
