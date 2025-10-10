@@ -15,20 +15,12 @@ class CalendarViewModel extends ChangeNotifier {
     final d = DateTime(day.year, day.month, day.day);
     if (_selectedDay == d) return;
     _selectedDay = d;
-    // also keep visibleWeek aligned to the selected day
     _visibleWeek = _getWeek(d);
     notifyListeners();
   }
 
-  // OPTIONAL: placeholder event count for dots
-  int eventCountFor(DateTime day) {
-    // replace with your real lookup
-    // e.g. return eventsByDate[DateOnly(day)]?.length ?? 0;
-    return (day.day % 3 == 0) ? 1 : (day.day % 5 == 0 ? 2 : 0);
-  }
-
   // -------- Month state --------
-  DateTime _visibleMonth; // first day of visible month
+  DateTime _visibleMonth;
   DateTime get visibleMonth => _visibleMonth;
 
   String get monthTitle => DateFormat('MMMM y', 'da').format(_visibleMonth);
@@ -52,8 +44,13 @@ class CalendarViewModel extends ChangeNotifier {
 
   static DateTime _addMonths(DateTime base, int delta) {
     final m = base.month + delta;
-    final y = base.year + ((m - 1) ~/ 12);
+    final y = m == 0
+        ? base.year - 1
+        : m == 13
+        ? base.year + 1
+        : base.year;
     final nm = ((m - 1) % 12) + 1;
+
     return DateTime(y, nm, 1);
   }
 
@@ -83,6 +80,7 @@ class CalendarViewModel extends ChangeNotifier {
   }
 
   void jumpToCurrentWeek() {
+    _selectedDay = DateTime.now();
     _visibleWeek = _getWeek(DateTime.now());
     notifyListeners();
   }

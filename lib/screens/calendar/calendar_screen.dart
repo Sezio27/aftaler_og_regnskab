@@ -4,6 +4,7 @@ import 'package:aftaler_og_regnskab/screens/calendar/month_switcher.dart';
 
 import 'package:aftaler_og_regnskab/screens/calendar/week_switcher.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/week_day_header.dart';
+import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
@@ -18,18 +19,26 @@ class CalendarScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final tab = context.watch<CalendarViewModel>().tab;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: tab == Tabs.month
-                ? _MonthViewBody(key: const ValueKey('month'))
-                : _WeekViewBody(key: const ValueKey('week')),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        6,
+        0,
+        6,
+        6 + LayoutMetrics.navBarHeight(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: tab == Tabs.month
+                  ? _MonthViewBody(key: const ValueKey('month'))
+                  : _WeekViewBody(key: const ValueKey('week')),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -39,13 +48,13 @@ class _MonthViewBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: const [
+    return const Column(
+      children: [
         SizedBox(height: 6),
         MonthSwitcher(),
-        SizedBox(height: 12),
+        SizedBox(height: 30),
         WeekdayHeader(),
-        SizedBox(height: 8),
+        SizedBox(height: 12),
         Expanded(child: MonthGrid()),
       ],
     );
@@ -59,6 +68,8 @@ class _WeekViewBody extends StatelessWidget {
     final selectedDay = context.select<CalendarViewModel, DateTime>(
       (vm) => vm.selectedDay,
     );
+
+    context.watch<AppointmentViewModel>();
     return Column(
       children: [
         const SizedBox(height: 14),
@@ -68,7 +79,6 @@ class _WeekViewBody extends StatelessWidget {
         const SizedBox(height: 30),
         Expanded(
           child: FutureBuilder<List<AppointmentCardModel>>(
-            // ensure a new future when the date changes
             key: ValueKey(
               '${selectedDay.year}-${selectedDay.month}-${selectedDay.day}',
             ),

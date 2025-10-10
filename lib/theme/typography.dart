@@ -40,7 +40,7 @@ class AppTypography {
   static final TextStyle b5 = _raleway(14, FontWeight.w500);
   static final TextStyle b6 = _raleway(13, FontWeight.w400);
   static final TextStyle b7 = _raleway(15, FontWeight.w700);
-  static final TextStyle b8 = _raleway(14, FontWeight.w700);
+  static final TextStyle b8 = _raleway(14, FontWeight.w600);
 
   static final TextStyle nav1 = _raleway(13, FontWeight.w800);
   static final TextStyle nav2 = _raleway(13, FontWeight.w500);
@@ -73,6 +73,9 @@ class AppTypography {
   static final TextStyle settingsTitle = _raleway(17, FontWeight.w700);
   static final TextStyle settingsLabel = _raleway(14, FontWeight.w600);
   static final TextStyle settingsValue = _raleway(14, FontWeight.w400);
+
+  static final TextStyle date1 = _inter(12, FontWeight.w500);
+  static final TextStyle calChip = _raleway(10, FontWeight.w700);
 
   static TextStyle onSurface(BuildContext c, TextStyle s) =>
       s.copyWith(color: Theme.of(c).colorScheme.onSurface);

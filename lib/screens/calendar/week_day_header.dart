@@ -1,5 +1,6 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/string_extensions.dart';
+import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -27,20 +28,27 @@ class WeekdayHeader extends StatelessWidget {
     final labels = _weekdayShortLabels(context);
 
     if (!weekView) {
-      return Row(
-        children: [
-          for (final l in labels)
-            Expanded(
-              child: Center(
-                child: Text(l.capitalize(), style: AppTypography.b5),
-              ),
-            ),
-        ],
+      return LayoutBuilder(
+        builder: (context, c) {
+          final w = c.maxWidth / 7;
+          return Row(
+            children: [
+              for (final l in labels)
+                SizedBox(
+                  width: w,
+                  child: Center(
+                    child: Text(l.capitalize(), style: AppTypography.b8),
+                  ),
+                ),
+            ],
+          );
+        },
       );
     }
 
-    final vm = context.watch<CalendarViewModel>();
-    final days = vm.weekDays;
+    final calVm = context.watch<CalendarViewModel>();
+    final apptVm = context.watch<AppointmentViewModel>();
+    final days = calVm.weekDays;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -48,9 +56,9 @@ class WeekdayHeader extends StatelessWidget {
         final v = details.primaryVelocity ?? 0;
         const minVelocity = 250;
         if (v > minVelocity) {
-          context.read<CalendarViewModel>().nextWeek();
-        } else if (v < -minVelocity) {
           context.read<CalendarViewModel>().prevWeek();
+        } else if (v < -minVelocity) {
+          context.read<CalendarViewModel>().nextWeek();
         }
       },
       child: Row(
@@ -60,9 +68,9 @@ class WeekdayHeader extends StatelessWidget {
               child: _DayPill(
                 date: days[i],
                 weekdayLabel: labels[i].capitalize(),
-                isSelected: _sameDate(days[i], vm.selectedDay),
+                isSelected: _sameDate(days[i], calVm.selectedDay),
                 isToday: _sameDate(days[i], DateTime.now()),
-                eventCount: vm.eventCountFor(days[i]),
+                hasEvents: apptVm.hasEventsOn(days[i]),
                 onTap: () =>
                     context.read<CalendarViewModel>().selectDay(days[i]),
               ),
@@ -79,7 +87,7 @@ class _DayPill extends StatelessWidget {
     required this.weekdayLabel,
     required this.isSelected,
     required this.isToday,
-    required this.eventCount,
+    required this.hasEvents,
 
     required this.onTap,
   });
@@ -88,7 +96,7 @@ class _DayPill extends StatelessWidget {
   final String weekdayLabel;
   final bool isSelected;
   final bool isToday;
-  final int eventCount;
+  final bool hasEvents;
 
   final VoidCallback onTap;
 
@@ -113,7 +121,6 @@ class _DayPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(weekdayLabel, style: isSelected ? selected : notSelected),
               const SizedBox(height: 6),
@@ -123,9 +130,9 @@ class _DayPill extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _EventDots(
-                count: eventCount,
+                show: hasEvents,
                 color: isSelected ? cs.onSecondary : cs.secondary,
-                todayHint: isToday && eventCount == 0,
+                todayHint: isToday && !hasEvents,
                 todayColor: isSelected ? cs.onSecondary : cs.secondary,
               ),
             ],
@@ -138,20 +145,20 @@ class _DayPill extends StatelessWidget {
 
 class _EventDots extends StatelessWidget {
   const _EventDots({
-    required this.count,
+    required this.show,
     required this.color,
     required this.todayHint,
     required this.todayColor,
   });
 
-  final int count;
+  final bool show;
   final Color color;
   final bool todayHint;
   final Color todayColor;
 
   @override
   Widget build(BuildContext context) {
-    if (count > 0) {
+    if (show || todayHint) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: _dot(color),

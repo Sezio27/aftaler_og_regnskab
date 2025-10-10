@@ -17,6 +17,7 @@ typedef DeleteAppointmentImages = Future<void> Function(String appointmentId);
 
 typedef FetchClient = Future<ClientModel?> Function(String clientId);
 typedef FetchService = Future<ServiceModel?> Function(String serviceId);
+typedef MonthChip = ({String title, String status, DateTime time});
 
 class AppointmentViewModel extends ChangeNotifier {
   AppointmentViewModel(
@@ -35,8 +36,21 @@ class AppointmentViewModel extends ChangeNotifier {
 
   StreamSubscription<List<AppointmentModel>>? _sub;
 
+  /// All appointments from the current subscription.
   List<AppointmentModel> _all = const [];
   List<AppointmentModel> get all => _all;
+
+  /// Fast, sync lookup: which (local) dates have events?
+  final Set<DateTime> _daysWithEvents = {};
+
+  /// Per-day index to avoid scanning all on each query.
+  final Map<DateTime, List<AppointmentModel>> _byDay = {};
+
+  /// Caches to avoid refetching the same client/service repeatedly.
+  final Map<String, ClientModel?> _clientCache = {};
+  final Map<String, Future<ClientModel?>> _clientPending = {};
+  final Map<String, ServiceModel?> _serviceCache = {};
+  final Map<String, Future<ServiceModel?>> _servicePending = {};
 
   bool _saving = false;
   String? _error;
@@ -52,25 +66,27 @@ class AppointmentViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  /// Start listening. Keep as a single source of truth.
   void init() {
     if (_sub != null) return;
     _sub = _repo.watchAppointments().listen((items) {
       _all = items;
+      _rebuildIndexes(items);
       notifyListeners();
     });
   }
 
-  // Streams / fetch
+  // ---- Minimal pass-throughs (avoid redundant methods) ----
   Stream<List<AppointmentModel>> watchAppointments() =>
       _repo.watchAppointments();
-  Stream<AppointmentModel?> watchLatestAppointment() =>
-      _repo.watchAppointment();
+
   Stream<AppointmentModel?> watchAppointmentById(String id) =>
       _repo.watchAppointmentById(id);
+
   Future<AppointmentModel?> getAppointment(String id) =>
       _repo.getAppointmentOnce(id);
 
-  // ---------- Create ----------
+  // -------------------- Create --------------------
   Future<bool> addAppointment({
     required String? clientId,
     required String? serviceId,
@@ -100,7 +116,7 @@ class AppointmentViewModel extends ChangeNotifier {
       // Prefer custom price; else fall back to service.price
       String? price = _clean(customPriceText);
       if ((price == null || price.isEmpty) && (serviceId ?? '').isNotEmpty) {
-        final svc = await fetchService(serviceId!);
+        final svc = await _getService(serviceId!);
         price = _clean(svc?.price);
       }
 
@@ -148,7 +164,7 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  // ---------- Update (patch fields) ----------
+  // -------------------- Update (patch fields) --------------------
   Future<bool> updateAppointmentFields(
     String id, {
     String? clientId,
@@ -209,7 +225,7 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  // ---------- Delete ----------
+  // -------------------- Delete --------------------
   Future<void> delete(String id, {bool deleteStorage = true}) async {
     if (deleteStorage && deleteImages != null) {
       await deleteImages!(id);
@@ -217,51 +233,146 @@ class AppointmentViewModel extends ChangeNotifier {
     await _repo.deleteAppointment(id);
   }
 
-  // ---------- Projection for Calendar UI ----------
-  /// Build *UI-ready* card models for all appointments on [day] (local time).
-  Future<List<AppointmentCardModel>> cardsForDate(DateTime day) async {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
+  // -------------------- Calendar helpers --------------------
+  /// **Sync** boolean for your dot in Week/Month views.
+  // --- MONTH (sync, lightweight) ---
+  List<MonthChip> monthChipsOn(DateTime day) {
+    final d = _dateOnly(day);
+    final items = _byDay[d] ?? const [];
 
-    final todays = _all.where((a) {
-      final dt = a.dateTime;
-      return dt != null && !dt.isBefore(start) && dt.isBefore(end);
-    }).toList()..sort((a, b) => a.dateTime!.compareTo(b.dateTime!));
+    return items.map((a) {
+      final client = _clientCache[a.clientId ?? ''];
+      final title = client?.name ?? "";
 
-    return Future.wait(
-      todays.map((appt) async {
-        // Fetch needed fields from related models
-        ClientModel? client;
-        ServiceModel? service;
-
-        if ((appt.clientId ?? '').isNotEmpty) {
-          client = await fetchClient(appt.clientId!);
-        }
-        if ((appt.serviceId ?? '').isNotEmpty) {
-          service = await fetchService(appt.serviceId!);
-        }
-
-        // Prefer stored appointment price, else service price
-        final price = _firstNonEmpty([
-          _clean(appt.price),
-          _clean(service?.price),
-        ]);
-
-        return AppointmentCardModel(
-          clientName: _or(client?.name, 'Klient'),
-          serviceName: _or(service?.name, 'Service'),
-          phone: client?.phone,
-          email: client?.email,
-          time: appt.dateTime!,
-          price: price,
-          duration: service?.duration,
-          status: appt.status ?? 'ufaktureret',
-        );
-      }).toList(),
-    );
+      return (title: title, status: a.status!, time: a.dateTime!);
+    }).toList()..sort((x, y) => x.time.compareTo(y.time));
   }
 
-  // ---------- helpers ----------
+  /// Prefetch names for the visible range (no duplicates, no refetch).
+  Future<void> prefetchForRange(DateTime start, DateTime end) async {
+    // gather unique ids in range
+    final idsClient = <String>{};
+    final idsService = <String>{};
+
+    for (
+      var d = _dateOnly(start);
+      !d.isAfter(end);
+      d = d.add(const Duration(days: 1))
+    ) {
+      for (final a in _byDay[d] ?? const <AppointmentModel>[]) {
+        final c = (a.clientId ?? '').trim();
+        if (c.isNotEmpty && !_clientCache.containsKey(c)) idsClient.add(c);
+        final s = (a.serviceId ?? '').trim();
+        if (s.isNotEmpty && !_serviceCache.containsKey(s)) idsService.add(s);
+      }
+    }
+
+    if (idsClient.isEmpty && idsService.isEmpty) return;
+
+    await Future.wait([
+      for (final id in idsClient) _getClient(id),
+      for (final id in idsService) _getService(id),
+    ]);
+
+    // names resolved -> re-render month grid with real titles
+    notifyListeners();
+  }
+
+  bool hasEventsOn(DateTime day) => _daysWithEvents.contains(_dateOnly(day));
+
+  /// Build *UI-ready* card models for all appointments on [day] (local time).
+  Future<List<AppointmentCardModel>> cardsForDate(DateTime day) async {
+    final d = _dateOnly(day);
+    final todays = List<AppointmentModel>.from(_byDay[d] ?? const [])
+      ..sort((a, b) => a.dateTime!.compareTo(b.dateTime!));
+
+    // Pre-fetch distinct clients/services (memoized).
+    final clientIds = todays
+        .map((a) => a.clientId ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final serviceIds = todays
+        .map((a) => a.serviceId ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    await Future.wait([
+      for (final id in clientIds) _getClient(id),
+      for (final id in serviceIds) _getService(id),
+    ]);
+
+    // Build cards using cached data.
+    return todays.map((appt) {
+      final client = _clientCache[appt.clientId ?? ''];
+      final service = _serviceCache[appt.serviceId ?? ''];
+
+      final price = _firstNonEmpty([
+        _clean(appt.price),
+        _clean(service?.price),
+      ]);
+
+      return AppointmentCardModel(
+        clientName: client?.name ?? "",
+        serviceName: service?.name ?? "",
+        phone: client?.phone,
+        email: client?.email,
+        time: appt.dateTime!,
+        price: price,
+        duration: service?.duration,
+        status: appt.status ?? 'ufaktureret',
+      );
+    }).toList();
+  }
+
+  // -------------------- Internal indexing --------------------
+  void _rebuildIndexes(List<AppointmentModel> items) {
+    _byDay.clear();
+    _daysWithEvents.clear();
+
+    for (final a in items) {
+      final dt = a.dateTime;
+      if (dt == null) continue;
+
+      final day = _dateOnly(dt);
+      (_byDay[day] ??= <AppointmentModel>[]).add(a);
+      _daysWithEvents.add(day);
+    }
+  }
+
+  // -------------------- Caching helpers --------------------
+  Future<ClientModel?> _getClient(String id) async {
+    if (_clientCache.containsKey(id)) return _clientCache[id];
+    final pending = _clientPending[id];
+    if (pending != null) return pending;
+
+    final f = fetchClient(id).then((v) {
+      _clientCache[id] = v;
+      _clientPending.remove(id);
+      return v;
+    });
+    _clientPending[id] = f;
+    return f;
+  }
+
+  Future<ServiceModel?> _getService(String id) async {
+    if (_serviceCache.containsKey(id)) return _serviceCache[id];
+    final pending = _servicePending[id];
+    if (pending != null) return pending;
+
+    final f = fetchService(id).then((v) {
+      _serviceCache[id] = v;
+      _servicePending.remove(id);
+      return v;
+    });
+    _servicePending[id] = f;
+    return f;
+  }
+
+  // -------------------- Utilities --------------------
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
   String? _clean(String? s) {
     final t = (s ?? '').trim();
     return t.isEmpty ? null : t;
@@ -273,10 +384,5 @@ class AppointmentViewModel extends ChangeNotifier {
       if (t.isNotEmpty) return t;
     }
     return null;
-  }
-
-  String _or(String? s, String fallback) {
-    final t = (s ?? '').trim();
-    return t.isEmpty ? fallback : t;
   }
 }
