@@ -63,7 +63,7 @@ class _MonthChipsArea extends StatelessWidget {
           if (remaining > 0) ...[
             const SizedBox(height: 3),
             Text(
-              '+ $remaining mere...',
+              '...+ $remaining mere',
               style: AppTypography.calChip.copyWith(
                 color: cs.onSurface.withAlpha(200),
               ),

@@ -100,7 +100,7 @@ class MyApp extends StatelessWidget {
                   ),
               deleteImages: (appointmentId) =>
                   storage.deleteAppointmentImages(appointmentId),
-            )..init();
+            );
           },
         ),
 

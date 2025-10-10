@@ -25,9 +25,9 @@ class AppTheme {
         brightness: Brightness.dark,
       ).copyWith(
         primary: const Color(0xFFFF9C86),
-        onPrimary: Colors.black, // often better in dark for contrast
-        surface: const Color(0xFF131313),
-        onSurface: const Color(0xFFEDEDED),
+        onPrimary: Colors.black,
+        surface: AppColors.backgroundDark,
+        onSurface: Colors.white,
         secondary: const Color(0xFFB8B8B8),
         onSecondary: Colors.black,
         error: const Color(0xFFFFB4AB),

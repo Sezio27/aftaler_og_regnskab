@@ -2,6 +2,12 @@ import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Repository for reading/writing appointments under:
+///   users/{uid}/appointments/{appointmentId}
+///
+/// Notes:
+/// - All calendar reads should be **range-driven** by `dateTime`.
+/// - Writes set `createdAt` (on create) and always touch `updatedAt` (server).
 class AppointmentRepository {
   AppointmentRepository({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -10,92 +16,107 @@ class AppointmentRepository {
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
 
-  String get _uidOrThrow {
+  // ────────────────────────────────────────────────────────────────────────────
+  // Internals
+  // ────────────────────────────────────────────────────────────────────────────
+  String get _requireUid {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw StateError('Not signed in');
     return uid;
   }
 
-  CollectionReference<Map<String, dynamic>> _collection(String uid) =>
+  CollectionReference<Map<String, dynamic>> _userAppointments(String uid) =>
       _db.collection('users').doc(uid).collection('appointments');
 
-  // Latest (createdAt desc)
-  Stream<AppointmentModel?> watchAppointment() {
-    final uid = _uidOrThrow;
-    return _collection(uid)
-        .orderBy('createdAt', descending: true)
-        .limit(1)
-        .snapshots()
-        .map((q) => q.docs.isEmpty ? null : _fromDoc(q.docs.first));
-  }
+  // ────────────────────────────────────────────────────────────────────────────
+  // Reads (range & detail)
+  // ────────────────────────────────────────────────────────────────────────────
 
-  Stream<AppointmentModel?> watchAppointmentById(String id) {
-    final uid = _uidOrThrow;
-    return _collection(uid).doc(id).snapshots().map((d) {
-      if (!d.exists) return null;
-      return _fromDoc(d);
-    });
-  }
-
-  Stream<List<AppointmentModel>> watchAppointments() {
-    final uid = _uidOrThrow;
-    return _collection(uid)
-        .orderBy('createdAt', descending: true)
+  /// Stream appointments with `dateTime` in [start, end], inclusive.
+  /// Sorted by `dateTime` ascending (what calendar/agenda UIs need).
+  Stream<List<AppointmentModel>> watchAppointmentsBetween(
+    DateTime startInclusive,
+    DateTime endInclusive,
+  ) {
+    final uid = _requireUid;
+    return _userAppointments(uid)
+        .where(
+          'dateTime',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
+        )
+        .where(
+          'dateTime',
+          isLessThanOrEqualTo: Timestamp.fromDate(endInclusive),
+        )
+        .orderBy('dateTime')
         .snapshots()
         .map((q) => q.docs.map(_fromDoc).toList());
   }
 
+  /// Watch a single appointment by id (detail screens).
+  Stream<AppointmentModel?> watchAppointmentById(String id) {
+    final uid = _requireUid;
+    return _userAppointments(uid).doc(id).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return _fromDoc(snap);
+    });
+  }
+
+  /// One-time fetch of an appointment by id.
   Future<AppointmentModel?> getAppointmentOnce(String id) async {
-    final uid = _uidOrThrow;
-    final snap = await _collection(uid).doc(id).get();
+    final uid = _requireUid;
+    final snap = await _userAppointments(uid).doc(id).get();
     if (!snap.exists) return null;
     return _fromDoc(snap);
   }
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Writes
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /// Create a new appointment (id auto-generated).
   Future<AppointmentModel> addAppointment(AppointmentModel model) async {
-    final uid = _uidOrThrow;
-    final doc = _collection(uid).doc();
+    final uid = _requireUid;
+    final doc = _userAppointments(uid).doc();
     final payload = _toFirestore(model.copyWith(id: doc.id), isCreate: true);
     await doc.set(payload);
     return model.copyWith(id: doc.id);
   }
 
-  Future<void> createAppointmentWithId(
-    String id,
-    AppointmentModel model,
-  ) async {
-    final uid = _uidOrThrow;
-    await _collection(
-      uid,
-    ).doc(id).set(_toFirestore(model.copyWith(id: id), isCreate: true));
-  }
-
+  /// Patch fields on an appointment.
+  /// Prefer passing a `fields` map (what your ViewModel does).
   Future<void> updateAppointment(
     String id, {
-    AppointmentModel? patch,
-    Map<String, Object?>? fields,
+    AppointmentModel? patch, // optional: convert model into fields
+    Map<String, Object?>? fields, // preferred: direct fields map
   }) async {
-    final uid = _uidOrThrow;
+    final uid = _requireUid;
+
     final data = fields ?? _toFirestore(patch!, isCreate: false);
-    final withMeta = {
+    final withMeta = <String, Object?>{
       ...data,
-      'updatedAt': FieldValue.serverTimestamp(), // Firestore-only
-    }..removeWhere((k, v) => v == null);
-    await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
+      'updatedAt': FieldValue.serverTimestamp(),
+    }..removeWhere((_, v) => v == null);
+
+    await _userAppointments(uid).doc(id).set(withMeta, SetOptions(merge: true));
   }
 
+  /// Delete an appointment document.
   Future<void> deleteAppointment(String id) async {
-    final uid = _uidOrThrow;
-    await _collection(uid).doc(id).delete();
+    final uid = _requireUid;
+    await _userAppointments(uid).doc(id).delete();
   }
 
-  // ---- Mapping ----
-  AppointmentModel _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
-    final data = d.data() ?? const <String, dynamic>{};
+  // ────────────────────────────────────────────────────────────────────────────
+  // Mapping
+  // ────────────────────────────────────────────────────────────────────────────
 
-    DateTime? dt;
+  AppointmentModel _fromDoc(DocumentSnapshot<Map<String, dynamic>> snap) {
+    final data = snap.data() ?? const <String, dynamic>{};
+
+    DateTime? dateTime;
     final ts = data['dateTime'];
-    if (ts is Timestamp) dt = ts.toDate();
+    if (ts is Timestamp) dateTime = ts.toDate();
 
     final checklistIds = (data['checklistIds'] as List? ?? const [])
         .map((e) => (e as String?)?.trim() ?? '')
@@ -108,11 +129,11 @@ class AppointmentRepository {
         .toList();
 
     return AppointmentModel(
-      id: d.id,
+      id: snap.id,
       clientId: data['clientId'] as String?,
       serviceId: data['serviceId'] as String?,
       checklistIds: checklistIds,
-      dateTime: dt,
+      dateTime: dateTime,
       price: data['price'] as String?,
       location: data['location'] as String?,
       note: data['note'] as String?,
@@ -138,6 +159,7 @@ class AppointmentRepository {
       if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };
+
     map.removeWhere((_, v) => v == null);
     return map;
   }

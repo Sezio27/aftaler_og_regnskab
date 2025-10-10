@@ -1,23 +1,69 @@
 ﻿// lib/screens/home_screen.dart
+import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/status_color.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
+import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key}); // no routeName, go_router handles paths
+  const HomeScreen({super.key}); // go_router handles paths
+
+  // Build one merged list of cards for [start..end] by reusing cardsForDate.
+  Future<List<AppointmentCardModel>> _cardsForRange(
+    AppointmentViewModel vm,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final List<AppointmentCardModel> out = [];
+    for (
+      var d = DateTime(start.year, start.month, start.day);
+      !d.isAfter(end);
+      d = d.add(const Duration(days: 1))
+    ) {
+      final dayCards = await vm.cardsForDate(d);
+      out.addAll(dayCards);
+    }
+    out.sort((a, b) => a.time.compareTo(b.time));
+    return out;
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final apptVm = context.watch<AppointmentViewModel>();
+
+    final now = DateTime.now();
+
+    // Month range for stats
+    final monthStart = DateTime(now.year, now.month, 1);
+    final monthEnd = DateTime(now.year, now.month + 1, 0);
+
+    // 2-week range for the list (unchanged)
+    final listStart = DateTime(now.year, now.month, now.day);
+    final listEnd = listStart.add(const Duration(days: 14));
+
+    // Load a superset: the whole month (covers both stats + list)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      apptVm.setActiveRange(monthStart, monthEnd);
+    });
+
+    // Use your new helpers
+    final monthlyCount = apptVm.countAppointmentsInRange(monthStart, monthEnd);
+    final monthlyPaid = apptVm.sumPaidInRangeDKK(monthStart, monthEnd);
+
     return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(vertical: 24, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 6),
         child: Column(
           children: [
             Row(
@@ -25,7 +71,7 @@ class HomeScreen extends StatelessWidget {
                 StatCard(
                   title: "Omsætning",
                   subtitle: "Denne måned",
-                  value: "12.750 Kr.",
+                  value: '${monthlyPaid.toStringAsFixed(0)} Kr.',
                   icon: Icon(
                     Icons.account_balance_outlined,
                     size: 20,
@@ -38,7 +84,7 @@ class HomeScreen extends StatelessWidget {
                 StatCard(
                   title: "Aftaler",
                   subtitle: "Denne måned",
-                  value: "8",
+                  value: monthlyCount.toString(),
                   icon: Icon(
                     Icons.calendar_today_outlined,
                     size: 20,
@@ -85,18 +131,67 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 2),
 
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Column(
-                children: [
-                  SizedBox(height: 6),
-                  AppointmentCard(title: "Sarah Johnson"),
-                  SizedBox(height: 6),
-                  AppointmentCard(title: "Emma Nielsen"),
-                  SizedBox(height: 6),
-                  AppointmentCard(title: "Lisa Wang"),
-                ],
-              ),
+            // Reuse existing VM methods to build a 2-week forward agenda
+            FutureBuilder<List<AppointmentCardModel>>(
+              future: _cardsForRange(apptVm, listStart, listEnd),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final items = snap.data ?? const [];
+                if (items.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Ingen kommende aftaler",
+                        style: AppTypography.b3.copyWith(
+                          color: cs.onSurface.withAlpha(150),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                // Inside SingleChildScrollView → use a non-scrolling, shrink-wrapped list
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final a = items[i];
+                    final dateText = DateFormat('d/M', 'da').format(a.time);
+                    final timeText = MaterialLocalizations.of(context)
+                        .formatTimeOfDay(
+                          TimeOfDay.fromDateTime(a.time),
+                          alwaysUse24HourFormat: true,
+                        );
+
+                    return AppointmentCard(
+                      avatar: Avatar(imageUrl: a.imageUrl),
+                      title: a.clientName,
+                      subtitle: a.serviceName,
+                      price: a.price,
+                      date: dateText,
+                      time: timeText,
+                      color: statusColor(a.status),
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
@@ -151,7 +246,6 @@ class StatCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: AppTypography.b2,
               ),
-
               Text(
                 value,
                 textAlign: TextAlign.center,

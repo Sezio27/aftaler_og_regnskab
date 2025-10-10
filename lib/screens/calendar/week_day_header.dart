@@ -69,7 +69,6 @@ class WeekdayHeader extends StatelessWidget {
                 date: days[i],
                 weekdayLabel: labels[i].capitalize(),
                 isSelected: _sameDate(days[i], calVm.selectedDay),
-                isToday: _sameDate(days[i], DateTime.now()),
                 hasEvents: apptVm.hasEventsOn(days[i]),
                 onTap: () =>
                     context.read<CalendarViewModel>().selectDay(days[i]),
@@ -86,7 +85,6 @@ class _DayPill extends StatelessWidget {
     required this.date,
     required this.weekdayLabel,
     required this.isSelected,
-    required this.isToday,
     required this.hasEvents,
 
     required this.onTap,
@@ -95,7 +93,6 @@ class _DayPill extends StatelessWidget {
   final DateTime date;
   final String weekdayLabel;
   final bool isSelected;
-  final bool isToday;
   final bool hasEvents;
 
   final VoidCallback onTap;
@@ -132,7 +129,6 @@ class _DayPill extends StatelessWidget {
               _EventDots(
                 show: hasEvents,
                 color: isSelected ? cs.onSecondary : cs.secondary,
-                todayHint: isToday && !hasEvents,
                 todayColor: isSelected ? cs.onSecondary : cs.secondary,
               ),
             ],
@@ -147,24 +143,21 @@ class _EventDots extends StatelessWidget {
   const _EventDots({
     required this.show,
     required this.color,
-    required this.todayHint,
     required this.todayColor,
   });
 
   final bool show;
   final Color color;
-  final bool todayHint;
   final Color todayColor;
 
   @override
   Widget build(BuildContext context) {
-    if (show || todayHint) {
+    if (show) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: _dot(color),
       );
     }
-    if (todayHint) return _dot(todayColor);
     return const SizedBox(height: 6);
   }
 

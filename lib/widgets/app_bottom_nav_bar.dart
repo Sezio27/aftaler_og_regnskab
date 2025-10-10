@@ -35,7 +35,7 @@ class AppBottomNavBar extends StatelessWidget {
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: maxContentWidth),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 2, 16, 12),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 10),
               child: Row(
                 children: [
                   for (var i = 0; i < _items.length; i++)
@@ -80,16 +80,14 @@ class _NavButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected
-                ? Colors.white.withAlpha(45)
-                : Colors.transparent,
+            color: isSelected ? Colors.white.withAlpha(45) : Colors.transparent,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
@@ -100,7 +98,7 @@ class _NavButton extends StatelessWidget {
                 color: isSelected ? activeColor : inactiveColor,
                 size: iconSize,
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               FittedBox(
                 fit: BoxFit.none,
                 child: Text(

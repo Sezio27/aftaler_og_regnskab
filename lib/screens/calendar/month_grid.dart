@@ -18,21 +18,25 @@ class _MonthGridState extends State<MonthGrid> {
   @override
   Widget build(BuildContext context) {
     final calVm = context.watch<CalendarViewModel>();
+
     final apptVm = context.watch<AppointmentViewModel>();
 
     final visibleMonth = calVm.visibleMonth;
     final days = _buildMonthDays(visibleMonth);
-    final weeks = (days.length / 7).ceil();
 
-    // final start = days.first;
-    // final end = days.last;
-    // if (_lastStart != start || _lastEnd != end) {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     context.read<AppointmentViewModel>().prefetchForRange(start, end);
-    //   });
-    //   _lastStart = start;
-    //   _lastEnd = end;
-    // }
+    final start = days.first;
+    final end = days.last;
+
+    final weeks = days.length ~/ 7;
+
+    if (_lastStart != start || _lastEnd != end) {
+      _lastStart = start;
+      _lastEnd = end;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        apptVm.setActiveRange(start, end);
+      });
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -74,6 +78,7 @@ class _MonthGridState extends State<MonthGrid> {
 
     final startShift = (firstOfMonth.weekday - DateTime.monday) % 7;
     final gridStart = firstOfMonth.subtract(Duration(days: startShift));
+
     final endShift = (DateTime.sunday - lastOfMonth.weekday) % 7;
     final gridEnd = lastOfMonth.add(Duration(days: endShift));
 

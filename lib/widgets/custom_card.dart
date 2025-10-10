@@ -6,7 +6,8 @@ class CustomCard extends StatelessWidget {
   final double? height;
   final double? shadowX;
   final double? shadowY;
-  final Color? backgroundColor;
+  final Color? shadowColor;
+  final BlurStyle? blurStyle;
   final double? blurRadius;
   final Widget? field;
   final BoxConstraints? constraints;
@@ -17,14 +18,16 @@ class CustomCard extends StatelessWidget {
     this.height,
     this.shadowX = 0,
     this.shadowY = 1,
-    this.backgroundColor = AppColors.shadowColor,
+    this.shadowColor = AppColors.shadowColor,
     this.blurRadius = 4,
     this.field,
     this.constraints,
+    this.blurStyle = BlurStyle.normal,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: width,
       height: height,
@@ -32,13 +35,14 @@ class CustomCard extends StatelessWidget {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: backgroundColor!,
+            color: shadowColor!,
             spreadRadius: 0,
             blurRadius: blurRadius!,
             offset: Offset(shadowX!, shadowY!),
+            blurStyle: blurStyle!,
           ),
         ],
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
       clipBehavior: Clip.antiAlias,

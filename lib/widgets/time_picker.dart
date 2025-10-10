@@ -35,7 +35,7 @@ class TimePicker extends StatelessWidget {
       context: context,
       builder: (popupContext) => Material(
         // Material for TextButton ink + theme
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         child: SafeArea(
           top: false,
           child: SizedBox(
@@ -79,6 +79,7 @@ class TimePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = value.format(context);
+    final cs = Theme.of(context).colorScheme;
 
     return SizedBox(
       height: 40,
@@ -93,9 +94,9 @@ class TimePicker extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          side: BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
-          backgroundColor: Colors.white,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          side: BorderSide(color: cs.onSurface.withOpacity(0.25), width: 1),
+          backgroundColor: cs.surface,
+          foregroundColor: cs.onSurface,
         ),
         child: Text(label, style: AppTypography.num3),
       ),

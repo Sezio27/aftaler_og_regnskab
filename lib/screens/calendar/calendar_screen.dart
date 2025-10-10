@@ -1,13 +1,15 @@
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_grid.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_switcher.dart';
-
 import 'package:aftaler_og_regnskab/screens/calendar/week_switcher.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/week_day_header.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
+import 'package:aftaler_og_regnskab/utils/status_color.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
+import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +19,7 @@ class CalendarScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tab = context.watch<CalendarViewModel>().tab;
+    final currentTab = context.watch<CalendarViewModel>().tab;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -32,9 +34,9 @@ class CalendarScreen extends StatelessWidget {
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: tab == Tabs.month
-                  ? _MonthViewBody(key: const ValueKey('month'))
-                  : _WeekViewBody(key: const ValueKey('week')),
+              child: currentTab == Tabs.month
+                  ? const _MonthViewBody(key: ValueKey('month'))
+                  : const _WeekViewBody(key: ValueKey('week')),
             ),
           ),
         ],
@@ -63,35 +65,55 @@ class _MonthViewBody extends StatelessWidget {
 
 class _WeekViewBody extends StatelessWidget {
   const _WeekViewBody({super.key});
+
+  // Monday of the given date's week (Mon=1..Sun=7)
+  DateTime _mondayOf(DateTime any) {
+    final d = DateTime(any.year, any.month, any.day);
+    return d.subtract(Duration(days: d.weekday - DateTime.monday));
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Rebuild list when the selected day changes
     final selectedDay = context.select<CalendarViewModel, DateTime>(
       (vm) => vm.selectedDay,
     );
 
-    context.watch<AppointmentViewModel>();
+    // Rebuild header/range when visible week changes
+    final calVm = context.watch<CalendarViewModel>();
+
+    // We only need methods here; no need to rebuild on VM changes
+    final apptVm = context.read<AppointmentViewModel>();
+
+    final weekStart = _mondayOf(calVm.visibleWeek);
+    final weekEnd = weekStart.add(const Duration(days: 6));
+
+    // Drive the range subscription in AppointmentViewModel
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      apptVm.setActiveRange(weekStart, weekEnd);
+    });
+
     return Column(
       children: [
         const SizedBox(height: 14),
-        WeekSwitcher(),
-        const SizedBox(height: 10),
-        WeekdayHeader(weekView: true),
-        const SizedBox(height: 30),
+        const WeekSwitcher(),
+        const SizedBox(height: 20),
+        const WeekdayHeader(weekView: true),
+        const SizedBox(height: 24),
         Expanded(
           child: FutureBuilder<List<AppointmentCardModel>>(
             key: ValueKey(
               '${selectedDay.year}-${selectedDay.month}-${selectedDay.day}',
             ),
-            future: context.read<AppointmentViewModel>().cardsForDate(
-              selectedDay,
-            ),
+            future: apptVm.cardsForDate(selectedDay),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
+
               final items = snap.data ?? const [];
               if (items.isEmpty) {
-                return _EmptyDayState();
+                return const _EmptyDayState();
               }
 
               return ListView.separated(
@@ -100,11 +122,9 @@ class _WeekViewBody extends StatelessWidget {
                   vertical: 8,
                 ),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, i) {
                   final a = items[i];
-
-                  // Localized date/time for the card
                   final dateText = DateFormat('d/M', 'da').format(a.time);
                   final timeText = MaterialLocalizations.of(context)
                       .formatTimeOfDay(
@@ -113,13 +133,13 @@ class _WeekViewBody extends StatelessWidget {
                       );
 
                   return AppointmentCard(
+                    avatar: Avatar(imageUrl: a.imageUrl),
                     title: a.clientName,
                     subtitle: a.serviceName,
-                    price: a.price, // shows top-right
-                    // If you add these props to the card (see below), pass them:
-                    date: dateText, // bottom-right date
-                    time: timeText, // bottom-right time
-                    // You can also pass phone/email to trailing actions if you expose them
+                    price: a.price,
+                    date: dateText,
+                    time: timeText,
+                    color: statusColor(a.status),
                   );
                 },
               );
@@ -132,6 +152,8 @@ class _WeekViewBody extends StatelessWidget {
 }
 
 class _EmptyDayState extends StatelessWidget {
+  const _EmptyDayState();
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -140,9 +162,7 @@ class _EmptyDayState extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Text(
           'Ingen aftaler denne dag',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: cs.onSurface.withOpacity(0.6),
-          ),
+          style: AppTypography.b5.copyWith(color: cs.onSurface.withAlpha(150)),
           textAlign: TextAlign.center,
         ),
       ),

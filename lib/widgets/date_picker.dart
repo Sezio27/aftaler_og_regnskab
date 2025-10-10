@@ -24,6 +24,7 @@ class DatePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     String defaultLabel(DateTime d) =>
         '${d.day}. ${_monthShortDa[d.month - 1]} ${d.year}';
     final label = (displayFormat ?? defaultLabel)(value);
@@ -46,9 +47,9 @@ class DatePicker extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          side: BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
-          backgroundColor: Colors.white,
-          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          side: BorderSide(color: cs.onSurface.withOpacity(0.25), width: 1),
+          backgroundColor: cs.surface,
+          foregroundColor: cs.onSurface,
         ),
         child: Text(label, style: AppTypography.num3),
       ),
@@ -72,7 +73,7 @@ extension DatePickerContextExt on BuildContext {
         context: popupContext,
         locale: locale,
         child: Material(
-          color: Colors.white,
+          color: Theme.of(this).colorScheme.surface,
           child: SafeArea(
             top: false,
             child: SizedBox(

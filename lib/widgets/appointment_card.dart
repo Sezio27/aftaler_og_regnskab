@@ -1,5 +1,6 @@
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +10,7 @@ class AppointmentCard extends StatelessWidget {
   final Color? color;
   final String? subtitlePrice;
   final Widget? mainIcon;
-  final Icon? leadingIcon;
+  final Avatar? avatar;
   final String? date;
   final String? time;
   final String? price;
@@ -21,30 +22,30 @@ class AppointmentCard extends StatelessWidget {
     this.subtitle,
     this.subtitlePrice,
     this.mainIcon,
-    this.leadingIcon,
     this.date,
     this.price,
     this.endingIcons,
-    this.color,
+    this.color = AppColors.shadowColor,
     this.time,
+    this.avatar,
   });
 
   @override
   Widget build(BuildContext context) {
     return CustomCard(
       width: double.infinity,
-      constraints: BoxConstraints(minHeight: 91),
+      constraints: BoxConstraints(minHeight: 90),
+      blurStyle: BlurStyle.inner,
+      shadowColor: color,
+      shadowX: -5,
+      shadowY: 0,
       field: Padding(
         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
 
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
-          //mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            if (leadingIcon != null) ...[
-              leadingIcon!,
-              const SizedBox(width: 10),
-            ],
+            if (avatar != null) ...[avatar!, const SizedBox(width: 10)],
 
             Expanded(
               child: Column(
@@ -62,8 +63,10 @@ class AppointmentCard extends StatelessWidget {
                         ),
                       ),
 
-                      if (price != null)
-                        Text(price!, style: AppTypography.num3),
+                      Text(
+                        price != null ? "${price!} Kr." : "---",
+                        style: AppTypography.num3,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -76,7 +79,9 @@ class AppointmentCard extends StatelessWidget {
                       Expanded(
                         flex: 5,
                         child: Text(
-                          subtitle ?? "ingen service valgt",
+                          (subtitle?.trim().isNotEmpty ?? false)
+                              ? subtitle!.trim()
+                              : '---',
                           style: AppTypography.acSubtitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
