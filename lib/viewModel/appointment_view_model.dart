@@ -392,6 +392,7 @@ class AppointmentViewModel extends ChangeNotifier {
         price: chosenPrice,
         duration: service?.duration,
         status: appt.status ?? 'ufaktureret',
+        imageUrl: client?.image,
       );
     }).toList();
   }
