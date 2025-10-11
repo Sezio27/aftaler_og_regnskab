@@ -2,11 +2,14 @@
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/date_range.dart';
+import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:aftaler_og_regnskab/utils/status_color.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/stat_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -45,21 +48,18 @@ class HomeScreen extends StatelessWidget {
     final now = DateTime.now();
 
     // Month range for stats
-    final monthStart = DateTime(now.year, now.month, 1);
-    final monthEnd = DateTime(now.year, now.month + 1, 0);
+    final m = monthRange(now);
 
-    // 2-week range for the list (unchanged)
-    final listStart = DateTime(now.year, now.month, now.day);
-    final listEnd = listStart.add(const Duration(days: 14));
+    final twoWeek = twoWeekRange(now);
 
     // Load a superset: the whole month (covers both stats + list)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      apptVm.setActiveRange(monthStart, monthEnd);
+      apptVm.setActiveRange(m.start, m.end);
     });
 
     // Use your new helpers
-    final monthlyCount = apptVm.countAppointmentsInRange(monthStart, monthEnd);
-    final monthlyPaid = apptVm.sumPaidInRangeDKK(monthStart, monthEnd);
+    final monthlyCount = apptVm.countAppointmentsInRange(m.start, m.end);
+    final monthlyPaid = apptVm.sumPaidInRangeDKK(m.start, m.end);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -133,7 +133,7 @@ class HomeScreen extends StatelessWidget {
 
             // Reuse existing VM methods to build a 2-week forward agenda
             FutureBuilder<List<AppointmentCardModel>>(
-              future: _cardsForRange(apptVm, listStart, listEnd),
+              future: _cardsForRange(apptVm, twoWeek.start, twoWeek.end),
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Padding(
@@ -194,65 +194,6 @@ class HomeScreen extends StatelessWidget {
               },
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class StatCard extends StatelessWidget {
-  const StatCard({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.valueColor,
-    required this.icon,
-    required this.iconBgColor,
-  });
-
-  final String title;
-  final String subtitle;
-  final String value;
-  final Color valueColor;
-  final Widget icon;
-  final Color iconBgColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: CustomCard(
-        constraints: const BoxConstraints(minHeight: 180),
-        field: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  shape: BoxShape.circle,
-                ),
-                child: icon,
-              ),
-              const SizedBox(height: 8),
-              Text(title, textAlign: TextAlign.center, style: AppTypography.h3),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: AppTypography.b2,
-              ),
-              Text(
-                value,
-                textAlign: TextAlign.center,
-                style: AppTypography.numStat.copyWith(color: valueColor),
-              ),
-            ],
-          ),
         ),
       ),
     );

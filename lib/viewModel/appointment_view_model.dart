@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev;
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
@@ -65,6 +66,10 @@ class AppointmentViewModel extends ChangeNotifier {
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
   AppointmentModel? get lastAdded => _lastCreatedAppointment;
+  DateTime? get activeRangeStart => _activeRangeStart;
+  DateTime? get activeRangeEnd => _activeRangeEnd;
+  bool _hasDataForActiveRange = false;
+  bool get hasDataForActiveRange => _hasDataForActiveRange;
 
   // ────────────────────────────────────────────────────────────────────────────
   // Caches for related documents (client/service) to avoid refetching
@@ -85,10 +90,22 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   /// Call this whenever month/week visible range changes.
   /// Subscribes only to appointments within [start]..[end] (by `dateTime`).
-  void setActiveRange(DateTime start, DateTime end) {
+  void setActiveRange(
+    DateTime start,
+    DateTime end, {
+    String label = 'VM:setActiveRange',
+  }) {
     final rangeStart = _asDateOnly(start);
     final rangeEnd = _asDateOnly(end);
-
+    if (_activeRangeStart != null && _activeRangeEnd != null) {
+      final newIsWithinCurrent =
+          !rangeStart.isBefore(_activeRangeStart!) &&
+          !rangeEnd.isAfter(_activeRangeEnd!);
+      if (newIsWithinCurrent) {
+        // No-op: keep the big stream; prevents re-attaching and losing Year.
+        return;
+      }
+    }
     final rangeIsSame =
         _activeRangeStart == rangeStart && _activeRangeEnd == rangeEnd;
     if (rangeIsSame) return;
@@ -98,11 +115,16 @@ class AppointmentViewModel extends ChangeNotifier {
 
     _rangeSubscription?.cancel();
 
-    // Firestore timestamps are precise; extend end to end-of-day inclusive.
+    _hasDataForActiveRange = false;
+
     final inclusiveEnd = rangeEnd
         .add(const Duration(days: 1))
         .subtract(const Duration(milliseconds: 1));
 
+    final startedAt = DateTime.now();
+    final task = dev.TimelineTask()
+      ..start('$label attach $rangeStart..$rangeEnd');
+    var first = true;
     _rangeSubscription = _repo
         .watchAppointmentsBetween(rangeStart, inclusiveEnd)
         .listen((fetched) async {
@@ -111,6 +133,14 @@ class AppointmentViewModel extends ChangeNotifier {
 
           // Resolve client/service display data used in month/week UIs.
           await _prefetchNamesForActiveRange();
+          if (first) {
+            first = false;
+            _hasDataForActiveRange =
+                true; // signal UI that data for this range has arrived
+            final dur = DateTime.now().difference(startedAt);
+            task.finish();
+            debugPrint('$label ready=${dur.inMilliseconds}ms');
+          }
 
           notifyListeners();
         });
@@ -271,22 +301,35 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
-    final s = _asDateOnly(start);
-    final e = _asDateOnly(end);
-    final result = <AppointmentModel>[];
+    final from = _asDateOnly(start);
+    final to = _asDateOnly(end);
+    if (to.isBefore(from)) return const [];
 
-    for (var d = s; !d.isAfter(e); d = d.add(const Duration(days: 1))) {
-      final list = _appointmentsByDay[d];
-      if (list != null && list.isNotEmpty) {
-        result.addAll(list);
+    final hits = _rangeAppointments.where((a) {
+      final dt = a.dateTime;
+      return dt != null && !dt.isBefore(from) && !dt.isAfter(to);
+    }).toList();
+
+    final appointmentsInRange = <AppointmentModel>[];
+
+    var currentDay = from;
+    while (!currentDay.isAfter(to)) {
+      final appointmentsOnDay = _appointmentsByDay[currentDay];
+      if (appointmentsOnDay != null && appointmentsOnDay.isNotEmpty) {
+        appointmentsInRange.addAll(appointmentsOnDay);
       }
+      currentDay = currentDay.add(const Duration(days: 1));
     }
-    // (Optional) keep a consistent order
-    result.sort(
-      (a, b) =>
-          (a.dateTime ?? DateTime(0)).compareTo(b.dateTime ?? DateTime(0)),
-    );
-    return result;
+
+    hits.sort((a, b) {
+      final at = a.dateTime, bt = b.dateTime;
+      if (at == null && bt == null) return 0;
+      if (at == null) return 1;
+      if (bt == null) return -1;
+      return at.compareTo(bt);
+    });
+
+    return hits;
   }
 
   int countAppointmentsInRange(DateTime start, DateTime end) {

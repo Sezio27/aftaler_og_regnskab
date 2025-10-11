@@ -28,7 +28,7 @@ class AuthGate extends StatelessWidget {
           exists,
         ) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go(exists ? '/home' : '/onboarding/email');
+            context.go(exists ? '/settings' : '/onboarding/email');
           });
         });
         return const _Splash();
