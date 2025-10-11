@@ -48,15 +48,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final monthlyPaid = apptVm.sumPaidInRangeDKK(m.start, m.end);
     final yearlyCount = apptVm.countAppointmentsInRange(y.start, y.end);
     final yearlyPaid = apptVm.sumPaidInRangeDKK(y.start, y.end);
-    final isYearActive =
-        apptVm.activeRangeStart ==
-            DateTime(y.start.year, y.start.month, y.start.day) &&
-        apptVm.activeRangeEnd == DateTime(y.end.year, y.end.month, y.end.day);
 
-    // 🔒 gate Year view until first year snapshot has landed
-    if (_tab == Tabs.year && (!isYearActive || !apptVm.hasDataForActiveRange)) {
-      return const SafeArea(child: Center(child: CircularProgressIndicator()));
-    }
     final income = switch (_tab) {
       Tabs.week => weeklyPaid,
       Tabs.month => monthlyPaid,
@@ -67,13 +59,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
       Tabs.month => monthlyCount,
       Tabs.year => yearlyCount,
     };
-
-    debugPrint(
-      'Finance gate: tab=$_tab '
-      'isYearActive=$isYearActive '
-      'hasData=${apptVm.hasDataForActiveRange} '
-      'all=${apptVm.all.length}',
-    );
 
     return SafeArea(
       child: Padding(

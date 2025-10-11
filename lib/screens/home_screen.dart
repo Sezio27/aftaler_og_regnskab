@@ -100,7 +100,7 @@ class HomeScreen extends StatelessWidget {
             CustomButton(
               text: "Ny aftale",
               icon: Icon(Icons.add, size: 18, color: cs.onSurface),
-              color: Colors.white,
+              color: cs.surface,
               width: 170,
               borderRadius: 18,
               textStyle: AppTypography.button2.copyWith(color: cs.onSurface),

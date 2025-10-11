@@ -66,10 +66,6 @@ class AppointmentViewModel extends ChangeNotifier {
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
   AppointmentModel? get lastAdded => _lastCreatedAppointment;
-  DateTime? get activeRangeStart => _activeRangeStart;
-  DateTime? get activeRangeEnd => _activeRangeEnd;
-  bool _hasDataForActiveRange = false;
-  bool get hasDataForActiveRange => _hasDataForActiveRange;
 
   // ────────────────────────────────────────────────────────────────────────────
   // Caches for related documents (client/service) to avoid refetching
@@ -115,8 +111,6 @@ class AppointmentViewModel extends ChangeNotifier {
 
     _rangeSubscription?.cancel();
 
-    _hasDataForActiveRange = false;
-
     final inclusiveEnd = rangeEnd
         .add(const Duration(days: 1))
         .subtract(const Duration(milliseconds: 1));
@@ -124,7 +118,7 @@ class AppointmentViewModel extends ChangeNotifier {
     final startedAt = DateTime.now();
     final task = dev.TimelineTask()
       ..start('$label attach $rangeStart..$rangeEnd');
-    var first = true;
+
     _rangeSubscription = _repo
         .watchAppointmentsBetween(rangeStart, inclusiveEnd)
         .listen((fetched) async {
@@ -133,14 +127,10 @@ class AppointmentViewModel extends ChangeNotifier {
 
           // Resolve client/service display data used in month/week UIs.
           await _prefetchNamesForActiveRange();
-          if (first) {
-            first = false;
-            _hasDataForActiveRange =
-                true; // signal UI that data for this range has arrived
-            final dur = DateTime.now().difference(startedAt);
-            task.finish();
-            debugPrint('$label ready=${dur.inMilliseconds}ms');
-          }
+
+          final dur = DateTime.now().difference(startedAt);
+          task.finish();
+          debugPrint('$label ready=${dur.inMilliseconds}ms');
 
           notifyListeners();
         });
