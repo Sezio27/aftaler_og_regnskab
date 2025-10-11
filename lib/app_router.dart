@@ -1,7 +1,5 @@
-// lib/app_router.dart
-import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
-import 'package:aftaler_og_regnskab/navigation/tab_config.dart';
+
 import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
 import 'package:aftaler_og_regnskab/screens/client_details_screen.dart';
 import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
@@ -12,10 +10,9 @@ import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.d
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
-import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import 'auth_gate.dart';
 import 'screens/home_screen.dart';

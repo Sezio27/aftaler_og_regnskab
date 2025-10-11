@@ -1,25 +1,14 @@
-// lib/utils/perf.dart
-import 'dart:developer' as dev;
+// lib/utils/perf_timer.dart
+class PerfTimer {
+  static final Map<String, DateTime> _marks = {};
 
-class Performance {
-  static T run<T>(String name, T Function() fn) {
-    dev.Timeline.startSync(name);
-    try {
-      return fn();
-    } finally {
-      dev.Timeline.finishSync();
-    }
+  static void start(String key) => _marks[key] = DateTime.now();
+
+  static void stop(String key, {String label = 'first frame'}) {
+    final t0 = _marks.remove(key);
+    if (t0 == null) return; // safe if start wasn't called
+    final ms = DateTime.now().difference(t0).inMilliseconds;
+    // ignore: avoid_print
+    print('$key → $label: ${ms}ms');
   }
-
-  static Future<T> runAsync<T>(String name, Future<T> Function() body) async {
-    final task = dev.TimelineTask(); // spans across awaits
-    task.start(name);
-    try {
-      return await body();
-    } finally {
-      task.finish();
-    }
-  }
-
-  static void mark(String name) => dev.Timeline.instantSync(name);
 }

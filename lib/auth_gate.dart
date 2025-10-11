@@ -1,44 +1,44 @@
+import 'dart:async';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const _Splash();
-        }
-        final user = snap.data;
-        if (user == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/login');
-          });
-          return const _Splash();
-        }
-
-        // User is signed in → check if profile exists
-        context.read<UserRepository>().userDocExists(uid: user.uid).then((
-          exists,
-        ) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go(exists ? '/settings' : '/onboarding/email');
-          });
-        });
-        return const _Splash();
-      },
-    );
-  }
+  State<AuthGate> createState() => _AuthGateState();
 }
 
-class _Splash extends StatelessWidget {
-  const _Splash();
+class _AuthGateState extends State<AuthGate> {
+  StreamSubscription<User?>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = FirebaseAuth.instance.authStateChanges().listen((user) async {
+      if (!mounted) return;
+
+      if (user == null) {
+        context.go('/login');
+        return;
+      }
+
+      final repo = context.read<UserRepository>();
+      final exists = await repo.userDocExists(uid: user.uid);
+      if (!mounted) return;
+
+      context.go(exists ? '/settings' : '/onboarding/email');
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

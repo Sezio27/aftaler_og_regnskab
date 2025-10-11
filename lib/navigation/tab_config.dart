@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,7 +47,16 @@ String? routeNameFromLocation(String loc) {
   return null;
 }
 
+const List<String> tabRoutes = [
+  '/home',
+  '/calendar',
+  '/finance',
+  '/services',
+  '/settings',
+];
 void goToTab(BuildContext context, int i) {
+  final route = tabRoutes[i];
+  PerfTimer.start('tab:$route');
   switch (i) {
     case 0:
       context.go(_paths[TabItem.home]!);

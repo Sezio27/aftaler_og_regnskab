@@ -8,9 +8,8 @@ import 'package:aftaler_og_regnskab/utils/status_color.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+
 import 'package:aftaler_og_regnskab/widgets/stat_card.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:aftaler_og_regnskab/app_router.dart';
@@ -18,10 +17,27 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key}); // go_router handles paths
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
-  // Build one merged list of cards for [start..end] by reusing cardsForDate.
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final vm = context.read<AppointmentViewModel>();
+
+      final now = DateTime.now();
+      final m = monthRange(now);
+
+      vm.setActiveRange(m.start, m.end);
+    });
+  }
+
   Future<List<AppointmentCardModel>> _cardsForRange(
     AppointmentViewModel vm,
     DateTime start,
@@ -47,15 +63,9 @@ class HomeScreen extends StatelessWidget {
 
     final now = DateTime.now();
 
-    // Month range for stats
     final m = monthRange(now);
 
     final twoWeek = twoWeekRange(now);
-
-    // Load a superset: the whole month (covers both stats + list)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      apptVm.setActiveRange(m.start, m.end);
-    });
 
     // Use your new helpers
     final monthlyCount = apptVm.countAppointmentsInRange(m.start, m.end);

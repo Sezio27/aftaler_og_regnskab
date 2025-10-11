@@ -11,7 +11,6 @@ class AppLayout extends StatelessWidget {
     required this.idx,
     required this.child,
     this.showNavBar = true,
-
   });
 
   final String? routeName;
@@ -19,22 +18,18 @@ class AppLayout extends StatelessWidget {
   final Widget child;
   final bool showNavBar;
 
-
   @override
   Widget build(BuildContext context) {
     final maxW = LayoutMetrics.contentMaxWidth(context);
     final topH = LayoutMetrics.topBarHeight(context);
-  
 
     return Scaffold(
-      appBar: 
-           buildTopBarForRouteName(
-              routeName,
-              maxContentWidth:
-                  maxW, 
-              fixedHeight: topH, 
-            ),
-         
+      appBar: buildTopBarForRouteName(
+        routeName,
+        maxContentWidth: maxW,
+        fixedHeight: topH,
+      ),
+
       extendBody: true,
 
       // Horizontal: 1 | 10 | 1

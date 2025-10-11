@@ -124,15 +124,16 @@ class AppointmentViewModel extends ChangeNotifier {
         .listen((fetched) async {
           _rangeAppointments = fetched;
           _rebuildDailyIndexes(fetched);
-
-          // Resolve client/service display data used in month/week UIs.
-          await _prefetchNamesForActiveRange();
+          notifyListeners();
 
           final dur = DateTime.now().difference(startedAt);
           task.finish();
           debugPrint('$label ready=${dur.inMilliseconds}ms');
-
-          notifyListeners();
+          _prefetchNamesForActiveRange().then((_) {
+            if (_activeRangeStart == start && _activeRangeEnd == end) {
+              notifyListeners();
+            }
+          });
         });
   }
 

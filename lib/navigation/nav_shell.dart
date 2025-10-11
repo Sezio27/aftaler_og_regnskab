@@ -1,12 +1,13 @@
 // lib/navigation/nav_shell.dart
 import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'tab_config.dart';
 
-class NavShell extends StatelessWidget {
+class NavShell extends StatefulWidget {
   const NavShell({
     super.key,
     required this.child,
@@ -18,8 +19,38 @@ class NavShell extends StatelessWidget {
   final String? routeName;
 
   @override
+  State<NavShell> createState() => _NavShellState();
+}
+
+class _NavShellState extends State<NavShell> {
+  String? _lastLocation;
+
+  void _stopIfLocationChanged() {
+    if (_lastLocation == widget.location) return;
+    _lastLocation = widget.location;
+
+    // Stop on the first frame of the new tab
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfTimer.stop('tab:${widget.location}');
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _stopIfLocationChanged(); // handles the initial mount too
+  }
+
+  @override
+  void didUpdateWidget(covariant NavShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _stopIfLocationChanged(); // runs when location changes
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final effectiveName = routeName ?? routeNameFromLocation(location);
+    final effectiveName =
+        widget.routeName ?? routeNameFromLocation(widget.location);
     final idx = tabIndexForRouteName(effectiveName);
     final hideBars = effectiveName == 'newAppointment';
     final isCalendar = effectiveName == 'calendar';
@@ -27,7 +58,7 @@ class NavShell extends StatelessWidget {
       idx: idx,
       showNavBar: !hideBars,
       routeName: effectiveName,
-      child: child,
+      child: widget.child,
     );
     if (isCalendar) {
       return ChangeNotifierProvider(
