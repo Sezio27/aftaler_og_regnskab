@@ -5,6 +5,7 @@ enum AppointmentStatus { notInvoiced, invoiced, cancelled }
 
 @immutable
 class AppointmentCardModel {
+  final String id;
   final String clientName;
   final String serviceName;
   final String? phone;
@@ -16,6 +17,7 @@ class AppointmentCardModel {
   final String status;
 
   const AppointmentCardModel({
+    required this.id,
     required this.clientName,
     required this.serviceName,
     required this.time,

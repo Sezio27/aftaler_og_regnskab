@@ -2,13 +2,11 @@
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/utils/range.dart';
-import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
+import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
-
 import 'package:aftaler_og_regnskab/widgets/stat_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -17,73 +15,55 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final vm = context.read<AppointmentViewModel>();
-
-      final now = DateTime.now();
-      final m = monthRange(now);
-
-      vm.setActiveRange(m.start, m.end);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final apptVm = context.watch<AppointmentViewModel>();
-
     final now = DateTime.now();
-
     final m = monthRange(now);
-
     final twoWeek = twoWeekRange(now);
-
-    // Use your new helpers
-    final monthlyCount = apptVm.countAppointmentsInRange(m.start, m.end);
-    final monthlyPaid = apptVm.sumPaidInRangeDKK(m.start, m.end);
 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 6),
         child: Column(
           children: [
+            // KPIs via Selector (fast, minimal rebuilds)
             Row(
               children: [
-                StatCard(
-                  title: "Omsætning",
-                  subtitle: "Denne måned",
-                  value: '${monthlyPaid.toStringAsFixed(0)} Kr.',
-                  icon: Icon(
-                    Icons.account_balance_outlined,
-                    size: 20,
-                    color: AppColors.greenMain,
+                Selector<AppointmentViewModel, double>(
+                  selector: (_, vm) => vm.sumPaidInRangeDKK(m.start, m.end),
+                  builder: (_, monthlyPaid, __) => StatCard(
+                    title: "Omsætning",
+                    subtitle: "Denne måned",
+                    value: '${monthlyPaid.toStringAsFixed(0)} Kr.',
+                    icon: const Icon(
+                      Icons.account_balance_outlined,
+                      size: 20,
+                      color: AppColors.greenMain,
+                    ),
+                    valueColor: AppColors.greenMain,
+                    iconBgColor: AppColors.greenBackground,
                   ),
-                  valueColor: AppColors.greenMain,
-                  iconBgColor: AppColors.greenBackground,
                 ),
                 const SizedBox(width: 16),
-                StatCard(
-                  title: "Aftaler",
-                  subtitle: "Denne måned",
-                  value: monthlyCount.toString(),
-                  icon: Icon(
-                    Icons.calendar_today_outlined,
-                    size: 20,
-                    color: AppColors.peach,
+                Selector<AppointmentViewModel, int>(
+                  selector: (_, vm) =>
+                      vm.countAppointmentsInRange(m.start, m.end),
+                  builder: (_, monthlyCount, __) => StatCard(
+                    title: "Aftaler",
+                    subtitle: "Denne måned",
+                    value: monthlyCount.toString(),
+                    icon: const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 20,
+                      color: AppColors.peach,
+                    ),
+                    valueColor: cs.onSurface,
+                    iconBgColor: AppColors.peachBackground,
                   ),
-                  valueColor: cs.onSurface,
-                  iconBgColor: AppColors.peachBackground,
                 ),
               ],
             ),
@@ -123,18 +103,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 2),
 
-            // Reuse existing VM methods to build a 2-week forward agenda
-            FutureBuilder<List<AppointmentCardModel>>(
-              future: cardsForRange(apptVm, twoWeek.start, twoWeek.end),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
+            // Upcoming list fed from VM memory
+            Selector<
+              AppointmentViewModel,
+              ({bool ready, List<AppointmentCardModel> items})
+            >(
+              selector: (_, vm) => (
+                ready: vm.isReady,
+                items: vm.cardsForRangeSync(twoWeek.start, twoWeek.end),
+              ),
+              // keep it simple: let it rebuild whenever the tuple changes
+              builder: (context, data, _) {
+                if (!data.ready) {
                   return const Padding(
                     padding: EdgeInsets.all(24),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
 
-                final items = snap.data ?? const [];
+                final items = data.items;
                 if (items.isEmpty) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(
@@ -153,7 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
 
-                // Inside SingleChildScrollView → use a non-scrolling, shrink-wrapped list
                 return ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -173,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
 
                     return AppointmentCard(
+                      key: ValueKey('appt-${a.id}'),
                       avatar: Avatar(imageUrl: a.imageUrl),
                       title: a.clientName,
                       subtitle: a.serviceName,

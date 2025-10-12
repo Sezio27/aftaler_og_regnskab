@@ -70,6 +70,35 @@ class AppointmentRepository {
     return _fromDoc(snap);
   }
 
+  // in AppointmentRepository
+  // appointment_repository.dart
+  Future<List<AppointmentModel>> getAppointmentsBetween(
+    DateTime startInclusive,
+    DateTime endInclusive,
+  ) async {
+    final uid = _requireUid;
+    final endOfDay = DateTime(
+      endInclusive.year,
+      endInclusive.month,
+      endInclusive.day,
+      23,
+      59,
+      59,
+      999,
+    );
+
+    final q = await _userAppointments(uid)
+        .where(
+          'dateTime',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
+        )
+        .where('dateTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .orderBy('dateTime')
+        .get();
+
+    return q.docs.map(_fromDoc).toList();
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Writes
   // ────────────────────────────────────────────────────────────────────────────
@@ -99,6 +128,14 @@ class AppointmentRepository {
     }..removeWhere((_, v) => v == null);
 
     await _userAppointments(uid).doc(id).set(withMeta, SetOptions(merge: true));
+  }
+
+  Future<void> updateStatus(String id, String newStatus) async {
+    final uid = _requireUid;
+    await _userAppointments(uid).doc(id).set({
+      'status': newStatus.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   /// Delete an appointment document.

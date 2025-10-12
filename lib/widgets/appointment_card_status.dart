@@ -5,7 +5,7 @@ import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 
-class AppointmentStatusCard extends StatelessWidget {
+class AppointmentStatusCard extends StatefulWidget {
   const AppointmentStatusCard({
     super.key,
     required this.title,
@@ -26,8 +26,19 @@ class AppointmentStatusCard extends StatelessWidget {
   final VoidCallback? onSeeDetails;
 
   @override
+  State<AppointmentStatusCard> createState() => _AppointmentStatusCardState();
+}
+
+class _AppointmentStatusCardState extends State<AppointmentStatusCard>
+    with TickerProviderStateMixin {
+  bool _expanded = false;
+
+  void _toggle() => setState(() => _expanded = !_expanded);
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final sel = PaymentStatusX.fromString(widget.status);
 
     return CustomCard(
       width: double.infinity,
@@ -38,39 +49,50 @@ class AppointmentStatusCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _StatusIcon(status: status),
+                _StatusIcon(status: widget.status),
 
                 Column(
                   children: [
                     Text(
-                      title,
+                      widget.title,
                       style: AppTypography.acTtitle,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      service,
+                      widget.service,
                       style: AppTypography.acSubtitle,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-                Text(dateText, style: AppTypography.f1),
+                Text(widget.dateText, style: AppTypography.f1),
 
-                Text(priceText, style: AppTypography.num3),
+                Text(widget.priceText, style: AppTypography.num3),
               ],
             ),
             const SizedBox(height: 4),
             // "Ændr status" + "Se detaljer"
             Row(
               children: [
-                Text(
-                  'Ændr status',
-                  style: AppTypography.b3.copyWith(color: cs.primary),
+                InkWell(
+                  onTap: _toggle,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 2,
+                    ),
+                    child: Text(
+                      'Ændr status',
+                      style: AppTypography.b3.copyWith(color: cs.primary),
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 TextButton(
-                  onPressed: onSeeDetails,
+                  onPressed: widget.onSeeDetails,
                   child: Text(
                     'Se detaljer',
                     style: AppTypography.b3.copyWith(color: cs.onSurface),
@@ -80,68 +102,77 @@ class AppointmentStatusCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // Pills row
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
-              children: [
-                _StatusPill(
-                  label: PaymentStatus.paid.label,
-                  selected: status == PaymentStatus.paid,
-                  fill: AppColors.greenMain,
-                  outline: AppColors.greenMain,
-                  onTap: () => onChangeStatus(PaymentStatus.paid),
-                ),
-                _StatusPill(
-                  label: PaymentStatus.uninvoiced.label,
-                  selected: status == PaymentStatus.uninvoiced,
-                  fill: cs.onPrimary, // white
-                  text: cs.onSurface,
-                  outline: cs.onSurface.withOpacity(.35),
-                  onTap: () => onChangeStatus(PaymentStatus.uninvoiced),
-                ),
-                _StatusPill(
-                  label: PaymentStatus.waiting.label,
-                  selected: status == PaymentStatus.waiting,
-                  fill: AppColors.orangeMain,
-                  outline: AppColors.orangeMain,
-                  onTap: () => onChangeStatus(PaymentStatus.waiting),
-                ),
-                _StatusPill(
-                  label: PaymentStatus.missing.label,
-                  selected: status == PaymentStatus.missing,
-                  fill: AppColors.redMain,
-                  outline: AppColors.redMain,
-                  onTap: () => onChangeStatus(PaymentStatus.missing),
-                ),
-              ],
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: _expanded
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          _pill(
+                            label: PaymentStatus.paid.label,
+                            selected: sel == PaymentStatus.paid,
+                            fill: AppColors.greenMain,
+                            outline: AppColors.greenMain,
+                            onTap: () {
+                              widget.onChangeStatus(PaymentStatus.paid);
+                              setState(() => _expanded = false);
+                            },
+                          ),
+                          _pill(
+                            label: PaymentStatus.uninvoiced.label,
+                            selected: sel == PaymentStatus.uninvoiced,
+                            fill: cs.onPrimary,
+                            text: cs.onSurface,
+                            outline: cs.onSurface.withOpacity(.35),
+                            onTap: () {
+                              widget.onChangeStatus(PaymentStatus.uninvoiced);
+                              setState(() => _expanded = false);
+                            },
+                          ),
+                          _pill(
+                            label: PaymentStatus.waiting.label,
+                            selected: sel == PaymentStatus.waiting,
+                            fill: AppColors.orangeMain,
+                            outline: AppColors.orangeMain,
+                            onTap: () {
+                              widget.onChangeStatus(PaymentStatus.waiting);
+                              setState(() => _expanded = false);
+                            },
+                          ),
+                          _pill(
+                            label: PaymentStatus.missing.label,
+                            selected: sel == PaymentStatus.missing,
+                            fill: AppColors.redMain,
+                            outline: AppColors.redMain,
+                            onTap: () {
+                              widget.onChangeStatus(PaymentStatus.missing);
+                              setState(() => _expanded = false);
+                            },
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.label,
-    required this.selected,
-    required this.fill,
-    required this.outline,
-    required this.onTap,
-    this.text,
-  });
-
-  final String label;
-  final bool selected;
-  final Color fill;
-  final Color outline;
-  final Color? text;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _pill({
+    required String label,
+    required bool selected,
+    required Color fill,
+    required Color outline,
+    required VoidCallback onTap,
+    Color? text,
+  }) {
     final cs = Theme.of(context).colorScheme;
     final bg = selected ? fill : Colors.transparent;
     final fg = selected ? Colors.white : (text ?? cs.onSurface);
