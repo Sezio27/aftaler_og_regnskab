@@ -351,6 +351,39 @@ class AppointmentViewModel extends ChangeNotifier {
     return double.tryParse(s) ?? 0;
   }
 
+  ({int paid, int waiting, int missing, int uninvoiced}) statusCount(
+    DateTime start,
+    DateTime end,
+  ) {
+    var paid = 0, waiting = 0, missing = 0, uninvoiced = 0;
+
+    final items = getAppointmentsInRange(start, end);
+
+    for (final a in items) {
+      switch ((a.status ?? '').toLowerCase()) {
+        case 'betalt':
+          paid++;
+          break;
+        case 'afventer':
+          waiting++;
+          break;
+        case 'forfalden':
+          missing++;
+          break;
+        case 'ufaktureret':
+          uninvoiced++;
+          break;
+      }
+    }
+
+    return (
+      paid: paid,
+      waiting: waiting,
+      missing: missing,
+      uninvoiced: uninvoiced,
+    );
+  }
+
   Future<void> delete(String id, {bool deleteStorage = true}) async {
     if (deleteStorage && deleteImages != null) {
       await deleteImages!(id);

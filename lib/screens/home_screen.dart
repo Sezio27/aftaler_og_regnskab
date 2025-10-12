@@ -2,9 +2,9 @@
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/utils/date_range.dart';
+import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/utils/performance.dart';
-import 'package:aftaler_og_regnskab/utils/status_color.dart';
+import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
@@ -36,24 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       vm.setActiveRange(m.start, m.end);
     });
-  }
-
-  Future<List<AppointmentCardModel>> _cardsForRange(
-    AppointmentViewModel vm,
-    DateTime start,
-    DateTime end,
-  ) async {
-    final List<AppointmentCardModel> out = [];
-    for (
-      var d = DateTime(start.year, start.month, start.day);
-      !d.isAfter(end);
-      d = d.add(const Duration(days: 1))
-    ) {
-      final dayCards = await vm.cardsForDate(d);
-      out.addAll(dayCards);
-    }
-    out.sort((a, b) => a.time.compareTo(b.time));
-    return out;
   }
 
   @override
@@ -143,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Reuse existing VM methods to build a 2-week forward agenda
             FutureBuilder<List<AppointmentCardModel>>(
-              future: _cardsForRange(apptVm, twoWeek.start, twoWeek.end),
+              future: cardsForRange(apptVm, twoWeek.start, twoWeek.end),
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return const Padding(

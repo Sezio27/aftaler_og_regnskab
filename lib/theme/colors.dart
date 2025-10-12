@@ -15,7 +15,7 @@ class AppColors {
   static const Color peach2 = Color(0xFFF2BEAE);
   static const Color peachBackground = Color(0xFFFEEBE4);
   static const Color greenBackground = Color(0xFFD5F4E3);
-  static const Color greenMain = Color(0xFF02542D);
+  static const Color greenMain = Color.fromARGB(255, 2, 112, 59);
   static const Color orangeBackground = Color(0xFFFEE0C2);
   static const Color orangeMain = Color(0xFFFF9500);
   static const Color redMain = Color(0xFFC00F0C);

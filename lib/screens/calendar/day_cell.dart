@@ -1,5 +1,5 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/utils/status_color.dart';
+import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:flutter/material.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 

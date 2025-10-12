@@ -5,7 +5,7 @@ import 'package:aftaler_og_regnskab/screens/calendar/week_switcher.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/week_day_header.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
-import 'package:aftaler_og_regnskab/utils/status_color.dart';
+import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
