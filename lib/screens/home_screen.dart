@@ -110,7 +110,7 @@ class HomeScreen extends StatelessWidget {
             >(
               selector: (_, vm) => (
                 ready: vm.isReady,
-                items: vm.cardsForRangeSync(twoWeek.start, twoWeek.end),
+                items: vm.cardsForRange(twoWeek.start, twoWeek.end),
               ),
               // keep it simple: let it rebuild whenever the tuple changes
               builder: (context, data, _) {

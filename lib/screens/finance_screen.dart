@@ -31,32 +31,11 @@ class FinanceScreen extends StatefulWidget {
 class _FinanceScreenState extends State<FinanceScreen> {
   Tabs _tab = Tabs.week;
 
-  // Cache the "recent" list query to avoid refetching on unrelated rebuilds.
-  Future<List<AppointmentCardModel>>? _recentFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    // Top-level already did: vm.setActiveRange(Jan 1..Dec 31 of current year).
-    // Here we only build the recent-list future once.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _buildRecentFuture();
-      setState(() {});
-    });
-  }
-
   DateRange _rangeForTab(Tabs t, DateTime now) => switch (t) {
     Tabs.week => weekRange(now),
     Tabs.month => monthRange(now),
     Tabs.year => yearRange(now),
   };
-
-  void _buildRecentFuture() {
-    final vm = context.read<AppointmentViewModel>();
-    final now = DateTime.now();
-    final r = monthRange(now); // "Seneste aftaler" for current month
-    _recentFuture = vm.cardsForRange(r.start, r.end);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,7 +235,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       selector: (_, vm) {
                         final now = DateTime.now();
                         final r = monthRange(now); // or whatever you want here
-                        return vm.cardsForRangeSync(r.start, r.end);
+                        return vm.cardsForRange(r.start, r.end);
                       },
                       shouldRebuild: (a, b) {
                         // Optional: micro-optimization; compare lengths or ids

@@ -50,13 +50,10 @@ class AppointmentViewModel extends ChangeNotifier {
 
   /// Appointments inside the current active range
 
-  StreamSubscription<List<AppointmentModel>>? _rangeSub;
-  DateTime? _activeStart, _activeEnd; // date-only
   List<AppointmentModel> _rangeAppointments = const [];
   List<AppointmentModel> get all => _rangeAppointments;
 
   /// Quick lookup sets and maps for calendar queries
-  final Set<DateTime> _daysWithAppointments = <DateTime>{}; // date-only
   final Map<DateTime, List<AppointmentModel>> _appointmentsByDay = {};
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -302,35 +299,9 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
-    final from = _asDateOnly(start);
-    final to = _asDateOnly(end);
-    if (to.isBefore(from)) return const [];
-
-    final hits = _rangeAppointments.where((a) {
-      final dt = a.dateTime;
-      return dt != null && !dt.isBefore(from) && !dt.isAfter(to);
-    }).toList();
-
-    final appointmentsInRange = <AppointmentModel>[];
-
-    var currentDay = from;
-    while (!currentDay.isAfter(to)) {
-      final appointmentsOnDay = _appointmentsByDay[currentDay];
-      if (appointmentsOnDay != null && appointmentsOnDay.isNotEmpty) {
-        appointmentsInRange.addAll(appointmentsOnDay);
-      }
-      currentDay = currentDay.add(const Duration(days: 1));
-    }
-
-    hits.sort((a, b) {
-      final at = a.dateTime, bt = b.dateTime;
-      if (at == null && bt == null) return 0;
-      if (at == null) return 1;
-      if (bt == null) return -1;
-      return at.compareTo(bt);
-    });
-
-    return hits;
+    final s = _asDateOnly(start);
+    final e = _endOfDayInclusive(_asDateOnly(end));
+    return _appointmentsInWindowFromMemory(s, e);
   }
 
   int countAppointmentsInRange(DateTime start, DateTime end) {
@@ -408,133 +379,41 @@ class AppointmentViewModel extends ChangeNotifier {
   Future<AppointmentModel?> getAppointment(String id) =>
       _repo.getAppointmentOnce(id);
 
-  List<AppointmentCardModel> cardsForRangeSync(DateTime start, DateTime end) {
-    final out = <AppointmentCardModel>[];
-    for (
-      var d = DateTime(start.year, start.month, start.day);
-      !d.isAfter(end);
-      d = d.add(const Duration(days: 1))
-    ) {
-      final todays = List<AppointmentModel>.from(
-        _appointmentsByDay[d] ?? const <AppointmentModel>[],
-      )..sort((a, b) => a.dateTime!.compareTo(b.dateTime!));
+  // ───────────────────────────────────────────────────────────
+  // Helpers
+  // ───────────────────────────────────────────────────────────
 
-      for (final appt in todays) {
-        final client = _clientCache[appt.clientId ?? ''];
-        final service = _serviceCache[appt.serviceId ?? ''];
+  bool _windowIsInsideActiveRange(DateTime s, DateTime e) =>
+      _activeRangeStart != null &&
+      _activeRangeEnd != null &&
+      !s.isBefore(_activeRangeStart!) &&
+      !e.isAfter(_activeRangeEnd!);
 
-        final chosenPrice = _firstNonEmpty([
-          _trimOrNull(appt.price),
-          _trimOrNull(service?.price),
-        ]);
+  DateTime _endOfDayInclusive(DateTime d) =>
+      DateTime(d.year, d.month, d.day, 23, 59, 59, 999);
 
-        out.add(
-          AppointmentCardModel(
-            id: appt.id!,
-            clientName: client?.name ?? '',
-            serviceName: service?.name ?? '',
-            phone: client?.phone,
-            email: client?.email,
-            time: appt.dateTime!,
-            price: chosenPrice,
-            duration: service?.duration,
-            status: appt.status ?? 'ufaktureret',
-            imageUrl: client?.image,
-          ),
-        );
-      }
-    }
-    out.sort((a, b) => a.time.compareTo(b.time));
-    return out;
-  }
-
-  Future<List<AppointmentCardModel>> cardsForRange(
+  List<AppointmentModel> _appointmentsInWindowFromMemory(
     DateTime start,
-    DateTime end,
-  ) async {
-    final appts = await _repo.getAppointmentsBetween(start, end);
-
-    // Prefetch related docs (batched, cached)
-    final clientIds = <String>{
-      for (final a in appts)
-        if ((a.clientId ?? '').trim().isNotEmpty) a.clientId!.trim(),
-    };
-    final serviceIds = <String>{
-      for (final a in appts)
-        if ((a.serviceId ?? '').trim().isNotEmpty) a.serviceId!.trim(),
-    };
-
-    await Future.wait([
-      for (final id in clientIds) _fetchClientCached(id),
-      for (final id in serviceIds) _fetchServiceCached(id),
-    ]);
-
-    // Map → AppointmentCardModel (same logic as cardsForDate)
-    final cards = <AppointmentCardModel>[
-      for (final a in appts)
-        if (a.id != null && a.dateTime != null)
-          AppointmentCardModel(
-            id: a.id!,
-            clientName: _clientCache[a.clientId ?? '']?.name ?? '',
-            serviceName: _serviceCache[a.serviceId ?? '']?.name ?? '',
-            phone: _clientCache[a.clientId ?? '']?.phone,
-            email: _clientCache[a.clientId ?? '']?.email,
-            time: a.dateTime!,
-            price: a.price,
-            duration: _serviceCache[a.serviceId ?? '']?.duration,
-            status: a.status ?? 'ufaktureret',
-            imageUrl: _clientCache[a.clientId ?? '']?.image,
-          ),
-    ]..sort((a, b) => a.time.compareTo(b.time));
-
-    return cards;
-  }
-
-  // in appointment_view_model.dart
-  Stream<List<AppointmentCardModel>> watchCardsForRange(
-    DateTime start,
-    DateTime end,
+    DateTime endInclusive,
   ) {
-    // make end inclusive for the day
-    final inclusiveEnd = DateTime(
-      end.year,
-      end.month,
-      end.day,
-      23,
-      59,
-      59,
-      999,
-    );
+    return _rangeAppointments.where((a) {
+      final dt = a.dateTime;
+      return dt != null && !dt.isBefore(start) && !dt.isAfter(endInclusive);
+    }).toList();
+  }
 
-    return _repo.watchAppointmentsBetween(start, inclusiveEnd).asyncMap((
-      appts,
-    ) async {
-      // Prefetch client/service (de-duped, cached)
-      final clientIds = <String>{
-        for (final a in appts)
-          if ((a.clientId ?? '').isNotEmpty) a.clientId!,
-      };
-      final serviceIds = <String>{
-        for (final a in appts)
-          if ((a.serviceId ?? '').isNotEmpty) a.serviceId!,
-      };
-
-      await Future.wait([
-        for (final id in clientIds) _fetchClientCached(id),
-        for (final id in serviceIds) _fetchServiceCached(id),
+  List<AppointmentCardModel> _mapToCards(List<AppointmentModel> appts) {
+    final out = <AppointmentCardModel>[];
+    for (final appt in appts) {
+      if (appt.id == null || appt.dateTime == null) continue;
+      final client = _clientCache[appt.clientId ?? ''];
+      final service = _serviceCache[appt.serviceId ?? ''];
+      final chosenPrice = _firstNonEmpty([
+        _trimOrNull(appt.price),
+        _trimOrNull(service?.price),
       ]);
-
-      // Build cards from caches (same logic as cardsForDate)
-      final cards = appts.map((appt) {
-        final client = _clientCache[appt.clientId ?? ''];
-        final service = _serviceCache[appt.serviceId ?? ''];
-
-        final chosenPrice = _firstNonEmpty([
-          _trimOrNull(appt.price),
-          _trimOrNull(service?.price),
-        ]);
-
-        return AppointmentCardModel(
+      out.add(
+        AppointmentCardModel(
           id: appt.id!,
           clientName: client?.name ?? '',
           serviceName: service?.name ?? '',
@@ -545,12 +424,23 @@ class AppointmentViewModel extends ChangeNotifier {
           duration: service?.duration,
           status: appt.status ?? 'ufaktureret',
           imageUrl: client?.image,
-        );
-      }).toList()..sort((a, b) => a.time.compareTo(b.time));
-
-      return cards;
-    });
+        ),
+      );
+    }
+    return out; // no sort
   }
+
+  // ───────────────────────────────────────────────────────────
+  // Unified: always call this one
+  // ───────────────────────────────────────────────────────────
+  List<AppointmentCardModel> cardsForRange(DateTime start, DateTime end) {
+    final s = _asDateOnly(start);
+    final e = _endOfDayInclusive(_asDateOnly(end));
+    final appts = _appointmentsInWindowFromMemory(s, e);
+    return _mapToCards(appts);
+  }
+
+  // in appointment_view_model.dart
 
   // ────────────────────────────────────────────────────────────────────────────
   // Calendar adapters (used by month/week UIs)
@@ -567,56 +457,62 @@ class AppointmentViewModel extends ChangeNotifier {
       final status = appt.status ?? 'not_invoiced';
       chips.add((title: clientName, status: status, time: time));
     }
-    chips.sort((a, b) => a.time.compareTo(b.time));
     return chips;
   }
 
-  bool hasEventsOn(DateTime day) =>
-      _daysWithAppointments.contains(_asDateOnly(day));
+  bool hasEventsOn(DateTime day) {
+    final d = _asDateOnly(day);
+    final list = _appointmentsByDay[d];
+    return list != null && list.isNotEmpty;
+  }
 
   /// Build UI-ready cards for a specific date (prefetches client/service first).
   Future<List<AppointmentCardModel>> cardsForDate(DateTime day) async {
-    final dateOnly = _asDateOnly(day);
-    final todays = List<AppointmentModel>.from(
-      _appointmentsByDay[dateOnly] ?? const <AppointmentModel>[],
-    )..sort((a, b) => a.dateTime!.compareTo(b.dateTime!));
+    final date = _asDateOnly(day);
+    final appointmentsOnDay =
+        _appointmentsByDay[date] ?? const <AppointmentModel>[];
+    // No sort needed: repo orders by dateTime and _rebuildDailyIndexes preserves it.
 
-    final uniqueClientIds = {
-      for (final a in todays)
-        if ((a.clientId ?? '').isNotEmpty) a.clientId!,
+    // Fetch only what’s missing from caches
+    final clientsToFetch = <String>{
+      for (final a in appointmentsOnDay)
+        if ((a.clientId ?? '').isNotEmpty &&
+            !_clientCache.containsKey(a.clientId))
+          a.clientId!,
     };
-    final uniqueServiceIds = {
-      for (final a in todays)
-        if ((a.serviceId ?? '').isNotEmpty) a.serviceId!,
+    final servicesToFetch = <String>{
+      for (final a in appointmentsOnDay)
+        if ((a.serviceId ?? '').isNotEmpty &&
+            !_serviceCache.containsKey(a.serviceId))
+          a.serviceId!,
     };
 
-    await Future.wait([
-      for (final id in uniqueClientIds) _fetchClientCached(id),
-      for (final id in uniqueServiceIds) _fetchServiceCached(id),
-    ]);
-
-    return todays.map((appt) {
-      final client = _clientCache[appt.clientId ?? ''];
-      final service = _serviceCache[appt.serviceId ?? ''];
-
-      final chosenPrice = _firstNonEmpty([
-        _trimOrNull(appt.price),
-        _trimOrNull(service?.price),
+    if (clientsToFetch.isNotEmpty || servicesToFetch.isNotEmpty) {
+      await Future.wait([
+        for (final id in clientsToFetch) _fetchClientCached(id),
+        for (final id in servicesToFetch) _fetchServiceCached(id),
       ]);
+    }
 
-      return AppointmentCardModel(
-        id: appt.id!,
-        clientName: client?.name ?? '',
-        serviceName: service?.name ?? '',
-        phone: client?.phone,
-        email: client?.email,
-        time: appt.dateTime!,
-        price: chosenPrice,
-        duration: service?.duration,
-        status: appt.status ?? 'ufaktureret',
-        imageUrl: client?.image,
-      );
-    }).toList();
+    return [
+      for (final appt in appointmentsOnDay)
+        if (appt.id != null && appt.dateTime != null)
+          AppointmentCardModel(
+            id: appt.id!,
+            clientName: _clientCache[appt.clientId ?? '']?.name ?? '',
+            serviceName: _serviceCache[appt.serviceId ?? '']?.name ?? '',
+            phone: _clientCache[appt.clientId ?? '']?.phone,
+            email: _clientCache[appt.clientId ?? '']?.email,
+            time: appt.dateTime!,
+            price: _firstNonEmpty([
+              _trimOrNull(appt.price),
+              _trimOrNull(_serviceCache[appt.serviceId ?? '']?.price),
+            ]),
+            duration: _serviceCache[appt.serviceId ?? '']?.duration,
+            status: appt.status ?? 'ufaktureret',
+            imageUrl: _clientCache[appt.clientId ?? '']?.image,
+          ),
+    ];
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -624,16 +520,13 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   void _rebuildDailyIndexes(List<AppointmentModel> items) {
     _appointmentsByDay.clear();
-    _daysWithAppointments.clear();
-
     for (final appt in items) {
       final dt = appt.dateTime;
       if (dt == null) continue;
-
       final day = _asDateOnly(dt);
       (_appointmentsByDay[day] ??= <AppointmentModel>[]).add(appt);
-      _daysWithAppointments.add(day);
     }
+    // no per-day sort needed
   }
 
   // ────────────────────────────────────────────────────────────────────────────
