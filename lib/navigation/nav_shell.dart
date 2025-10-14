@@ -1,6 +1,5 @@
 // lib/navigation/nav_shell.dart
 import 'package:aftaler_og_regnskab/app_layout.dart';
-import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';

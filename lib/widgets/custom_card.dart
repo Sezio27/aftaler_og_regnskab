@@ -42,7 +42,7 @@ class CustomCard extends StatelessWidget {
             blurStyle: blurStyle!,
           ),
         ],
-        color: cs.surface,
+        color: cs.onPrimary,
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
       clipBehavior: Clip.antiAlias,

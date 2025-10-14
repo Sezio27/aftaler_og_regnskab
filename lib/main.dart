@@ -116,7 +116,7 @@ class MyApp extends StatelessWidget {
 /// Leaves screens free of setActiveRange calls.
 class _AppBootstrap extends StatefulWidget {
   final GoRouter router;
-  const _AppBootstrap({super.key, required this.router});
+  const _AppBootstrap({required this.router});
 
   @override
   State<_AppBootstrap> createState() => _AppBootstrapState();

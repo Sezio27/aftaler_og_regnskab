@@ -167,6 +167,12 @@ class HomeScreen extends StatelessWidget {
                       date: dateText,
                       time: timeText,
                       color: statusColor(a.status),
+                      onTap: () {
+                        context.pushNamed(
+                          AppRoute.appointmentDetails.name,
+                          pathParameters: {'id': a.id},
+                        );
+                      },
                     );
                   },
                 );

@@ -11,6 +11,7 @@ import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -140,6 +141,12 @@ class _WeekViewBody extends StatelessWidget {
                     date: dateText,
                     time: timeText,
                     color: statusColor(a.status),
+                    onTap: () {
+                      context.pushNamed(
+                        'appointmentDetails',
+                        pathParameters: {'id': a.id},
+                      );
+                    },
                   );
                 },
               );

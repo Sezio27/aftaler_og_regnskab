@@ -1,6 +1,7 @@
 ﻿import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
+import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
@@ -17,6 +18,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/service_list.dart';
+import 'package:aftaler_og_regnskab/widgets/status.dart';
 import 'package:aftaler_og_regnskab/widgets/time_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +45,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   final _noteCtrl = TextEditingController();
   final _customPriceCtrl = TextEditingController();
 
-  String _status = 'Ufaktureret';
+  PaymentStatus _status = PaymentStatus.uninvoiced;
 
   String? _selectedClientId;
   String? _selectedServiceId;
@@ -106,36 +108,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       note: _noteCtrl.text,
       customPriceText: _customPriceCtrl.text, // UI override (optional)
       images: _images,
-      status: _status,
-    );
-  }
-
-  Widget _statusChoice(BuildContext context, String label, Color color) {
-    final cs = Theme.of(context).colorScheme;
-    final selected = _status == label;
-
-    return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          color: selected ? color : cs.onPrimary, // filled vs unfilled
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? color : cs.onSurface.withAlpha(80),
-            width: 0.6,
-          ),
-        ),
-        child: CupertinoButton(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          borderRadius: BorderRadius.circular(12),
-          onPressed: () => setState(() => _status = label),
-          child: Text(
-            label,
-            style: AppTypography.button2.copyWith(
-              color: selected ? cs.onPrimary : cs.onSurface, // text color
-            ),
-          ),
-        ),
-      ),
+      status: _status.label,
     );
   }
 
@@ -410,40 +383,9 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                               'Vælg status', // keep your section title, this row mirrors DatePicker
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    _statusChoice(
-                                      context,
-                                      'Betalt',
-                                      AppColors.greenMain,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _statusChoice(
-                                      context,
-                                      'Afventer',
-                                      AppColors.orangeMain,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    _statusChoice(
-                                      context,
-                                      'Forfalden',
-                                      AppColors.redMain,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _statusChoice(
-                                      context,
-                                      'Ufaktureret',
-                                      AppColors.greyMain,
-                                    ), // ← default will start as filled
-                                  ],
-                                ),
-                              ],
+                            child: StatusChoice(
+                              value: _status,
+                              onChanged: (s) => setState(() => _status = s),
                             ),
                           ),
                         ),

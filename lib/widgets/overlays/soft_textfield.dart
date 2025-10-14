@@ -45,7 +45,7 @@ class SoftTextField extends StatelessWidget {
         : BorderSide.none;
 
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(borderRadius!),
+      borderRadius: BorderRadius.circular(borderRadius),
       borderSide: borderSide,
     );
 

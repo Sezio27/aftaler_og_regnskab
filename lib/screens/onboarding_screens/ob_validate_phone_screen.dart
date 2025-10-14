@@ -1,14 +1,10 @@
 import 'dart:async';
 
 import 'package:aftaler_og_regnskab/app_router.dart';
-import 'package:aftaler_og_regnskab/screens/home_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';

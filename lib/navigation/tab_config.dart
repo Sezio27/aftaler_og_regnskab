@@ -33,6 +33,7 @@ int? tabIndexForRouteName(String? name) {
 String? routeNameFromLocation(String loc) {
   if (loc.startsWith('/appointments/new')) return 'newAppointment';
   if (loc.startsWith('/appointments/all')) return 'allAppointments';
+  if (loc.startsWith('/appointments')) return 'appointmentDetails';
 
   if (loc.startsWith('/clients')) {
     if (loc == "/clients/all") return "allClients";

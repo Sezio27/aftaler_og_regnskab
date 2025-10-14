@@ -9,11 +9,13 @@ class ClientTile extends StatelessWidget {
     required this.c,
     this.selected = false,
     this.onTap,
+    this.border = true,
   });
 
   final ClientModel c;
   final bool selected;
   final VoidCallback? onTap;
+  final bool border;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +30,12 @@ class ClientTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: cs.onPrimary,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? cs.primary : cs.onSurface.withAlpha(50),
-            width: selected ? 1.4 : 1.0,
-          ),
+          border: border
+              ? Border.all(
+                  color: selected ? cs.primary : cs.onSurface.withAlpha(50),
+                  width: selected ? 1.4 : 1.0,
+                )
+              : null,
         ),
         child: Row(
           children: [

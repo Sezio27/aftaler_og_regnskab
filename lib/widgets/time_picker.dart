@@ -95,7 +95,7 @@ class TimePicker extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           side: BorderSide(color: cs.onSurface.withOpacity(0.25), width: 1),
-          backgroundColor: cs.surface,
+          backgroundColor: cs.onPrimary,
           foregroundColor: cs.onSurface,
         ),
         child: Text(label, style: AppTypography.num3),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 Future<T?> showOverlayPanel<T>({
   required BuildContext context,
@@ -20,9 +21,7 @@ Future<T?> showOverlayPanel<T>({
           children: [
             if (dismissOnTapOutside)
               Positioned.fill(
-                child: GestureDetector(
-                  onTap: () => Navigator.of(ctx).maybePop(),
-                ),
+                child: GestureDetector(onTap: () => context.pop()),
               ),
             Center(
               child: ScaleTransition(
@@ -42,7 +41,10 @@ Future<T?> showOverlayPanel<T>({
                           bottom: MediaQuery.of(ctx).viewInsets.bottom,
                         ),
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 520),
+                          constraints: BoxConstraints(
+                            maxWidth: 520,
+                            maxHeight: MediaQuery.of(ctx).size.height * 0.9,
+                          ),
                           child: child,
                         ),
                       ),

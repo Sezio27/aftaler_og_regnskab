@@ -49,6 +49,14 @@ PreferredSizeWidget buildTopBarForRouteName(
         height: fixedHeight,
       );
 
+    case 'appointmentDetails':
+      return AppTopBar(
+        title: 'Aftaler detaljer',
+        showBackButton: true,
+        width: maxContentWidth,
+        height: fixedHeight,
+      );
+
     case 'allClients':
       return AppTopBar(
         title: 'Klienter',

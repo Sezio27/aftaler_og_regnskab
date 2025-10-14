@@ -12,17 +12,10 @@ void showOTPDialog({
       title: const Text("Enter OTP"),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          TextField(
-            controller: codeController,
-          ),
-        ],
+        children: <Widget>[TextField(controller: codeController)],
       ),
       actions: <Widget>[
-        TextButton(
-          child: const Text("Done"),
-          onPressed: onPressed,
-        )
+        TextButton(onPressed: onPressed, child: const Text("Done")),
       ],
     ),
   );

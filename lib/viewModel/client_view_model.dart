@@ -14,12 +14,13 @@ class ClientViewModel extends ChangeNotifier {
   StreamSubscription<List<ClientModel>>? _sub;
 
   String _query = '';
-
+  ClientModel? _client;
   List<ClientModel> _all = const [];
   List<ClientModel> _allFiltered = const [];
   List<ClientModel> _private = const [];
   List<ClientModel> _business = const [];
 
+  ClientModel? get client => _client;
   List<ClientModel> get allClients => _allFiltered;
   List<ClientModel> get privateClients => _private;
   List<ClientModel> get businessClients => _business;
@@ -27,10 +28,27 @@ class ClientViewModel extends ChangeNotifier {
   int get privateCount => _private.length;
   int get businessCount => _business.length;
 
+  final Map<String, ClientModel> _clientCache = {};
+
   @override
   void dispose() {
     _sub?.cancel();
     super.dispose();
+  }
+
+  Future<void> prefetchClient(String? id) async {
+    final key = (id ?? '').trim();
+    if (key.isEmpty) return;
+
+    if (_clientCache.containsKey(key)) return; // already cached
+
+    final fetched = await _repo.getClientOnce(key);
+    if (fetched != null) {
+      _clientCache[key] = fetched;
+      // also keep _client if you still use it anywhere
+      _client = fetched;
+      notifyListeners(); // triggers UI rebuilds using select()
+    }
   }
 
   void initClientFilters({String initialQuery = ''}) {
@@ -41,6 +59,21 @@ class ClientViewModel extends ChangeNotifier {
       _all = items;
       _recompute();
     });
+  }
+
+  ClientModel? getClient(String id) {
+    // try cache first
+    final cached = _clientCache[id];
+    if (cached != null) return cached;
+
+    // then from the list populated by initClientFilters/watchClients
+    for (final c in _all) {
+      if (c.id == id) {
+        _clientCache[id] = c;
+        return c;
+      }
+    }
+    return null;
   }
 
   void setClientSearch(String q) {
@@ -73,6 +106,10 @@ class ClientViewModel extends ChangeNotifier {
 
     for (final c in searched) {
       (hasCvr(c) ? business : priv).add(c);
+      final id = (c.id ?? '').trim();
+      if (id.isNotEmpty) {
+        _clientCache[id] = c;
+      }
     }
 
     _business = business;

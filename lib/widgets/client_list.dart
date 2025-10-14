@@ -60,7 +60,7 @@ class ClientList extends StatelessWidget {
         final size = CurvedAnimation(
           parent: animation,
           curve: Curves.ease,
-          reverseCurve: Curves.easeOut
+          reverseCurve: Curves.easeOut,
         );
 
         final fade = CurvedAnimation(
@@ -78,9 +78,9 @@ class ClientList extends StatelessWidget {
 
       child: (selectedItem != null)
           ? SizedBox(
-              key: ValueKey('selected_${selectedItem!.id}'),
+              key: ValueKey('selected_${selectedItem.id}'),
               height: 90,
-              child: ClientTile(c: selectedItem!, selected: true),
+              child: ClientTile(c: selectedItem, selected: true),
             )
           : KeyedSubtree(
               key: const ValueKey('list'),

@@ -1,11 +1,7 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/client_list.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
-import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
-import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/material.dart';

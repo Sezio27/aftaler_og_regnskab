@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as dev;
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
@@ -131,11 +130,10 @@ class AppointmentViewModel extends ChangeNotifier {
             firstSnapshot = false;
           }
 
-          _prefetchNamesForActiveRange().then((_) {
-            if (_activeRangeStart == start && _activeRangeEnd == end) {
-              notifyListeners();
-            }
-          });
+          final changed = await _prefetchNamesForActiveRange();
+          if (changed) {
+            notifyListeners();
+          }
         });
   }
 
@@ -147,6 +145,7 @@ class AppointmentViewModel extends ChangeNotifier {
     required String? serviceId,
     required DateTime? dateTime,
     required List<String> checklistIds,
+    DateTime? payDate,
     String? location,
     String? note,
     String? customPriceText,
@@ -183,6 +182,7 @@ class AppointmentViewModel extends ChangeNotifier {
           serviceId: serviceId,
           checklistIds: checklistIds,
           dateTime: dateTime,
+          payDate: payDate,
           price: chosenPrice,
           location: _trimOrNull(location),
           note: _trimOrNull(note),
@@ -233,6 +233,7 @@ class AppointmentViewModel extends ChangeNotifier {
     String? serviceId,
     List<String>? checklistIds,
     DateTime? dateTime,
+    DateTime? payDate,
     String? location,
     String? note,
     String? customPrice,
@@ -262,6 +263,10 @@ class AppointmentViewModel extends ChangeNotifier {
 
       if (dateTime != null) {
         put('dateTime', Timestamp.fromDate(dateTime));
+      }
+
+      if (payDate != null) {
+        put('payDate', Timestamp.fromDate(payDate));
       }
 
       put('location', _trimOrNull(location));
@@ -383,12 +388,6 @@ class AppointmentViewModel extends ChangeNotifier {
   // Helpers
   // ───────────────────────────────────────────────────────────
 
-  bool _windowIsInsideActiveRange(DateTime s, DateTime e) =>
-      _activeRangeStart != null &&
-      _activeRangeEnd != null &&
-      !s.isBefore(_activeRangeStart!) &&
-      !e.isAfter(_activeRangeEnd!);
-
   DateTime _endOfDayInclusive(DateTime d) =>
       DateTime(d.year, d.month, d.day, 23, 59, 59, 999);
 
@@ -427,7 +426,7 @@ class AppointmentViewModel extends ChangeNotifier {
         ),
       );
     }
-    return out; // no sort
+    return out;
   }
 
   // ───────────────────────────────────────────────────────────

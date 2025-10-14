@@ -50,7 +50,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       active: _tab == Tabs.services,
                     ),
                     Tabs.checklists: SegItem(
-                      icon: Icons.event_note_outlined,
+                      icon: Icons.checklist,
                       text: 'Checklister',
                       active: _tab == Tabs.checklists,
                     ),
@@ -163,7 +163,9 @@ class _ServicesGrid extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(14),
                 ),
-                child: Container(color: cs.surfaceVariant.withOpacity(.5)),
+                child: Container(
+                  color: cs.surfaceContainerHighest.withOpacity(.5),
+                ),
               ),
             ),
             const Padding(

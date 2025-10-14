@@ -50,13 +50,15 @@ class FirebaseAuthMethods {
           if (!completer.isCompleted) completer.completeError(e);
         },
         codeSent: (String verificationId, int? resendToken) {
-          if (!completer.isCompleted)
+          if (!completer.isCompleted) {
             completer.complete((verificationId, resendToken));
+          }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           // Still return an id if timeout fires before codeSent (rare)
-          if (!completer.isCompleted)
+          if (!completer.isCompleted) {
             completer.complete((verificationId, null));
+          }
         },
       );
     } catch (e) {

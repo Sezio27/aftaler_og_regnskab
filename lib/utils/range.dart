@@ -1,6 +1,3 @@
-import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
-import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
-
 DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 DateTime mondayOf(DateTime d) {
   final x = DateTime(d.year, d.month, d.day);

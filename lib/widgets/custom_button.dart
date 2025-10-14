@@ -1,4 +1,3 @@
-import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {

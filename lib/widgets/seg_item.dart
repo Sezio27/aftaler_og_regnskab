@@ -40,7 +40,7 @@ class SegItem extends StatelessWidget {
           if (amount != null) ...[
             const SizedBox(height: 6),
             Text(
-              "${amount}",
+              "$amount",
               style: active
                   ? AppTypography.segActiveNumber.copyWith(color: fg)
                   : AppTypography.segPassiveNumber.copyWith(color: fg),

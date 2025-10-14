@@ -1,4 +1,3 @@
-import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';

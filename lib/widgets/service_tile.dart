@@ -1,7 +1,6 @@
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:flutter/material.dart';
 
 class ServiceTile extends StatelessWidget {

@@ -30,7 +30,7 @@ class _AuthGateState extends State<AuthGate> {
       final exists = await repo.userDocExists(uid: user.uid);
       if (!mounted) return;
 
-      context.go(exists ? '/settings' : '/onboarding/email');
+      context.go(exists ? '/home' : '/onboarding/email');
     });
   }
 

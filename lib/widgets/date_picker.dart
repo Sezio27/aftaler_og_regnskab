@@ -15,7 +15,7 @@ class DatePicker extends StatelessWidget {
     this.displayFormat,
   });
 
-  final DateTime value;
+  final DateTime? value;
   final ValueChanged<DateTime> onChanged;
   final DateTime? minimumDate;
   final DateTime? maximumDate;
@@ -25,16 +25,20 @@ class DatePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     String defaultLabel(DateTime d) =>
         '${d.day}. ${_monthShortDa[d.month - 1]} ${d.year}';
-    final label = (displayFormat ?? defaultLabel)(value);
+
+    final String label = (value != null)
+        ? (displayFormat ?? defaultLabel)(value!)
+        : '---';
 
     return SizedBox(
       height: 40,
       child: OutlinedButton(
         onPressed: () async {
           final picked = await context.pickCupertinoDate(
-            initial: value,
+            initial: value ?? DateTime.now(),
             minimumDate: minimumDate,
             maximumDate: maximumDate,
             modalHeight: modalHeight,
@@ -48,7 +52,7 @@ class DatePicker extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           side: BorderSide(color: cs.onSurface.withOpacity(0.25), width: 1),
-          backgroundColor: cs.surface,
+          backgroundColor: cs.onPrimary,
           foregroundColor: cs.onSurface,
         ),
         child: Text(label, style: AppTypography.num3),
@@ -119,16 +123,16 @@ extension DatePickerContextExt on BuildContext {
 }
 
 const List<String> _monthShortDa = [
-  'jan.',
-  'feb.',
-  'mar.',
-  'apr.',
-  'maj',
-  'jun.',
-  'jul.',
-  'aug.',
-  'sep.',
-  'okt.',
-  'nov.',
-  'dec.',
+  'Jan.',
+  'Feb.',
+  'Mar.',
+  'Apr.',
+  'Maj',
+  'Jun.',
+  'Jul.',
+  'Aug.',
+  'Sep.',
+  'Okt.',
+  'Nov.',
+  'Dec.',
 ];

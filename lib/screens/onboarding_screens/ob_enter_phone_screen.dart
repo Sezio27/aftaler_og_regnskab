@@ -1,9 +1,7 @@
 import 'package:aftaler_og_regnskab/app_router.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 
 import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
