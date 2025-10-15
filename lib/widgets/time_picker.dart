@@ -13,22 +13,24 @@ class TimePicker extends StatelessWidget {
     this.modalHeight = 300,
   });
 
-  final TimeOfDay value;
+  final TimeOfDay? value;
   final ValueChanged<TimeOfDay> onChanged;
   final bool use24h;
   final double modalHeight;
 
   Future<TimeOfDay?> _showWheelTimePicker(
     BuildContext context,
-    TimeOfDay initial,
+    TimeOfDay? initial,
   ) async {
     final now = DateTime.now();
+    final initHour = initial?.hour ?? now.hour;
+    final initMinute = initial?.minute ?? now.minute;
     DateTime temp = DateTime(
       now.year,
       now.month,
       now.day,
-      initial.hour,
-      initial.minute,
+      initHour,
+      initMinute,
     );
 
     return showCupertinoModalPopup<TimeOfDay>(
@@ -78,7 +80,7 @@ class TimePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = value.format(context);
+    final label = value != null ? value!.format(context) : "---";
     final cs = Theme.of(context).colorScheme;
 
     return SizedBox(
