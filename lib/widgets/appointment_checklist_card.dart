@@ -7,12 +7,18 @@ class AppointmentChecklistCard extends StatefulWidget {
     super.key,
     required this.checklist,
     required this.completed, // indices of done points
-    required this.onChanged, // returns updated set
+    required this.onToggleItem,
+    this.collapse = false,
+    this.editing = false, // << NEW
+    this.onRemove, // << NEW
   });
 
   final ChecklistModel checklist;
   final Set<int> completed;
-  final ValueChanged<Set<int>> onChanged;
+  final void Function(int index, bool nowChecked) onToggleItem;
+  final bool collapse;
+  final bool editing; // << NEW
+  final VoidCallback? onRemove; // << NEW
 
   @override
   State<AppointmentChecklistCard> createState() =>
@@ -23,14 +29,13 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
   bool _expanded = false;
 
   void _toggleExpanded() => setState(() => _expanded = !_expanded);
-  void _toggleIndex(int i) {
-    final next = {...widget.completed};
-    if (next.contains(i)) {
-      next.remove(i);
-    } else {
-      next.add(i);
+
+  @override
+  void didUpdateWidget(covariant AppointmentChecklistCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.collapse != oldWidget.collapse && _expanded) {
+      setState(() => _expanded = false);
     }
-    widget.onChanged(next);
   }
 
   @override
@@ -44,64 +49,65 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
       decoration: BoxDecoration(
         color: cs.onPrimary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.onSurface.withOpacity(0.35), width: 1),
+        border: Border.all(color: cs.onSurface.withAlpha(100), width: 0.8),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header block
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left: title + description + counter
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.checklist.name ?? '—', style: AppTypography.b6),
-                    if ((widget.checklist.description ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        widget.checklist.description!,
-                        style: AppTypography.num6.copyWith(
-                          color: cs.onSurface.withOpacity(0.75),
-                        ),
-                      ),
-                    ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.checklist.name ?? '—', style: AppTypography.b3),
+                  if ((widget.checklist.description ?? '').isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      '$done af $total færdige',
-                      style: AppTypography.num7.copyWith(
-                        color: cs.onSurface.withOpacity(0.55),
-                      ),
+                      widget.checklist.description!,
+                      style: AppTypography.b6,
                     ),
                   ],
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$done af $total færdige',
+                    style: AppTypography.num5.copyWith(
+                      color: cs.onSurface.withAlpha(180),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(width: 8),
               // Right: pill + Åbn/Luk
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _ProgressPill(percent: pct),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: _toggleExpanded,
-                    child: Text(
-                      _expanded ? 'Luk' : 'Åbn',
-                      style: AppTypography.b4.copyWith(color: cs.onSurface),
+                  const SizedBox(width: 20),
+                  if (widget.editing)
+                    InkWell(
+                      onTap: widget.onRemove,
+                      child: Text(
+                        'Fjern',
+                        style: AppTypography.b8.copyWith(color: cs.error),
+                      ),
+                    )
+                  else
+                    InkWell(
+                      onTap: _toggleExpanded,
+                      child: Text(
+                        _expanded ? 'Luk' : 'Åbn',
+                        style: AppTypography.b8.copyWith(color: cs.onSurface),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ],
           ),
 
-          // Body (expanded)
           if (_expanded && total > 0) ...[
-            const SizedBox(height: 12),
-            Divider(height: 1, color: cs.onSurface.withOpacity(0.25)),
+            const SizedBox(height: 14),
+            Divider(height: 1, color: cs.onSurface.withAlpha(100)),
             const SizedBox(height: 8),
 
             // Points
@@ -112,36 +118,20 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => _toggleIndex(i),
+                  onTap: () => widget.onToggleItem(i, !checked),
                   child: Row(
                     children: [
                       _CheckSquare(checked: checked),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          text,
-                          style: AppTypography.b4.copyWith(color: cs.onSurface),
-                        ),
+                      Text(
+                        text,
+                        style: AppTypography.b9.copyWith(color: cs.onSurface),
                       ),
                     ],
                   ),
                 ),
               );
             }),
-
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton.icon(
-                onPressed: () {
-                  // Hook up your add-flow (overlay/bottom sheet) here.
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(
-                  'Tilføj punkt',
-                  style: AppTypography.b4.copyWith(color: cs.onSurface),
-                ),
-              ),
-            ),
           ],
         ],
       ),
@@ -159,15 +149,12 @@ class _ProgressPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: cs.primary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(999),
+        color: cs.primary.withAlpha(30),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         '$percent%',
-        style: AppTypography.b5.copyWith(
-          color: cs.primary,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AppTypography.segActiveNumber.copyWith(color: cs.primary),
       ),
     );
   }
@@ -182,21 +169,19 @@ class _CheckSquare extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
-      width: 26,
-      height: 26,
+      width: 24,
+      height: 24,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
-        color: checked ? cs.primary.withOpacity(0.25) : cs.onPrimary,
+        color: checked ? cs.primary : cs.onPrimary,
         border: Border.all(
-          color: checked
-              ? cs.primary.withOpacity(0.0)
-              : cs.onSurface.withOpacity(0.25),
+          color: checked ? cs.primary.withAlpha(0) : cs.onSurface.withAlpha(60),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 3,
+            color: cs.onPrimary.withAlpha(100),
+            blurRadius: 1,
             offset: const Offset(0, 1),
           ),
         ],

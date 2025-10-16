@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
@@ -212,6 +213,18 @@ class AppointmentViewModel extends ChangeNotifier {
         _lastCreatedAppointment = created;
       }
 
+      // ─────────────────────────────────────────────────────────────
+      // CLEAN UP stabilized temp files (safe to ignore errors)
+      // ─────────────────────────────────────────────────────────────
+      try {
+        for (final x in images ?? const <XFile>[]) {
+          if (x.path.isNotEmpty) {
+            await File(x.path).delete().catchError((_) {});
+          }
+        }
+      } catch (_) {}
+      // ─────────────────────────────────────────────────────────────
+
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke oprette aftale: $e';
@@ -239,13 +252,16 @@ class AppointmentViewModel extends ChangeNotifier {
     String? customPrice,
     String? servicePrice,
     String? status,
-    List<String>? imageUrls,
+    List<String>? imageUrls, // explicit set/replace of URLs
+    List<XFile>? imagesToUpload, // stabilized files to upload now
+    bool replaceImages = false, // when uploading: replace or append
   }) async {
     _isSaving = true;
     _lastErrorMessage = null;
     notifyListeners();
 
     try {
+      // Build fields like before
       final fields = <String, Object?>{};
       void put(String key, Object? value) {
         if (value != null) fields[key] = value;
@@ -274,13 +290,42 @@ class AppointmentViewModel extends ChangeNotifier {
       put('status', _trimOrNull(status));
 
       if (imageUrls != null) {
+        // If the caller explicitly passes URLs, respect that and skip uploads.
         put(
           'imageUrls',
           imageUrls.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         );
+      } else if ((imagesToUpload?.isNotEmpty ?? false) &&
+          uploadImages != null) {
+        // Upload new images first, then decide to append or replace
+        final uploaded = await uploadImages!(
+          appointmentId: id,
+          files: imagesToUpload!,
+        );
+
+        if (uploaded.isNotEmpty) {
+          if (replaceImages) {
+            // Replace any existing URLs entirely
+            fields['imageUrls'] = uploaded;
+          } else {
+            // Append to existing
+            final current = await _repo.getAppointmentOnce(id);
+            final existing = current?.imageUrls ?? const <String>[];
+            fields['imageUrls'] = [...existing, ...uploaded];
+          }
+        }
+
+        // CLEAN UP stabilized temp files (ignore errors)
+        try {
+          for (final x in imagesToUpload!) {
+            if (x.path.isNotEmpty) {
+              await File(x.path).delete().catchError((_) {});
+            }
+          }
+        } catch (_) {}
       }
 
-      // Price: prefer customPrice over servicePrice if provided
+      // Price: prefer custom over service price if provided
       final chosenPrice = _firstNonEmpty([
         _trimOrNull(customPrice),
         _trimOrNull(servicePrice),
@@ -599,6 +644,30 @@ class AppointmentViewModel extends ChangeNotifier {
     });
     _serviceInFlight[id] = future;
     return future;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  Stream<Map<String, Set<int>>> watchChecklistProgressOnParent(
+    String appointmentId,
+  ) => _repo.watchChecklistProgress(appointmentId);
+
+  Future<void> setAllChecklistProgressOnParent({
+    required String appointmentId,
+    required Map<String, Set<int>> progress,
+  }) => _repo.setAllChecklistProgress(appointmentId, progress);
+
+  Future<void> setChecklistSelection({
+    required String appointmentId,
+    required Set<String> newSelection,
+    Set<String> removedIds = const {},
+    Set<String> resetProgressIds = const {},
+  }) {
+    return _repo.updateChecklistSelectionAndResets(
+      apptId: appointmentId,
+      newSelection: newSelection,
+      removedIds: removedIds,
+      resetProgressIds: resetProgressIds,
+    );
   }
 
   // ────────────────────────────────────────────────────────────────────────────

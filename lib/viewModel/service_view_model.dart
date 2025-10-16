@@ -18,6 +18,7 @@ class ServiceViewModel extends ChangeNotifier {
   List<ServiceModel> _all = const [];
   List<ServiceModel> _allFiltered = const [];
   List<ServiceModel> get allServices => _allFiltered;
+  final Map<String, ServiceModel> _byId = {};
 
   @override
   void dispose() {
@@ -31,8 +32,29 @@ class ServiceViewModel extends ChangeNotifier {
 
     _sub = _repo.watchServices().listen((items) {
       _all = items;
+      _byId
+        ..clear()
+        ..addEntries(
+          items
+              .where((s) => (s.id ?? '').isNotEmpty)
+              .map((s) => MapEntry(s.id!, s)),
+        );
       _recompute();
     });
+  }
+
+  ServiceModel? getById(String? id) {
+    if (id == null || id.isEmpty) return null;
+    return _byId[id];
+  }
+
+  Future<void> prefetchById(String id) async {
+    if (_byId.containsKey(id)) return;
+    final one = await _repo.getServiceOnce(id);
+    if (one != null && (one.id ?? '').isNotEmpty) {
+      _byId[one.id!] = one;
+      notifyListeners();
+    }
   }
 
   void setServiceSearch(String q) {

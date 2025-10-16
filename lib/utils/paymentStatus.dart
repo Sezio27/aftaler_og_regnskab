@@ -8,7 +8,7 @@ extension PaymentStatusX on PaymentStatus {
     PaymentStatus.paid => 'Betalt',
     PaymentStatus.waiting => 'Afventer',
     PaymentStatus.missing => 'Forfalden',
-    PaymentStatus.uninvoiced => 'Ikke faktureret',
+    PaymentStatus.uninvoiced => 'Ufaktureret',
   };
 
   static PaymentStatus fromString(String? s) {

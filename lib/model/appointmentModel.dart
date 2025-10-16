@@ -84,7 +84,7 @@ class AppointmentModel {
 
     final payDt = json['payDate'];
     DateTime? payDtParsed;
-    if (dt is DateTime) payDtParsed = payDt;
+    if (payDt is DateTime) payDtParsed = payDt;
 
     return AppointmentModel(
       id: json['id'] as String?,

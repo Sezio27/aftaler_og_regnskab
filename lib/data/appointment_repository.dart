@@ -138,6 +138,62 @@ class AppointmentRepository {
     }, SetOptions(merge: true));
   }
 
+  Stream<Map<String, Set<int>>> watchChecklistProgress(String apptId) {
+    final uid = _requireUid;
+    return _userAppointments(uid).doc(apptId).snapshots().map((snap) {
+      final data = snap.data() ?? const <String, dynamic>{};
+      final raw = (data['progress'] as Map<String, dynamic>? ?? const {});
+      final out = <String, Set<int>>{};
+      for (final e in raw.entries) {
+        final list = (e.value as List? ?? const []);
+        out[e.key] = list.map((x) => (x as num).toInt()).toSet();
+      }
+      return out;
+    });
+  }
+
+  /// One **single** write to set the whole progress map on the parent appointment.
+  Future<void> setAllChecklistProgress(
+    String apptId,
+    Map<String, Set<int>> progress,
+  ) async {
+    final uid = _requireUid;
+    final payload = <String, dynamic>{
+      'progress': {
+        for (final e in progress.entries) e.key: (e.value.toList()..sort()),
+      },
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    await _userAppointments(
+      uid,
+    ).doc(apptId).set(payload, SetOptions(merge: true));
+  }
+
+  Future<void> updateChecklistSelectionAndResets({
+    required String apptId,
+    required Set<String> newSelection,
+    Set<String> removedIds = const {},
+    Set<String> resetProgressIds = const {},
+  }) async {
+    final uid = _requireUid;
+    final doc = _userAppointments(uid).doc(apptId);
+
+    // Build payload for update(): dotted paths for deletes are supported here.
+    final Map<String, Object?> payload = {
+      'checklistIds': newSelection.toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    // Delete nested progress entries for removed or reset ids
+    final toDelete = {...removedIds, ...resetProgressIds};
+    for (final id in toDelete) {
+      // ⚠ If your checklist IDs could contain a dot ".", use IDs without dots.
+      payload['progress.$id'] = FieldValue.delete();
+    }
+
+    await doc.update(payload);
+  }
+
   /// Delete an appointment document.
   Future<void> deleteAppointment(String id) async {
     final uid = _requireUid;
@@ -155,6 +211,10 @@ class AppointmentRepository {
     final ts = data['dateTime'];
     if (ts is Timestamp) dateTime = ts.toDate();
 
+    DateTime? payDate;
+    final tsPay = data['payDate'];
+    if (tsPay is Timestamp) payDate = tsPay.toDate();
+
     final checklistIds = (data['checklistIds'] as List? ?? const [])
         .map((e) => (e as String?)?.trim() ?? '')
         .where((s) => s.isNotEmpty)
@@ -171,6 +231,7 @@ class AppointmentRepository {
       serviceId: data['serviceId'] as String?,
       checklistIds: checklistIds,
       dateTime: dateTime,
+      payDate: payDate,
       price: data['price'] as String?,
       location: data['location'] as String?,
       note: data['note'] as String?,
@@ -188,11 +249,13 @@ class AppointmentRepository {
       'serviceId': m.serviceId,
       'checklistIds': m.checklistIds,
       'dateTime': m.dateTime == null ? null : Timestamp.fromDate(m.dateTime!),
+      'payDate': m.payDate == null ? null : Timestamp.fromDate(m.payDate!),
       'price': m.price,
       'location': m.location,
       'note': m.note,
       'imageUrls': m.imageUrls,
       'status': m.status,
+      if (isCreate) 'progress': <String, dynamic>{},
       if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     };

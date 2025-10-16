@@ -140,7 +140,7 @@ class StatusIconRect extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 5, 7, 5),
           child: Row(
             children: [
-              Text(status, style: AppTypography.b9.copyWith(color: fg)),
+              Text(status, style: AppTypography.b5.copyWith(color: fg)),
               const SizedBox(width: 8),
               Icon(icon, size: 16, color: fg),
             ],

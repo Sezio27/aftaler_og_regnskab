@@ -1,9 +1,11 @@
 // lib/services/image_storage.dart
 
 import 'dart:async';
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ImageStorage {
@@ -151,4 +153,23 @@ class ImageStorage {
       rethrow;
     }
   }
+}
+
+Future<XFile> stabilizeXFile(XFile x) async {
+  final tmp = await getTemporaryDirectory();
+  final safePath = p.join(
+    tmp.path,
+    '${DateTime.now().microsecondsSinceEpoch}_${p.basename(x.path)}',
+  );
+
+  // Make sure parent exists (very defensive).
+  await Directory(p.dirname(safePath)).create(recursive: true);
+
+  await File(x.path).copy(safePath);
+  return XFile(safePath, name: x.name, mimeType: x.mimeType);
+}
+
+/// Convenience for many at once.
+Future<List<XFile>> stabilizeAll(Iterable<XFile> files) async {
+  return Future.wait(files.map(stabilizeXFile));
 }

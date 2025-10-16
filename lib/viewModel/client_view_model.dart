@@ -62,11 +62,9 @@ class ClientViewModel extends ChangeNotifier {
   }
 
   ClientModel? getClient(String id) {
-    // try cache first
     final cached = _clientCache[id];
     if (cached != null) return cached;
 
-    // then from the list populated by initClientFilters/watchClients
     for (final c in _all) {
       if (c.id == id) {
         _clientCache[id] = c;

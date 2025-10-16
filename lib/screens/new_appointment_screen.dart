@@ -1,4 +1,5 @@
-﻿import 'package:aftaler_og_regnskab/theme/colors.dart';
+﻿import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
@@ -372,8 +373,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           title: 'Billeder',
                           child: ImagesPickerGrid(
                             initial: _images,
-                            onChanged: (files) =>
-                                setState(() => _images = files),
+                            onChanged: (picked) async {
+                              final stable = await stabilizeAll(picked);
+                              if (!mounted) return;
+                              setState(() => _images = stable);
+                            },
                           ),
                         ),
 
