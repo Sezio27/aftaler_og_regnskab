@@ -39,9 +39,9 @@ class ServiceList extends StatelessWidget {
 
     ServiceModel? selectedItem;
     if (collapseWhenSelected && selectedId != null) {
-      for (final c in items) {
-        if (c.id == selectedId) {
-          selectedItem = c;
+      for (final s in items) {
+        if (s.id == selectedId) {
+          selectedItem = s;
           break;
         }
       }
@@ -53,7 +53,7 @@ class ServiceList extends StatelessWidget {
         final size = CurvedAnimation(
           parent: animation,
           curve: Curves.ease,
-          reverseCurve: Curves.easeOut
+          reverseCurve: Curves.easeOut,
         );
 
         final fade = CurvedAnimation(
@@ -86,8 +86,42 @@ class ServiceList extends StatelessWidget {
                       tileBuilder: (ctx, s, selected, onTap) =>
                           ServiceTile(s: s, selected: selected, onTap: onTap),
                     )
-                  : Text("to do"),
+                  : _FullServiceList(
+                      items: items,
+                      selectedId: selectedId,
+                      onPick: onPick,
+                    ),
             ),
+    );
+  }
+}
+
+class _FullServiceList extends StatelessWidget {
+  const _FullServiceList({
+    required this.items,
+
+    required this.selectedId,
+    required this.onPick,
+  });
+
+  final List<ServiceModel> items;
+  final String? selectedId;
+  final ValueChanged<ServiceModel> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: EdgeInsets.only(bottom: 16),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (_, i) {
+        final s = items[i];
+        return ServiceTile(
+          s: s,
+          selected: s.id == selectedId,
+          onTap: () => onPick(s),
+        );
+      },
     );
   }
 }

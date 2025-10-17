@@ -645,9 +645,7 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                                       horizontal: 25,
                                     ),
                                     child: ServiceListOverlay(
-                                      selectedId:
-                                          _selectedServiceId ??
-                                          widget.appointment.serviceId,
+                                      selectedId: _selectedServiceId,
                                       onPick: (s) {
                                         setState(() {
                                           _selectedServiceId =
@@ -659,6 +657,7 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                                     ),
                                   ),
                                 );
+                                if (!mounted) return;
                               },
                               icon: const Icon(Icons.add),
                               label: Text(
