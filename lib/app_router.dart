@@ -2,6 +2,7 @@ import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
 
 import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
 import 'package:aftaler_og_regnskab/screens/appointment_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/checklist_details_screen.dart';
 import 'package:aftaler_og_regnskab/screens/client_details_screen.dart';
 import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
@@ -11,6 +12,7 @@ import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.d
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
+import 'package:aftaler_og_regnskab/screens/service_details_screen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +21,7 @@ import 'auth_gate.dart';
 import 'screens/home_screen.dart';
 import 'screens/calendar/calendar_screen.dart';
 import 'screens/finance_screen.dart';
-import 'screens/services_screen.dart';
+import 'screens/services_overview_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/new_appointment_screen.dart';
 
@@ -36,12 +38,14 @@ enum AppRoute {
   home,
   calendar,
   finance,
-  services,
+  servicesOverview,
   settings,
   newAppointment,
   allAppointments,
   allClients,
   clientDetails,
+  serviceDetails,
+  checklistDetails,
   appointmentDetails,
 }
 
@@ -123,10 +127,10 @@ GoRouter createRouter() {
                 const NoTransitionPage(child: FinanceScreen()),
           ),
           GoRoute(
-            path: '/services',
-            name: AppRoute.services.name,
+            path: '/service/overview',
+            name: AppRoute.servicesOverview.name,
             pageBuilder: (_, state) =>
-                const NoTransitionPage(child: ServicesScreen()),
+                const NoTransitionPage(child: ServicesOverviewScreen()),
           ),
           GoRoute(
             path: '/settings',
@@ -157,6 +161,24 @@ GoRouter createRouter() {
             path: '/clients/:id',
             pageBuilder: (_, state) => NoTransitionPage(
               child: ClientDetailsScreen(clientId: state.pathParameters['id']!),
+            ),
+          ),
+          GoRoute(
+            name: AppRoute.serviceDetails.name,
+            path: '/services/:id',
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: ServiceDetailsScreen(
+                clientId: state.pathParameters['id']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            name: AppRoute.checklistDetails.name,
+            path: '/checklists/:id',
+            pageBuilder: (_, state) => NoTransitionPage(
+              child: ChecklistDetailsScreen(
+                checklistId: state.pathParameters['id']!,
+              ),
             ),
           ),
           GoRoute(

@@ -8,6 +8,7 @@ PreferredSizeWidget buildTopBarForRouteName(
   required double maxContentWidth,
   required double fixedHeight,
 }) {
+  debugPrint(routeName);
   switch (routeName) {
     case 'home':
       return AppTopBar(width: maxContentWidth, height: fixedHeight);
@@ -26,9 +27,9 @@ PreferredSizeWidget buildTopBarForRouteName(
         width: maxContentWidth,
         height: fixedHeight,
       );
-    case 'services':
+    case 'servicesOverview':
       return AppTopBar(
-        title: 'Forretning',
+        title: 'Services og Checklister',
 
         width: maxContentWidth,
         height: fixedHeight,
@@ -72,7 +73,20 @@ PreferredSizeWidget buildTopBarForRouteName(
         width: maxContentWidth,
         height: fixedHeight,
       );
-
+    case 'checklistDetails':
+      return AppTopBar(
+        title: 'Checkliste detaljer',
+        showBackButton: true,
+        width: maxContentWidth,
+        height: fixedHeight,
+      );
+    case 'serviceDetails':
+      return AppTopBar(
+        title: 'Service detaljer',
+        showBackButton: true,
+        width: maxContentWidth,
+        height: fixedHeight,
+      );
     case 'allAppointments':
       return AppTopBar(
         title: 'Alle aftaler',

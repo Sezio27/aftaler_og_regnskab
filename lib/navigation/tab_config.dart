@@ -8,7 +8,7 @@ const _paths = {
   TabItem.home: '/home',
   TabItem.calendar: '/calendar',
   TabItem.finance: '/finance',
-  TabItem.services: '/services',
+  TabItem.services: '/service/overview',
   TabItem.settings: '/settings',
 };
 
@@ -39,10 +39,15 @@ String? routeNameFromLocation(String loc) {
     if (loc == "/clients/all") return "allClients";
     return 'clientDetails';
   }
+  if (loc.startsWith('/service')) {
+    if (loc == "/service/overview") return 'servicesOverview';
+    return "serviceDetails";
+  }
+  if (loc.startsWith('/checklists')) return "checklistDetails";
 
   if (loc.startsWith('/calendar')) return 'calendar';
   if (loc.startsWith('/finance')) return 'finance';
-  if (loc.startsWith('/services')) return 'services';
+
   if (loc.startsWith('/settings')) return 'settings';
   if (loc.startsWith('/home')) return 'home';
   return null;
@@ -52,7 +57,7 @@ const List<String> tabRoutes = [
   '/home',
   '/calendar',
   '/finance',
-  '/services',
+  '/service/overview',
   '/settings',
 ];
 void goToTab(BuildContext context, int i) {

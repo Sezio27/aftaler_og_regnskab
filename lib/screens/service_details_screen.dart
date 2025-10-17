@@ -14,8 +14,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-class ClientDetailsScreen extends StatelessWidget {
-  const ClientDetailsScreen({super.key, required this.clientId});
+class ServiceDetailsScreen extends StatelessWidget {
+  const ServiceDetailsScreen({super.key, required this.clientId});
   final String clientId;
 
   @override
@@ -342,11 +342,9 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                                 borderRadius: 12,
                                 color: cs.onPrimary,
                                 textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onSurface.withAlpha(200),
+                                  color: cs.onSurface,
                                 ),
-                                borderStroke: Border.all(
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
+                                borderStroke: Border.all(color: cs.onSurface),
                               ),
                             ),
                             const SizedBox(width: 20),
@@ -396,7 +394,7 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                                         }
                                       },
                                 borderRadius: 12,
-                                color: cs.primary.withAlpha(200),
+                                color: cs.primary,
                                 textStyle: AppTypography.button3.copyWith(
                                   color: cs.onPrimary,
                                 ),
@@ -414,14 +412,9 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                                 ),
                                 onTap: () => setState(() => _editing = true),
                                 borderRadius: 12,
-                                icon: Icon(
-                                  Icons.edit_outlined,
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
+                                icon: Icon(Icons.edit_outlined),
                                 color: cs.onPrimary,
-                                borderStroke: Border.all(
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
+                                borderStroke: Border.all(color: cs.onSurface),
                               ),
                             ),
                             const SizedBox(width: 20),
@@ -429,7 +422,7 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                               child: CustomButton(
                                 text: "Slet",
                                 textStyle: AppTypography.button3.copyWith(
-                                  color: cs.error.withAlpha(200),
+                                  color: cs.error,
                                 ),
                                 onTap: () async {
                                   final ok =
@@ -479,14 +472,9 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                                   }
                                 },
                                 borderRadius: 12,
-                                icon: Icon(
-                                  Icons.delete,
-                                  color: cs.error.withAlpha(200),
-                                ),
+                                icon: Icon(Icons.delete, color: cs.error),
                                 color: cs.onPrimary,
-                                borderStroke: Border.all(
-                                  color: cs.error.withAlpha(200),
-                                ),
+                                borderStroke: Border.all(color: cs.error),
                               ),
                             ),
                           ],

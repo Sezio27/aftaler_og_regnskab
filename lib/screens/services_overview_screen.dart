@@ -11,18 +11,19 @@ import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 enum Tabs { services, checklists }
 
-class ServicesScreen extends StatefulWidget {
-  const ServicesScreen({super.key});
+class ServicesOverviewScreen extends StatefulWidget {
+  const ServicesOverviewScreen({super.key});
 
   @override
-  State<ServicesScreen> createState() => _ServicesScreenState();
+  State<ServicesOverviewScreen> createState() => _ServicesOverviewScreenState();
 }
 
-class _ServicesScreenState extends State<ServicesScreen> {
+class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
   late final ServiceViewModel _serviceVM;
   late final ChecklistViewModel _checklistVM;
 
@@ -243,26 +244,34 @@ class ServiceItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // image placeholder
-        Expanded(child: _ServiceImage(service.image)),
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 18, horizontal: 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(service.name ?? "", style: AppTypography.b3),
-              SizedBox(height: 12),
-              Text(
-                service.price != null ? "${service.price!} Kr." : "Ingen pris",
-                style: AppTypography.segPassiveNumber,
-              ),
-            ],
+    return InkWell(
+      onTap: () => context.pushNamed(
+        "serviceDetails",
+        pathParameters: {'id': service.id!},
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // image placeholder
+          Expanded(child: _ServiceImage(service.image)),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(service.name ?? "", style: AppTypography.b3),
+                SizedBox(height: 12),
+                Text(
+                  service.price != null
+                      ? "${service.price!} Kr."
+                      : "Ingen pris",
+                  style: AppTypography.segPassiveNumber,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -287,28 +296,38 @@ class _ChecklistsList extends StatelessWidget {
             BoxShadow(blurRadius: 8, color: Colors.black.withOpacity(.06)),
           ],
         ),
-        child: CustomCard(
-          field: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("${items[i].name}", style: AppTypography.h4),
-                      SizedBox(height: 10),
-                      Text("${items[i].description}", style: AppTypography.b6),
-                    ],
+        child: InkWell(
+          splashFactory: NoSplash.splashFactory,
+          onTap: () => context.pushNamed(
+            "checklistDetails",
+            pathParameters: {'id': items[i].id!},
+          ),
+          child: CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("${items[i].name}", style: AppTypography.h4),
+                        SizedBox(height: 10),
+                        Text(
+                          "${items[i].description}",
+                          style: AppTypography.b6,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
 
-                Text(
-                  '${items[i].points.length} ${items[i].points.length == 1 ? "punkt" : "punkter"}',
-                  style: AppTypography.num5,
-                ),
-              ],
+                  Text(
+                    '${items[i].points.length} ${items[i].points.length == 1 ? "punkt" : "punkter"}',
+                    style: AppTypography.num5,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

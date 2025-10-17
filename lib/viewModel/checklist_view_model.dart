@@ -166,6 +166,7 @@ class ChecklistViewModel extends ChangeNotifier {
     String id, {
     String? name,
     String? description,
+    List<String>? points,
   }) async {
     _saving = true;
     _error = null;
@@ -179,8 +180,18 @@ class ChecklistViewModel extends ChangeNotifier {
         fields[k] = t.isEmpty ? null : t;
       }
 
+      void putPoints(List<String>? pts) {
+        if (pts == null) return; // no change
+        final cleaned = <String>[
+          for (final p in pts)
+            if (p.trim().isNotEmpty) p.trim(),
+        ];
+        fields['points'] = cleaned; // write [] if all empty
+      }
+
       put('name', name);
       put('description', description);
+      putPoints(points);
 
       if (fields.isNotEmpty) {
         await _repo.updateChecklist(id, fields: fields);
@@ -191,6 +202,9 @@ class ChecklistViewModel extends ChangeNotifier {
         _cacheById[id] = cached.copyWith(
           name: fields['name'] as String? ?? cached.name,
           description: fields['description'] as String? ?? cached.description,
+          points: fields.containsKey('points')
+              ? (fields['points'] as List<String>)
+              : cached.points,
         );
       }
       return true;
