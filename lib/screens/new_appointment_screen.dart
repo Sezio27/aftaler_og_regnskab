@@ -269,7 +269,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                 onChanged: checklistVM.setChecklistSearch,
                               ),
                               const SizedBox(height: 10),
-                              //TODO
+
                               ChecklistList(
                                 selectedIds: _selectedChecklistIds,
                                 onToggle: (item, nowSelected) {

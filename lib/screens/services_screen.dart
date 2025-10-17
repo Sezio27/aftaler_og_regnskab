@@ -1,8 +1,10 @@
+import 'package:aftaler_og_regnskab/model/checklistModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
+import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
@@ -21,14 +23,20 @@ class ServicesScreen extends StatefulWidget {
 }
 
 class _ServicesScreenState extends State<ServicesScreen> {
+  late final ServiceViewModel _serviceVM;
+  late final ChecklistViewModel _checklistVM;
+
   Tabs _tab = Tabs.services;
   final _searchCtrl = TextEditingController();
   String _query = '';
   @override
   void initState() {
     super.initState();
+    _serviceVM = context.read<ServiceViewModel>();
+    _checklistVM = context.read<ChecklistViewModel>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceViewModel>().initServiceFilters();
+      _serviceVM.initServiceFilters();
+      _checklistVM.initChecklistFilters();
     });
   }
 
@@ -41,7 +49,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final vm = context.read<ServiceViewModel>();
 
     return SafeArea(
       child: Stack(
@@ -54,7 +61,18 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   groupValue: _tab,
                   backgroundColor: cs.onPrimary,
                   thumbColor: cs.secondary,
-                  onValueChanged: (v) => setState(() => _tab = v!),
+                  onValueChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      _tab = v;
+                      _query = "";
+                      _searchCtrl.clear();
+                    });
+
+                    FocusScope.of(context).unfocus();
+                    _serviceVM.setServiceSearch('');
+                    _checklistVM.setChecklistSearch('');
+                  },
                   children: {
                     Tabs.services: SegItem(
                       icon: Icons.face_retouching_natural,
@@ -74,8 +92,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 //Search
                 CupertinoSearchTextField(
                   controller: _searchCtrl,
+
                   placeholder: 'Søg',
-                  onChanged: (q) => setState(() => _query = q.trim()),
+                  onChanged: (q) => setState(() {
+                    _query = q.trim();
+                    _tab == Tabs.services
+                        ? _serviceVM.setServiceSearch(q)
+                        : _checklistVM.setChecklistSearch(q);
+                  }),
                   onSubmitted: (_) => FocusScope.of(context).unfocus(),
                   itemColor: cs.onSurface.withAlpha(150),
                   style: AppTypography.b2.copyWith(color: cs.onSurface),
@@ -87,7 +111,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: cs.surface,
+                    color: cs.onPrimary,
                     borderRadius: BorderRadius.all(Radius.circular(10)),
                     boxShadow: [
                       BoxShadow(
@@ -100,7 +124,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 // Body
                 Expanded(
                   child: AnimatedSwitcher(
@@ -164,10 +188,10 @@ class _ServicesGrid extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (_, i) => Container(
         decoration: BoxDecoration(
-          color: cs.surface,
+          color: cs.onPrimary,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
-            BoxShadow(blurRadius: 2, color: cs.onSurface.withAlpha(50)),
+            BoxShadow(blurRadius: 3, color: cs.onSurface.withAlpha(70)),
           ],
         ),
         child: ServiceItem(service: items[i]),
@@ -248,9 +272,12 @@ class _ChecklistsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final items = context.select<ChecklistViewModel, List<ChecklistModel>>(
+      (vm) => vm.allChecklists,
+    );
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      itemCount: 6,
+      itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (_, i) => Container(
         decoration: BoxDecoration(
@@ -260,16 +287,29 @@ class _ChecklistsList extends StatelessWidget {
             BoxShadow(blurRadius: 8, color: Colors.black.withOpacity(.06)),
           ],
         ),
-        child: const ListTile(
-          title: Text('Bryllups makeup'),
-          subtitle: Text('Komplet checkliste til bryllups makeup\n8 punkter'),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.edit_outlined),
-              SizedBox(width: 12),
-              Icon(Icons.delete_outline),
-            ],
+        child: CustomCard(
+          field: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("${items[i].name}", style: AppTypography.h4),
+                      SizedBox(height: 10),
+                      Text("${items[i].description}", style: AppTypography.b6),
+                    ],
+                  ),
+                ),
+
+                Text(
+                  '${items[i].points.length} ${items[i].points.length == 1 ? "punkt" : "punkter"}',
+                  style: AppTypography.num5,
+                ),
+              ],
+            ),
           ),
         ),
       ),

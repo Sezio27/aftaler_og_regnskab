@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/checklistModel.dart';
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
@@ -14,6 +17,7 @@ import 'package:aftaler_og_regnskab/widgets/client_tile.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
+import 'package:aftaler_og_regnskab/widgets/images_picker_grid.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/checklist_list_overlay.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/client_list_overlay.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/service_list_overlay.dart';
@@ -24,6 +28,7 @@ import 'package:aftaler_og_regnskab/widgets/time_picker.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -70,9 +75,13 @@ class _AppointmentDetailsView extends StatefulWidget {
 
 class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
   late final ClientViewModel _clientVM;
+  late final ServiceViewModel _serviceVM;
+  late final ChecklistViewModel _checklistVM;
+
   bool _editing = false;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _locationCtrl;
+  late final TextEditingController _noteCtrl;
   late PaymentStatus _status;
   late bool _expandedStatus;
   String? _selectedClientId;
@@ -82,10 +91,16 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
   late TimeOfDay? _time;
   int? _active;
   void _toggle() => setState(() => _expandedStatus = !_expandedStatus);
+  bool _hasStagedChanges = false;
 
   final Map<String, Map<int, bool>> _localCheckpointOverrides = {};
+  late List<String> _initialImageUrls; // snapshot from Firestore
+  late List<String> _draftImageUrls; // mutable copy for UI
+  final List<String> _removedImageUrls = []; // removed existing URLs (staged)
+  List<XFile> _newLocalImages = []; // newly picked (staged, not uploaded)
+  final bool _savingImages = false;
+
   Map<String, Set<int>> _lastServerProgress = {};
-  bool _hasStagedChanges = false;
   bool _collapseChecklists = false;
   bool _saving = false;
 
@@ -93,16 +108,21 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
   void initState() {
     super.initState();
     _clientVM = context.read<ClientViewModel>();
-
+    _serviceVM = context.read<ServiceViewModel>();
+    _checklistVM = context.read<ChecklistViewModel>();
     _priceCtrl = TextEditingController(text: widget.appointment.price ?? '');
     _locationCtrl = TextEditingController(
       text: widget.appointment.location ?? '',
     );
+    _noteCtrl = TextEditingController(text: widget.appointment.note ?? '');
     _status = PaymentStatusX.fromString(widget.appointment.status!);
     _expandedStatus = false;
     _selectedClientId = widget.appointment.clientId;
     _selectedServiceId = widget.appointment.serviceId;
     _payDate = widget.appointment.payDate;
+    _initialImageUrls = List<String>.from(widget.appointment.imageUrls);
+    _draftImageUrls = List<String>.from(_initialImageUrls);
+    _newLocalImages = [];
 
     final dt = widget.appointment.dateTime?.toLocal();
     if (dt != null) {
@@ -113,26 +133,25 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
       _time = null;
     }
     _clientVM.prefetchClient(_selectedClientId);
+    if ((_selectedServiceId ?? '').isNotEmpty) {
+      _serviceVM.prefetchById(_selectedServiceId!); // no-op if already cached
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final clVm = context.read<ChecklistViewModel>();
 
-      clVm.ensureSubscribedToAll();
-      // Best-effort: make sure the ones used by this appointment are in cache
-      clVm.prefetchByIds(widget.appointment.checklistIds);
-
-      final svcVm = context.read<ServiceViewModel>();
-      svcVm.initServiceFilters();
-      final sid = _selectedServiceId;
-      if ((sid ?? '').isNotEmpty) {
-        svcVm.prefetchById(sid!); // no-op if already cached
-      }
+      _checklistVM.ensureSubscribedToAll();
+      _checklistVM.prefetchByIds(widget.appointment.checklistIds);
     });
   }
 
   @override
   void dispose() {
+    _clientVM.clearSearch();
+    _serviceVM.clearSearch();
+    _checklistVM.clearSearch();
     _priceCtrl.dispose();
+    _locationCtrl.dispose();
+    _noteCtrl.dispose();
     super.dispose();
   }
 
@@ -240,6 +259,29 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
     });
   }
 
+  Future<void> _addImagesStaged() async {
+    final picked = await ImagePicker().pickMultiImage();
+    if (picked.isEmpty) return;
+    final stable = await stabilizeAll(picked);
+    if (!mounted) return;
+    setState(() {
+      _newLocalImages.addAll(stable);
+    });
+  }
+
+  void _removeDraftUrlAt(int i) {
+    setState(() {
+      _removedImageUrls.add(_draftImageUrls[i]);
+      _draftImageUrls.removeAt(i);
+    });
+  }
+
+  void _removeNewLocalAt(int j) {
+    setState(() {
+      _newLocalImages.removeAt(j);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -329,7 +371,7 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
           hPad / 2,
           20,
           hPad / 2,
-          20 + LayoutMetrics.navBarHeight(context),
+          40 + LayoutMetrics.navBarHeight(context),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -629,8 +671,7 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                               onPressed: () {
                                 setState(() {
                                   _selectedServiceId = null;
-                                  _hasStagedChanges =
-                                      true; // show "Gem ændringer"
+                                  // show "Gem ændringer"
                                 });
                               },
                             ),
@@ -650,8 +691,7 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                                         setState(() {
                                           _selectedServiceId =
                                               s.id; // stage selection
-                                          _hasStagedChanges =
-                                              true; // show "Gem ændringer"
+                                          // show "Gem ændringer"
                                         });
                                       },
                                     ),
@@ -785,11 +825,10 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                                 const SizedBox(height: 12),
                               ],
 
-                              // ▼▼ NEW: Save button appears only when dirty ▼▼
                               if (_hasStagedChanges) ...[
                                 const SizedBox(height: 6),
                                 Align(
-                                  alignment: Alignment.centerLeft,
+                                  //alignment: Alignment.centerLeft,
                                   child: TextButton.icon(
                                     onPressed: _saving
                                         ? null
@@ -802,8 +841,14 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                                               strokeWidth: 2,
                                             ),
                                           )
-                                        : const Icon(Icons.save_outlined),
-                                    label: const Text('Gem ændringer'),
+                                        : const Icon(
+                                            Icons.save_outlined,
+                                            size: 20,
+                                          ),
+                                    label: Text(
+                                      'Gem ændringer',
+                                      style: AppTypography.h4,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -835,6 +880,80 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                       ],
                     ),
                     const SizedBox(height: 20),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        LayoutBuilder(
+                          builder: (ctx, c) {
+                            final cross = c.maxWidth >= 520 ? 3 : 2;
+                            final total =
+                                _draftImageUrls.length + _newLocalImages.length;
+
+                            if (total == 0 && !_editing) {
+                              return Text(
+                                'Ingen billeder tilføjet',
+                                style: AppTypography.b5.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withAlpha(150),
+                                ),
+                              );
+                            }
+
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: total,
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: cross,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
+                              itemBuilder: (ctx, i) {
+                                if (i < _draftImageUrls.length) {
+                                  final url = _draftImageUrls[i];
+                                  return _ImageTile(
+                                    url: url,
+                                    canRemove: _editing,
+                                    onRemove: () => _removeDraftUrlAt(i),
+                                  );
+                                } else {
+                                  final j = i - _draftImageUrls.length;
+                                  final xf = _newLocalImages[j];
+                                  return _ImageTile(
+                                    file: xf,
+                                    isXFile: true,
+                                    canRemove: _editing,
+                                    onRemove: () => _removeNewLocalAt(j),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    if (_editing) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton.icon(
+                            onPressed: _savingImages ? null : _addImagesStaged,
+                            icon: _savingImages
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.add),
+                            label: const Text('Tilføj billeder'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -856,11 +975,35 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                       ],
                     ),
                     const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: _editing
+                          ? SoftTextField(
+                              hintText: "Tilføj note til denne aftale",
+                              controller: _noteCtrl,
+                              maxLines: 3,
+                              fill: cs.onPrimary,
+                              strokeColor: _active != 3
+                                  ? cs.onSurface.withAlpha(50)
+                                  : cs.primary,
+                              strokeWidth: _active != 3 ? 1 : 1.5,
+                              borderRadius: 8,
+                              showStroke: true,
+                              onTap: () => setState(() => _active = 3),
+                            )
+                          : Text(
+                              _noteCtrl.text.isEmpty
+                                  ? "Ingen note"
+                                  : _noteCtrl.text,
+                              style: AppTypography.b8,
+                            ),
+                    ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
+
             Row(
               children: [
                 Expanded(
@@ -935,6 +1078,51 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
         children: [
           Expanded(child: Text(label, style: AppTypography.b9)),
           editing ? editChild : value,
+        ],
+      ),
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  const _ImageTile({
+    this.url,
+    this.file,
+    this.onRemove,
+    this.canRemove = false,
+    this.isXFile = false,
+  });
+  final String? url;
+  final XFile? file;
+  final VoidCallback? onRemove;
+  final bool canRemove;
+  final bool isXFile;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          isXFile
+              ? Image.file(File(file!.path), fit: BoxFit.cover)
+              : Image.network(url!, fit: BoxFit.cover),
+          if (canRemove)
+            Positioned(
+              right: 6,
+              top: 6,
+              child: IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close, size: 18),
+                style: IconButton.styleFrom(
+                  backgroundColor: cs.surface.withOpacity(.9),
+                  padding: EdgeInsets.zero,
+                ),
+                tooltip: 'Fjern',
+              ),
+            ),
         ],
       ),
     );

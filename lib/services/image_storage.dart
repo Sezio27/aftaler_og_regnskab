@@ -153,6 +153,19 @@ class ImageStorage {
       rethrow;
     }
   }
+
+  // lib/services/image_storage.dart
+  Future<void> deleteByUrls(Iterable<String> urls) async {
+    for (final url in urls) {
+      try {
+        final ref = _storage.refFromURL(url);
+        await ref.delete();
+      } on FirebaseException catch (e) {
+        if (e.code == 'object-not-found') continue;
+        rethrow;
+      }
+    }
+  }
 }
 
 Future<XFile> stabilizeXFile(XFile x) async {

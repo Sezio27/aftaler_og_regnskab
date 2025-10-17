@@ -1,4 +1,4 @@
-// lib/widgets/images_picker_grid.dart
+﻿// lib/widgets/images_picker_grid.dart
 import 'dart:io';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +12,14 @@ class ImagesPickerGrid extends StatefulWidget {
     this.onChanged,
     this.addLabel = 'Tilføj billeder',
     this.emptyLabel = 'Tilføj billeder',
+    this.viewOnly = false,
   });
 
   final List<XFile>? initial;
   final ValueChanged<List<XFile>>? onChanged;
-  final String addLabel; // text for the add button under the grid
-  final String emptyLabel; // text when there are no images
+  final String addLabel;
+  final String emptyLabel;
+  final bool viewOnly;
 
   @override
   State<ImagesPickerGrid> createState() => _ImagesPickerGridState();
@@ -51,16 +53,19 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
     final cs = Theme.of(context).colorScheme;
 
     // Empty state: just a "+ Tilføj billeder" button
+
     if (_files.isEmpty) {
       return Center(
-        child: TextButton.icon(
-          onPressed: _addImages,
-          icon: const Icon(Icons.add),
-          label: Text(
-            widget.emptyLabel,
-            style: AppTypography.b3.copyWith(color: cs.primary),
-          ),
-        ),
+        child: widget.viewOnly
+            ? Text("Ingen billeder tilføjet", style: AppTypography.b3)
+            : TextButton.icon(
+                onPressed: _addImages,
+                icon: const Icon(Icons.add),
+                label: Text(
+                  widget.emptyLabel,
+                  style: AppTypography.b3.copyWith(color: cs.primary),
+                ),
+              ),
       );
     }
 
@@ -80,32 +85,41 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
-              itemBuilder: (ctx, i) =>
-                  _ImageTile(file: _files[i], onRemove: () => _removeAt(i)),
+              itemBuilder: (ctx, i) => _ImageTile(
+                file: _files[i],
+                onRemove: () => _removeAt(i),
+                canRemove: !widget.viewOnly,
+              ),
             );
           },
         ),
         const SizedBox(height: 8),
-        Center(
-          child: TextButton.icon(
-            onPressed: _addImages,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(
-              widget.addLabel,
-              style: AppTypography.b3.copyWith(color: cs.primary),
-              textAlign: TextAlign.center,
+        if (!widget.viewOnly)
+          Center(
+            child: TextButton.icon(
+              onPressed: _addImages,
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(
+                widget.addLabel,
+                style: AppTypography.b3.copyWith(color: cs.primary),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 }
 
 class _ImageTile extends StatelessWidget {
-  const _ImageTile({required this.file, required this.onRemove});
+  const _ImageTile({
+    required this.file,
+    required this.onRemove,
+    this.canRemove = true,
+  });
   final XFile file;
   final VoidCallback onRemove;
+  final bool canRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -116,19 +130,20 @@ class _ImageTile extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.file(File(file.path), fit: BoxFit.cover),
-          Positioned(
-            right: 6,
-            top: 6,
-            child: IconButton(
-              onPressed: onRemove,
-              icon: const Icon(Icons.close, size: 18),
-              style: IconButton.styleFrom(
-                backgroundColor: cs.surface.withOpacity(.9),
-                padding: EdgeInsets.zero,
+          if (canRemove)
+            Positioned(
+              right: 6,
+              top: 6,
+              child: IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close, size: 18),
+                style: IconButton.styleFrom(
+                  backgroundColor: cs.surface.withAlpha(200),
+                  padding: EdgeInsets.zero,
+                ),
+                tooltip: 'Fjern',
               ),
-              tooltip: 'Fjern',
             ),
-          ),
         ],
       ),
     );
