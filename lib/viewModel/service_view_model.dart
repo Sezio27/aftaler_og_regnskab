@@ -210,9 +210,12 @@ class ServiceViewModel extends ChangeNotifier {
     return null;
   }
 
-  Future<void> delete(String id, String? imageUrl) async {
-    if (imageUrl != null && imageUrl.isNotEmpty) {
+  Future<void> delete(String id) async {
+    // Try deleting the image first; ignore if it doesn’t exist.
+    try {
       await _imageStorage.deleteServiceImage(id);
+    } catch (_) {
+      // optionally log, but ignore NotFound errors
     }
     await _repo.deleteService(id);
   }

@@ -1,17 +1,14 @@
 import 'dart:io';
-
-import 'package:aftaler_og_regnskab/model/checklistModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
-import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
+import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -42,14 +39,14 @@ class ServiceDetailsScreen extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _ServiceDetailsView(service: service);
+        return _ServiceDetailsView(key: ValueKey(service.id), service: service);
       },
     );
   }
 }
 
 class _ServiceDetailsView extends StatefulWidget {
-  const _ServiceDetailsView({required this.service});
+  const _ServiceDetailsView({super.key, required this.service});
   final ServiceModel service;
 
   @override
@@ -58,48 +55,6 @@ class _ServiceDetailsView extends StatefulWidget {
 
 class _ServiceDetailsViewState extends State<_ServiceDetailsView> {
   bool _editing = false;
-
-  Future<void> _handleDelete() async {
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Slet service?'),
-            content: const Text('Dette kan ikke fortrydes.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Annuller'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Slet'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-
-    if (!ok) return;
-
-    final vm = context.read<ServiceViewModel>();
-    try {
-      await vm.delete(
-        widget.service.id!,
-        widget.service.image,
-      ); // adjust name if different
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Service slettet')));
-      context.pop();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Kunne ikke slette: $e')));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +84,15 @@ class _ServiceDetailsViewState extends State<_ServiceDetailsView> {
                   key: const ValueKey('read'),
                   service: widget.service,
                   onEdit: () => setState(() => _editing = true),
-                  onDelete: _handleDelete,
+                  onDelete: () async {
+                    await handleDelete(
+                      context: context,
+                      componentLabel: 'Service',
+                      onDelete: () => context.read<ServiceViewModel>().delete(
+                        widget.service.id!,
+                      ),
+                    );
+                  },
                 ),
         ),
       ),
@@ -298,36 +261,25 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
   }
 
   Future<void> _save() async {
-    FocusScope.of(context).unfocus();
-    final name = _name.text.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Angiv navn på servicen')));
-      return;
-    }
-
-    final vm = context.read<ServiceViewModel>();
-    final ok = await vm.updateServiceFields(
-      widget.service.id!,
-      name: name,
-      description: _desc.text,
-      duration: _dur.text,
-      price: _price.text,
-      newImage: _newPhoto,
-      removeImage: _removeImage,
+    await handleSave(
+      context: context,
+      validate: () {
+        final name = _name.text.trim();
+        if (name.isEmpty) return 'Angiv navn på servicen';
+        return null;
+      },
+      onSave: () => context.read<ServiceViewModel>().updateServiceFields(
+        widget.service.id!,
+        name: _name.text.trim(),
+        description: _desc.text,
+        duration: _dur.text,
+        price: _price.text,
+        newImage: _newPhoto,
+        removeImage: _removeImage,
+      ),
+      errorText: () => context.read<ServiceViewModel>().error ?? 'Ukendt fejl',
+      onSuccess: widget.onSaved, // flip back to read mode
     );
-
-    if (!mounted) return;
-    if (ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Opdateret')));
-      widget.onSaved(); // parent flips back to read mode
-    } else {
-      final err = vm.error ?? 'Ukendt fejl';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-    }
   }
 
   void _clearFocus() {

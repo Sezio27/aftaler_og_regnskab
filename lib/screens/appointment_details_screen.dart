@@ -58,14 +58,17 @@ class AppointmentDetailsScreen extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _AppointmentDetailsView(appointment: appointment);
+        return _AppointmentDetailsView(
+          key: ValueKey(appointment.id),
+          appointment: appointment,
+        );
       },
     );
   }
 }
 
 class _AppointmentDetailsView extends StatefulWidget {
-  const _AppointmentDetailsView({required this.appointment});
+  const _AppointmentDetailsView({super.key, required this.appointment});
   final AppointmentModel appointment;
 
   @override

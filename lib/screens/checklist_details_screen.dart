@@ -35,14 +35,17 @@ class ChecklistDetailsScreen extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _ChecklistDetailsView(checklist: checklist);
+        return _ChecklistDetailsView(
+          key: ValueKey(checklist.id),
+          checklist: checklist,
+        );
       },
     );
   }
 }
 
 class _ChecklistDetailsView extends StatefulWidget {
-  const _ChecklistDetailsView({required this.checklist});
+  const _ChecklistDetailsView({super.key, required this.checklist});
   final ChecklistModel checklist;
 
   @override
@@ -51,6 +54,7 @@ class _ChecklistDetailsView extends StatefulWidget {
 
 class _ChecklistDetailsViewState extends State<_ChecklistDetailsView> {
   bool _editing = false;
+
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _descCtrl = TextEditingController();
   List<TextEditingController> _pointCtrls = [];
