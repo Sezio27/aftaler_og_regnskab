@@ -153,6 +153,7 @@ class ServiceViewModel extends ChangeNotifier {
     String? duration,
     String? price,
     XFile? newImage,
+    bool removeImage = false, // <--- add this
   }) async {
     try {
       _saving = true;
@@ -172,6 +173,10 @@ class ServiceViewModel extends ChangeNotifier {
       put('duration', duration);
       put('price', price);
 
+      if (removeImage) {
+        await _imageStorage.deleteServiceImage(id);
+        fields['image'] = null;
+      }
       if (newImage != null) {
         final url = await _imageStorage.uploadServiceImage(
           serviceId: id,

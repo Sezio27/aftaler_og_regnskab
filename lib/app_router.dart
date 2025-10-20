@@ -168,7 +168,7 @@ GoRouter createRouter() {
             path: '/services/:id',
             pageBuilder: (_, state) => NoTransitionPage(
               child: ServiceDetailsScreen(
-                clientId: state.pathParameters['id']!,
+                serviceId: state.pathParameters['id']!,
               ),
             ),
           ),

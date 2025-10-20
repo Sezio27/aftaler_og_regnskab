@@ -1,29 +1,31 @@
-// lib/screens/client_details_screen.dart
 import 'dart:io';
 
-import 'package:aftaler_og_regnskab/model/clientModel.dart';
+import 'package:aftaler_og_regnskab/model/checklistModel.dart';
+import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
-import 'package:aftaler_og_regnskab/utils/phone_format.dart';
-import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class ServiceDetailsScreen extends StatelessWidget {
-  const ServiceDetailsScreen({super.key, required this.clientId});
-  final String clientId;
+  const ServiceDetailsScreen({super.key, required this.serviceId});
+  final String serviceId;
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.read<ClientViewModel>();
-
-    return StreamBuilder<ClientModel?>(
-      stream: vm.watchClient(clientId),
+    final vm = context.read<ServiceViewModel>();
+    return StreamBuilder<ServiceModel?>(
+      stream: vm.watchService(serviceId),
       builder: (context, snap) {
         if (snap.hasError) {
           return Center(child: Text('Fejl: ${snap.error}'));
@@ -32,61 +34,259 @@ class ServiceDetailsScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final client = snap.data;
-        if (client == null) {
+        final service = snap.data;
+        if (service == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pop();
           });
           return const SizedBox.shrink();
         }
 
-        return _ClientDetailsView(client: client);
+        return _ServiceDetailsView(service: service);
       },
     );
   }
 }
 
-class _ClientDetailsView extends StatefulWidget {
-  const _ClientDetailsView({required this.client});
-  final ClientModel client;
+class _ServiceDetailsView extends StatefulWidget {
+  const _ServiceDetailsView({required this.service});
+  final ServiceModel service;
 
   @override
-  State<_ClientDetailsView> createState() => _ClientDetailsViewState();
+  State<_ServiceDetailsView> createState() => _ServiceDetailsViewState();
 }
 
-class _ClientDetailsViewState extends State<_ClientDetailsView> {
+class _ServiceDetailsViewState extends State<_ServiceDetailsView> {
   bool _editing = false;
-  late final TextEditingController _name;
-  late final TextEditingController _phone;
-  late final TextEditingController _email;
-  late final TextEditingController _address;
-  late final TextEditingController _postal;
-  late final TextEditingController _city;
-  late final TextEditingController _cvr;
 
-  XFile? _newPhoto; // temp picked photo
+  Future<void> _handleDelete() async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Slet service?'),
+            content: const Text('Dette kan ikke fortrydes.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Annuller'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Slet'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!ok) return;
+
+    final vm = context.read<ServiceViewModel>();
+    try {
+      await vm.delete(
+        widget.service.id!,
+        widget.service.image,
+      ); // adjust name if different
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Service slettet')));
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Kunne ikke slette: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hPad = LayoutMetrics.horizontalPadding(context);
+
+    return SingleChildScrollView(
+      key: const PageStorageKey('serviceDetailsScroll'), // keeps scroll offset
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          hPad,
+          10,
+          hPad,
+          LayoutMetrics.navBarHeight(context) + 30,
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: _editing
+              ? _ServiceEditPane(
+                  key: const ValueKey('edit'),
+                  service: widget.service,
+                  onCancel: () => setState(() => _editing = false),
+                  onSaved: () => setState(() => _editing = false),
+                )
+              : _ServiceReadPane(
+                  key: const ValueKey('read'),
+                  service: widget.service,
+                  onEdit: () => setState(() => _editing = true),
+                  onDelete: _handleDelete,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ServiceReadPane extends StatelessWidget {
+  const _ServiceReadPane({
+    super.key,
+    required this.service,
+    required this.onEdit,
+    required this.onDelete,
+  });
+  final ServiceModel service;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CustomCard(
+          field: Padding(
+            padding: const EdgeInsets.all(35),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                //Image
+                _ServiceImage(
+                  url: service.image,
+                  aspectRatio: 16 / 9,
+                  borderRadius: 12,
+                ),
+                const SizedBox(height: 40),
+                //Title
+                Text(service.name!, style: AppTypography.h3),
+                const SizedBox(height: 40),
+
+                // Price
+                _InfoRow(
+                  icon: Icons.sell_outlined,
+                  label: 'Pris',
+                  value: service.price?.isNotEmpty == true
+                      ? service.price!
+                      : '—',
+                ),
+                const SizedBox(height: 26),
+
+                // Duration
+                _InfoRow(
+                  icon: Icons.schedule,
+                  label: 'Varighed',
+                  value: service.duration != null
+                      ? '${service.duration} timer'
+                      : '—',
+                ),
+
+                const SizedBox(height: 40),
+
+                // Description
+                if ((service.description ?? '').isNotEmpty) ...[
+                  Text(service.description!, style: AppTypography.b2),
+                ] else ...[
+                  Text('Ingen beskrivelse', style: AppTypography.b2),
+                ],
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: Row(
+            children: [
+              Expanded(
+                child: CustomButton(
+                  text: "Rediger",
+                  textStyle: AppTypography.button3.copyWith(
+                    color: cs.onSurface.withAlpha(200),
+                  ),
+                  onTap: onEdit,
+                  borderRadius: 12,
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: cs.onSurface.withAlpha(200),
+                  ),
+                  color: cs.onPrimary,
+                  borderStroke: Border.all(color: cs.onSurface.withAlpha(200)),
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: CustomButton(
+                  text: "Slet",
+                  textStyle: AppTypography.button3.copyWith(
+                    color: cs.error.withAlpha(200),
+                  ),
+                  onTap: onDelete,
+                  borderRadius: 12,
+                  icon: Icon(Icons.delete, color: cs.error.withAlpha(200)),
+                  color: cs.onPrimary,
+                  borderStroke: Border.all(color: cs.error.withAlpha(200)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ServiceEditPane extends StatefulWidget {
+  const _ServiceEditPane({
+    super.key,
+    required this.service,
+    required this.onCancel,
+    required this.onSaved,
+  });
+  final ServiceModel service;
+  final VoidCallback onCancel;
+  final VoidCallback onSaved;
+
+  @override
+  State<_ServiceEditPane> createState() => __ServiceEditPaneState();
+}
+
+class __ServiceEditPaneState extends State<_ServiceEditPane> {
+  late final TextEditingController _name;
+  late final TextEditingController _price;
+  late final TextEditingController _dur;
+  late final TextEditingController _desc;
+  int? _active;
+
+  XFile? _newPhoto;
+  bool _removeImage = false;
 
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: widget.client.name ?? '');
-    _phone = TextEditingController(text: widget.client.phone ?? '');
-    _email = TextEditingController(text: widget.client.email ?? '');
-    _address = TextEditingController(text: widget.client.address ?? '');
-    _postal = TextEditingController(text: widget.client.postal ?? '');
-    _city = TextEditingController(text: widget.client.city ?? '');
-    _cvr = TextEditingController(text: widget.client.cvr ?? '');
+    _name = TextEditingController(text: widget.service.name ?? '');
+    _price = TextEditingController(text: widget.service.price ?? '');
+    _dur = TextEditingController(text: widget.service.duration ?? '');
+    _desc = TextEditingController(text: widget.service.description ?? '');
   }
 
   @override
   void dispose() {
     _name.dispose();
-    _phone.dispose();
-    _email.dispose();
-    _address.dispose();
-    _postal.dispose();
-    _city.dispose();
-    _cvr.dispose();
+    _price.dispose();
+    _dur.dispose();
+    _desc.dispose();
     super.dispose();
   }
 
@@ -97,429 +297,405 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
     }
   }
 
+  Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Angiv navn på servicen')));
+      return;
+    }
+
+    final vm = context.read<ServiceViewModel>();
+    final ok = await vm.updateServiceFields(
+      widget.service.id!,
+      name: name,
+      description: _desc.text,
+      duration: _dur.text,
+      price: _price.text,
+      newImage: _newPhoto,
+      removeImage: _removeImage,
+    );
+
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Opdateret')));
+      widget.onSaved(); // parent flips back to read mode
+    } else {
+      final err = vm.error ?? 'Ukendt fejl';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    }
+  }
+
+  void _clearFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _active = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final vm = context.watch<ClientViewModel>();
+    return TapRegion(
+      onTapInside: (_) => _clearFocus(),
+      onTapOutside: (_) => _clearFocus(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.all(35),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: _pickNewPhoto,
+                    child: _ServiceImage(
+                      url: widget.service.image,
+                      newFile: _newPhoto,
+                      remove: _removeImage,
+                      editable: true,
+                      aspectRatio: 16 / 9,
+                      onChanged: (file, remove) {
+                        setState(() {
+                          _newPhoto = file;
+                          _removeImage = remove;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SoftTextField(
+                    hintText: 'Navn',
+                    controller: _name,
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    showStroke: true,
+                    strokeColor: _active != 1
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 1 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 1),
+                  ),
+                  const SizedBox(height: 18),
 
-    var circleAvatar = CircleAvatar(
-      radius: 38,
-      backgroundColor: cs.secondary.withAlpha(150),
-      backgroundImage: _newPhoto != null
-          ? FileImage(File(_newPhoto!.path))
-          : (widget.client.image != null && widget.client.image!.isNotEmpty)
-          ? NetworkImage(widget.client.image!)
-          : null,
-      child:
-          (_newPhoto == null &&
-              (widget.client.image == null || widget.client.image!.isEmpty))
-          ? const Icon(Icons.person, size: 36)
-          : null,
+                  // Price
+                  SoftTextField(
+                    hintText: 'Pris (fx 1200 kr)',
+                    controller: _price,
+                    suffixText: "DKK",
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    showStroke: true,
+                    strokeColor: _active != 2
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 2 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 2),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Duration
+                  SoftTextField(
+                    hintText: 'Varighed (timer, fx 1.5)',
+                    controller: _dur,
+                    suffixText: "Timer",
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    showStroke: true,
+                    strokeColor: _active != 3
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 3 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 3),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Description
+                  SoftTextField(
+                    hintText: 'Beskrivelse',
+                    controller: _desc,
+                    maxLines: 4,
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    showStroke: true,
+                    strokeColor: _active != 4
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 4 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 4),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+          Selector<ServiceViewModel, bool>(
+            selector: (_, vm) => vm.saving,
+            builder: (context, saving, _) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Annuller',
+                      onTap: widget.onCancel,
+                      borderRadius: 12,
+                      color: cs.onPrimary,
+                      textStyle: AppTypography.button3.copyWith(
+                        color: cs.onSurface.withAlpha(200),
+                      ),
+                      borderStroke: Border.all(
+                        color: cs.onSurface.withAlpha(200),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: CustomButton(
+                      text: saving ? "Gemmer" : "Bekræft",
+                      onTap: saving ? () {} : _save,
+                      borderRadius: 12,
+                      color: cs.primary.withAlpha(200),
+                      textStyle: AppTypography.button3.copyWith(
+                        color: cs.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceImage extends StatelessWidget {
+  const _ServiceImage({
+    super.key,
+    this.url,
+    this.newFile,
+    this.remove = false,
+    this.editable = false,
+    this.onChanged, // (file, remove)
+    this.aspectRatio = 16 / 9,
+    this.borderRadius = 12,
+  });
+
+  final String? url;
+  final XFile? newFile;
+  final bool remove;
+  final bool editable;
+  final void Function(XFile? file, bool remove)? onChanged;
+
+  final double aspectRatio;
+  final double borderRadius;
+
+  Future<void> _pick(BuildContext context) async {
+    final picked = await pickImageViaSheet(context);
+    if (picked != null)
+      onChanged?.call(picked, false); // picking cancels removal
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    Widget content;
+    if (newFile != null) {
+      content = Image.file(File(newFile!.path), fit: BoxFit.cover);
+    } else if (remove) {
+      content = const _ImagePlaceholder();
+    } else if ((url ?? '').isNotEmpty) {
+      content = Image.network(
+        url!,
+        fit: BoxFit.cover,
+        loadingBuilder: (c, w, p) => p == null
+            ? w
+            : Container(
+                alignment: Alignment.center,
+                color: cs.surfaceVariant.withAlpha(80),
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              ),
+        errorBuilder: (_, __, ___) => const _ImagePlaceholder(),
+      );
+    } else {
+      content = const _ImagePlaceholder();
+    }
+
+    final image = ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: AspectRatio(aspectRatio: aspectRatio, child: content),
     );
 
+    if (!editable) return image; // read mode: unchanged
+
+    // edit mode: tap to pick + small top-left action
     return Stack(
+      clipBehavior: Clip.none,
       children: [
-        ListView(
-          padding: EdgeInsets.fromLTRB(
-            10,
-            20,
-            10,
-            70 + LayoutMetrics.navBarHeight(context),
-          ),
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CustomCard(
-                  field: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 26),
-                    child: Column(
-                      children: [
-                        _editing
-                            ? GestureDetector(
-                                onTap: _pickNewPhoto,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    circleAvatar,
-                                    Positioned(
-                                      right: -2,
-                                      bottom: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: cs.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.edit,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : circleAvatar,
-                        const SizedBox(height: 14),
-                        _editing
-                            ? TextField(
-                                controller: _name,
-                                textAlign: TextAlign.center,
-                                decoration: const InputDecoration(
-                                  hintText: 'Navn',
-                                  border: InputBorder.none,
-                                ),
-                                style: AppTypography.h2,
-                              )
-                            : Text(
-                                widget.client.name ?? 'Uden navn',
-                                style: AppTypography.h2,
-                              ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+        // Whole image tappable to pick
+        GestureDetector(onTap: () => _pick(context), child: image),
 
-                CustomCard(
-                  field: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 26,
-                      horizontal: 14,
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.assignment_outlined),
-                            const SizedBox(width: 10),
-                            Text(
-                              "Grundlæggende oplysninger",
-                              style: AppTypography.b7,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        _rowField(
-                          context,
-                          icon: Icons.phone_outlined,
-                          label: 'Telefon',
-                          read: widget.client.phone?.toGroupedPhone() ?? '---',
-                          editChild: TextField(
-                            controller: _phone,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              hintText: 'Telefon',
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-                        Divider(thickness: 1.2),
-                        _rowField(
-                          context,
-                          icon: Icons.mail_outline,
-                          label: 'E-mail',
-                          read: widget.client.email ?? '---',
-                          editChild: TextField(
-                            controller: _email,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'E-mail',
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-                        Divider(thickness: 1.2),
-
-                        _rowField(
-                          context,
-                          icon: Icons.map_outlined,
-                          label: 'Adresse',
-                          read: widget.client.address ?? '---',
-                          editChild: TextField(
-                            controller: _address,
-                            decoration: const InputDecoration(
-                              hintText: 'Adresse',
-                            ),
-                          ),
-                        ),
-
-                        if (!_editing) ...[
-                          if (widget.client.postal != null)
-                            Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                ),
-                                child: Text(
-                                  widget.client.postal!,
-                                  style: AppTypography.segPassiveNumber,
-                                ),
-                              ),
-                            ),
-                          if (widget.client.city != null)
-                            Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                ),
-                                child: Text(
-                                  widget.client.city!,
-                                  style: AppTypography.segPassiveNumber,
-                                ),
-                              ),
-                            ),
-                        ] else ...[
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _postal,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              hintText: 'Postnummer',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _city,
-                            decoration: const InputDecoration(hintText: 'By'),
-                          ),
-                        ],
-
-                        if (widget.client.cvr != null || _editing) ...[
-                          const SizedBox(height: 6),
-                          const Divider(thickness: 1.2),
-                          _rowField(
-                            context,
-                            icon: Icons.business_outlined,
-                            label: 'CVR',
-                            read: widget.client.cvr ?? '---',
-                            editChild: TextField(
-                              controller: _cvr,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                hintText: 'CVR',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: _editing
-                      ? Row(
-                          children: [
-                            Expanded(
-                              child: CustomButton(
-                                text: "Annuller",
-                                onTap: () {
-                                  // revert form to current doc values
-                                  _name.text = widget.client.name ?? '';
-                                  _phone.text = widget.client.phone ?? '';
-                                  _email.text = widget.client.email ?? '';
-                                  _address.text = widget.client.address ?? '';
-                                  _postal.text = widget.client.postal ?? '';
-                                  _city.text = widget.client.city ?? '';
-                                  _cvr.text = widget.client.cvr ?? '';
-                                  setState(() {
-                                    _newPhoto = null;
-                                    _editing = false;
-                                  });
-                                },
-                                borderRadius: 12,
-                                color: cs.onPrimary,
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onSurface,
-                                ),
-                                borderStroke: Border.all(color: cs.onSurface),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: CustomButton(
-                                text: vm.saving ? "Gemmer..." : "Bekræft",
-                                onTap: vm.saving
-                                    ? () {}
-                                    : () async {
-                                        final ok = await context
-                                            .read<ClientViewModel>()
-                                            .updateClientFields(
-                                              widget.client.id!,
-                                              name: _name.text,
-                                              phone: _phone.text,
-                                              email: _email.text,
-                                              address: _address.text,
-                                              city: _city.text,
-                                              postal: _postal.text,
-                                              cvr: _cvr.text,
-                                              newImage: _newPhoto,
-                                            );
-                                        if (!mounted) return;
-                                        if (ok) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Opdateret'),
-                                            ),
-                                          );
-                                          setState(() {
-                                            _editing = false;
-                                            _newPhoto = null;
-                                          });
-                                        } else {
-                                          final err =
-                                              context
-                                                  .read<ClientViewModel>()
-                                                  .error ??
-                                              'Ukendt fejl';
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(content: Text(err)),
-                                          );
-                                        }
-                                      },
-                                borderRadius: 12,
-                                color: cs.primary,
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onPrimary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            Expanded(
-                              child: CustomButton(
-                                text: "Rediger",
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onSurface,
-                                ),
-                                onTap: () => setState(() => _editing = true),
-                                borderRadius: 12,
-                                icon: Icon(Icons.edit_outlined),
-                                color: cs.onPrimary,
-                                borderStroke: Border.all(color: cs.onSurface),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: CustomButton(
-                                text: "Slet",
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.error,
-                                ),
-                                onTap: () async {
-                                  final ok =
-                                      await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Slet klient?'),
-                                          content: const Text(
-                                            'Dette kan ikke fortrydes.',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => ctx.pop(false),
-                                              child: const Text('Annuller'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () => ctx.pop(true),
-                                              child: const Text('Slet'),
-                                            ),
-                                          ],
-                                        ),
-                                      ) ??
-                                      false;
-
-                                  if (!ok) return;
-                                  final vm = context.read<ClientViewModel>();
-                                  try {
-                                    await vm.delete(
-                                      widget.client.id!,
-                                      widget.client.image,
-                                    );
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Klient slettet'),
-                                      ),
-                                    );
-
-                                    context.pop();
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Kunne ikke slette: $e'),
-                                      ),
-                                    );
-                                  }
-                                },
-                                borderRadius: 12,
-                                icon: Icon(Icons.delete, color: cs.error),
-                                color: cs.onPrimary,
-                                borderStroke: Border.all(color: cs.error),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+        // Bottom-right pencil
+        Positioned(
+          right: 8,
+          bottom: 8,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.primary,
+              shape: BoxShape.circle,
             ),
-          ],
+            padding: const EdgeInsets.all(8),
+            child: const Icon(Icons.edit, size: 18, color: Colors.white),
+          ),
         ),
 
-        if (vm.saving)
-          AbsorbPointer(
-            absorbing: true,
-            child: const Center(child: CircularProgressIndicator()),
+        // Top-left chip: remove / undo remove / undo new
+        Positioned(
+          left: 8,
+          top: 8,
+          child: Material(
+            color: cs.surface.withAlpha(230),
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () {
+                if (newFile != null) {
+                  onChanged?.call(null, false); // undo new
+                } else if (remove) {
+                  onChanged?.call(null, false); // undo removal
+                } else {
+                  onChanged?.call(null, true); // request removal
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      newFile != null
+                          ? Icons.undo
+                          : (remove ? Icons.undo : Icons.delete_outline),
+                      size: 16,
+                      color: cs.onSurface.withAlpha(200),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      newFile != null
+                          ? 'Fortryd nyt'
+                          : (remove ? 'Fortryd fjernelse' : 'Fjern billede'),
+                      style: AppTypography.b6.copyWith(
+                        color: cs.onSurface.withAlpha(220),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
+        ),
       ],
     );
   }
+}
 
-  Widget _rowField(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String read,
-    required Widget editChild,
-  }) {
-    final editing = _editing;
-    return Column(
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.greyBackground.withAlpha(200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        Icons.hotel_class,
+        size: 40,
+        color: cs.onSurface.withAlpha(150),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Icon(icon, size: 20),
-            const SizedBox(width: 10),
-            Text(label, style: AppTypography.b8),
-          ],
+        Icon(icon, size: 24, color: cs.primary),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AppTypography.h4),
+              const SizedBox(height: 4),
+              Text(value, style: AppTypography.num3),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: editing
-                ? editChild
-                : Text(read, style: AppTypography.segPassiveNumber),
+      ],
+    );
+  }
+}
+
+class _InfoRowEdit extends StatelessWidget {
+  const _InfoRowEdit({
+    required this.icon,
+    required this.label,
+    required this.editChild,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget editChild;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 24, color: cs.primary),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AppTypography.h4),
+              const SizedBox(height: 4),
+              editChild,
+            ],
           ),
         ),
       ],
