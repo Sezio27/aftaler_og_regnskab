@@ -5,6 +5,7 @@ import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -61,6 +62,7 @@ class _ChecklistDetailsViewState extends State<_ChecklistDetailsView> {
     final hPad = LayoutMetrics.horizontalPadding(context);
 
     return SingleChildScrollView(
+      key: const PageStorageKey('checklistDetailsScroll'),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           hPad,
@@ -196,43 +198,7 @@ class _ChecklistReadPane extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 30),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              Expanded(
-                child: CustomButton(
-                  text: "Rediger",
-                  textStyle: AppTypography.button3.copyWith(
-                    color: cs.onSurface.withAlpha(200),
-                  ),
-                  onTap: onEdit,
-                  borderRadius: 12,
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    color: cs.onSurface.withAlpha(200),
-                  ),
-                  color: cs.onPrimary,
-                  borderStroke: Border.all(color: cs.onSurface.withAlpha(200)),
-                ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: CustomButton(
-                  text: "Slet",
-                  textStyle: AppTypography.button3.copyWith(
-                    color: cs.error.withAlpha(200),
-                  ),
-                  onTap: onDelete,
-                  borderRadius: 12,
-                  icon: Icon(Icons.delete, color: cs.error.withAlpha(200)),
-                  color: cs.onPrimary,
-                  borderStroke: Border.all(color: cs.error.withAlpha(200)),
-                ),
-              ),
-            ],
-          ),
-        ),
+        ReadActionsRow(onEdit: onEdit, onDelete: onDelete),
       ],
     );
   }
@@ -466,38 +432,10 @@ class __ChecklistEditPaneState extends State<_ChecklistEditPane> {
           const SizedBox(height: 30),
           Selector<ChecklistViewModel, bool>(
             selector: (_, vm) => vm.saving,
-            builder: (context, saving, _) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                      text: "Annuller",
-                      onTap: widget.onCancel,
-
-                      textStyle: AppTypography.button3.copyWith(
-                        color: cs.onSurface.withAlpha(200),
-                      ),
-
-                      borderRadius: 12,
-                      color: cs.onPrimary,
-                      borderStroke: Border.all(
-                        color: cs.onSurface.withAlpha(200),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: CustomButton(
-                      text: saving ? "Gemmer..." : "Bekræft",
-                      textStyle: AppTypography.button3.copyWith(
-                        color: cs.onPrimary,
-                      ),
-                      onTap: saving ? () {} : _save,
-                    ),
-                  ),
-                ],
-              ),
+            builder: (context, saving, _) => EditActionsRow(
+              saving: saving,
+              onCancel: widget.onCancel,
+              onConfirm: _save,
             ),
           ),
         ],

@@ -196,6 +196,7 @@ class ClientViewModel extends ChangeNotifier {
     String? postal,
     String? cvr,
     XFile? newImage,
+    bool removeImage = false,
   }) async {
     try {
       _saving = true;
@@ -203,11 +204,20 @@ class ClientViewModel extends ChangeNotifier {
       notifyListeners();
 
       final fields = <String, Object?>{};
+      final deletes = <String>{};
 
-      void put(String k, String? v) {
-        if (v == null) return;
+      // Helper: if a param is provided
+      // - empty string  => delete field
+      // - non-empty     => set field
+      // - null          => untouched
+      void put(String key, String? v) {
+        if (v == null) return; // not changed
         final t = v.trim();
-        fields[k] = t.isEmpty ? null : t;
+        if (t.isEmpty) {
+          deletes.add(key);
+        } else {
+          fields[key] = t;
+        }
       }
 
       put('name', name);
@@ -218,17 +228,56 @@ class ClientViewModel extends ChangeNotifier {
       put('postal', postal);
       put('cvr', cvr);
 
+      // Image precedence: new image > remove flag
       if (newImage != null) {
         final url = await _imageStorage.uploadClientImage(
           clientId: id,
           file: newImage,
         );
         fields['image'] = url;
+      } else if (removeImage) {
+        deletes.add('image');
+        // Optional storage cleanup; don't fail the whole op if it throws
+        try {
+          await _imageStorage.deleteClientImage(id);
+        } catch (_) {}
       }
 
-      if (fields.isNotEmpty) {
-        await _repo.updateClient(id, fields: fields);
+      if (fields.isNotEmpty || deletes.isNotEmpty) {
+        await _repo.updateClient(id, fields: fields, deletes: deletes);
       }
+
+      // Optional: best-effort cache touch
+      final cached = _clientCache[id];
+      if (cached != null) {
+        _clientCache[id] = cached.copyWith(
+          name: fields.containsKey('name')
+              ? fields['name'] as String?
+              : (deletes.contains('name') ? null : cached.name),
+          phone: fields.containsKey('phone')
+              ? fields['phone'] as String?
+              : (deletes.contains('phone') ? null : cached.phone),
+          email: fields.containsKey('email')
+              ? fields['email'] as String?
+              : (deletes.contains('email') ? null : cached.email),
+          address: fields.containsKey('address')
+              ? fields['address'] as String?
+              : (deletes.contains('address') ? null : cached.address),
+          city: fields.containsKey('city')
+              ? fields['city'] as String?
+              : (deletes.contains('city') ? null : cached.city),
+          postal: fields.containsKey('postal')
+              ? fields['postal'] as String?
+              : (deletes.contains('postal') ? null : cached.postal),
+          cvr: fields.containsKey('cvr')
+              ? fields['cvr'] as String?
+              : (deletes.contains('cvr') ? null : cached.cvr),
+          image: fields.containsKey('image')
+              ? fields['image'] as String?
+              : (deletes.contains('image') ? null : cached.image),
+        );
+      }
+
       return true;
     } catch (e) {
       _error = 'Kunne ikke opdatere: $e';
@@ -239,10 +288,11 @@ class ClientViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> delete(String id, String? imageUrl) async {
-    if (imageUrl != null && imageUrl.isNotEmpty) {
+  Future<void> delete(String id) async {
+    try {
       await _imageStorage.deleteClientImage(id);
-    }
+    } catch (_) {}
+
     await _repo.deleteClient(id);
   }
 }

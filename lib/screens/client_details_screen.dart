@@ -2,13 +2,16 @@
 import 'dart:io';
 
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
+import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/utils/phone_format.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
-import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
+import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
+import 'package:aftaler_og_regnskab/widgets/details/image_pickers.dart';
+import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,14 +43,14 @@ class ClientDetailsScreen extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return _ClientDetailsView(client: client);
+        return _ClientDetailsView(key: ValueKey(client.id), client: client);
       },
     );
   }
 }
 
 class _ClientDetailsView extends StatefulWidget {
-  const _ClientDetailsView({required this.client});
+  const _ClientDetailsView({super.key, required this.client});
   final ClientModel client;
 
   @override
@@ -56,6 +59,185 @@ class _ClientDetailsView extends StatefulWidget {
 
 class _ClientDetailsViewState extends State<_ClientDetailsView> {
   bool _editing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final hPad = LayoutMetrics.horizontalPadding(context);
+
+    return SingleChildScrollView(
+      key: const PageStorageKey('clientDetailsScroll'), // keeps scroll offset
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          hPad,
+          10,
+          hPad,
+          LayoutMetrics.navBarHeight(context) + 50,
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: _editing
+              ? _ClientEditPane(
+                  key: const ValueKey('edit'),
+                  client: widget.client,
+                  onCancel: () => setState(() => _editing = false),
+                  onSaved: () => setState(() => _editing = false),
+                )
+              : _ClientReadPane(
+                  key: const ValueKey('read'),
+                  client: widget.client,
+                  onEdit: () => setState(() => _editing = true),
+                  onDelete: () async {
+                    await handleDelete(
+                      context: context,
+                      componentLabel: 'Service',
+                      onDelete: () => context.read<ClientViewModel>().delete(
+                        widget.client.id!,
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClientReadPane extends StatelessWidget {
+  const _ClientReadPane({
+    super.key,
+    required this.client,
+    required this.onEdit,
+    required this.onDelete,
+  });
+  final ClientModel client;
+  final VoidCallback onEdit;
+  final Future<void> Function() onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CustomCard(
+          field: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 30),
+            child: Column(
+              children: [
+                AvatarImagePicker(url: client.image),
+                const SizedBox(height: 20),
+
+                Text(client.name ?? "Intet navn", style: AppTypography.h2),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        CustomCard(
+          field: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 22),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.assignment_outlined),
+                    const SizedBox(width: 10),
+                    Text("Grundlæggende oplysninger", style: AppTypography.b7),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                _rowField(
+                  context,
+                  icon: Icons.phone_outlined,
+                  label: 'Telefon',
+                  read: client.phone?.toGroupedPhone() ?? '---',
+                ),
+
+                const SizedBox(height: 6),
+                Divider(thickness: 1.2),
+                _rowField(
+                  context,
+                  icon: Icons.mail_outline,
+                  label: 'E-mail',
+                  read: client.email ?? '---',
+                ),
+
+                const SizedBox(height: 6),
+                Divider(thickness: 1.2),
+
+                _rowField(
+                  context,
+                  icon: Icons.map_outlined,
+                  label: 'Adresse',
+                  read: client.address ?? '---',
+                ),
+
+                if (client.postal != null)
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        client.postal!,
+                        style: AppTypography.segPassiveNumber,
+                      ),
+                    ),
+                  ),
+                if (client.city != null)
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        client.city!,
+                        style: AppTypography.segPassiveNumber,
+                      ),
+                    ),
+                  ),
+
+                if (client.cvr != null) ...[
+                  const SizedBox(height: 6),
+                  const Divider(thickness: 1.2),
+                  _rowField(
+                    context,
+                    icon: Icons.business_outlined,
+                    label: 'CVR',
+                    read: client.cvr ?? '---',
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 30),
+        ReadActionsRow(onEdit: onEdit, onDelete: onDelete),
+      ],
+    );
+  }
+}
+
+class _ClientEditPane extends StatefulWidget {
+  const _ClientEditPane({
+    super.key,
+    required this.client,
+    required this.onCancel,
+    required this.onSaved,
+  });
+  final ClientModel client;
+  final VoidCallback onCancel;
+  final VoidCallback onSaved;
+
+  @override
+  State<_ClientEditPane> createState() => __ClientEditPaneState();
+}
+
+class __ClientEditPaneState extends State<_ClientEditPane> {
   late final TextEditingController _name;
   late final TextEditingController _phone;
   late final TextEditingController _email;
@@ -63,8 +245,10 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
   late final TextEditingController _postal;
   late final TextEditingController _city;
   late final TextEditingController _cvr;
+  int? _active;
 
-  XFile? _newPhoto; // temp picked photo
+  XFile? _newPhoto;
+  bool _removeImage = false;
 
   @override
   void initState() {
@@ -90,451 +274,287 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
     super.dispose();
   }
 
-  Future<void> _pickNewPhoto() async {
-    final picked = await pickImageViaSheet(context);
-    if (picked != null && mounted) {
-      setState(() => _newPhoto = picked);
-    }
+  Future<void> _save() async {
+    await handleSave(
+      context: context,
+      validate: () {
+        final name = _name.text.trim();
+        if (name.isEmpty) return 'Angiv navn på servicen';
+        return null;
+      },
+      onSave: () => context.read<ClientViewModel>().updateClientFields(
+        widget.client.id!,
+        name: _name.text.trim(),
+        phone: _phone.text,
+        email: _email.text,
+        address: _address.text,
+        city: _city.text,
+        postal: _postal.text,
+        cvr: _cvr.text,
+        newImage: _newPhoto,
+        removeImage: _removeImage,
+      ),
+      errorText: () => context.read<ClientViewModel>().error ?? 'Ukendt fejl',
+      onSuccess: widget.onSaved, // flip back to read mode
+    );
+  }
+
+  void _clearFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _active = null);
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final vm = context.watch<ClientViewModel>();
-
-    var circleAvatar = CircleAvatar(
-      radius: 38,
-      backgroundColor: cs.secondary.withAlpha(150),
-      backgroundImage: _newPhoto != null
-          ? FileImage(File(_newPhoto!.path))
-          : (widget.client.image != null && widget.client.image!.isNotEmpty)
-          ? NetworkImage(widget.client.image!)
-          : null,
-      child:
-          (_newPhoto == null &&
-              (widget.client.image == null || widget.client.image!.isEmpty))
-          ? const Icon(Icons.person, size: 36)
-          : null,
-    );
-
-    return Stack(
-      children: [
-        ListView(
-          padding: EdgeInsets.fromLTRB(
-            10,
-            20,
-            10,
-            70 + LayoutMetrics.navBarHeight(context),
-          ),
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CustomCard(
-                  field: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 26),
-                    child: Column(
-                      children: [
-                        _editing
-                            ? GestureDetector(
-                                onTap: _pickNewPhoto,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    circleAvatar,
-                                    Positioned(
-                                      right: -2,
-                                      bottom: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: cs.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.edit,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : circleAvatar,
-                        const SizedBox(height: 14),
-                        _editing
-                            ? TextField(
-                                controller: _name,
-                                textAlign: TextAlign.center,
-                                decoration: const InputDecoration(
-                                  hintText: 'Navn',
-                                  border: InputBorder.none,
-                                ),
-                                style: AppTypography.h2,
-                              )
-                            : Text(
-                                widget.client.name ?? 'Uden navn',
-                                style: AppTypography.h2,
-                              ),
-                      ],
-                    ),
+    return TapRegion(
+      onTapInside: (_) => _clearFocus(),
+      onTapOutside: (_) => _clearFocus(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 30, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  AvatarImagePicker(
+                    url: widget.client.image,
+                    newFile: _newPhoto,
+                    remove: _removeImage,
+                    editable: true,
+                    onChanged: (file, remove) {
+                      setState(() {
+                        _newPhoto = file;
+                        _removeImage = remove;
+                      });
+                    },
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                CustomCard(
-                  field: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 26,
-                      horizontal: 14,
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.assignment_outlined),
-                            const SizedBox(width: 10),
-                            Text(
-                              "Grundlæggende oplysninger",
-                              style: AppTypography.b7,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-
-                        _rowField(
-                          context,
-                          icon: Icons.phone_outlined,
-                          label: 'Telefon',
-                          read: widget.client.phone?.toGroupedPhone() ?? '---',
-                          editChild: TextField(
-                            controller: _phone,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              hintText: 'Telefon',
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-                        Divider(thickness: 1.2),
-                        _rowField(
-                          context,
-                          icon: Icons.mail_outline,
-                          label: 'E-mail',
-                          read: widget.client.email ?? '---',
-                          editChild: TextField(
-                            controller: _email,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'E-mail',
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-                        Divider(thickness: 1.2),
-
-                        _rowField(
-                          context,
-                          icon: Icons.map_outlined,
-                          label: 'Adresse',
-                          read: widget.client.address ?? '---',
-                          editChild: TextField(
-                            controller: _address,
-                            decoration: const InputDecoration(
-                              hintText: 'Adresse',
-                            ),
-                          ),
-                        ),
-
-                        if (!_editing) ...[
-                          if (widget.client.postal != null)
-                            Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                ),
-                                child: Text(
-                                  widget.client.postal!,
-                                  style: AppTypography.segPassiveNumber,
-                                ),
-                              ),
-                            ),
-                          if (widget.client.city != null)
-                            Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                ),
-                                child: Text(
-                                  widget.client.city!,
-                                  style: AppTypography.segPassiveNumber,
-                                ),
-                              ),
-                            ),
-                        ] else ...[
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _postal,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              hintText: 'Postnummer',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _city,
-                            decoration: const InputDecoration(hintText: 'By'),
-                          ),
-                        ],
-
-                        if (widget.client.cvr != null || _editing) ...[
-                          const SizedBox(height: 6),
-                          const Divider(thickness: 1.2),
-                          _rowField(
-                            context,
-                            icon: Icons.business_outlined,
-                            label: 'CVR',
-                            read: widget.client.cvr ?? '---',
-                            editChild: TextField(
-                              controller: _cvr,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                hintText: 'CVR',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  SoftTextField(
+                    hintText: 'Navn',
+                    controller: _name,
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    textAlign: TextAlign.center,
+                    showStroke: true,
+                    strokeColor: _active != 1
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 1 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 1),
                   ),
-                ),
-
-                const SizedBox(height: 30),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: _editing
-                      ? Row(
-                          children: [
-                            Expanded(
-                              child: CustomButton(
-                                text: "Annuller",
-                                onTap: () {
-                                  // revert form to current doc values
-                                  _name.text = widget.client.name ?? '';
-                                  _phone.text = widget.client.phone ?? '';
-                                  _email.text = widget.client.email ?? '';
-                                  _address.text = widget.client.address ?? '';
-                                  _postal.text = widget.client.postal ?? '';
-                                  _city.text = widget.client.city ?? '';
-                                  _cvr.text = widget.client.cvr ?? '';
-                                  setState(() {
-                                    _newPhoto = null;
-                                    _editing = false;
-                                  });
-                                },
-                                borderRadius: 12,
-                                color: cs.onPrimary,
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
-                                borderStroke: Border.all(
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: CustomButton(
-                                text: vm.saving ? "Gemmer..." : "Bekræft",
-                                onTap: vm.saving
-                                    ? () {}
-                                    : () async {
-                                        final ok = await context
-                                            .read<ClientViewModel>()
-                                            .updateClientFields(
-                                              widget.client.id!,
-                                              name: _name.text,
-                                              phone: _phone.text,
-                                              email: _email.text,
-                                              address: _address.text,
-                                              city: _city.text,
-                                              postal: _postal.text,
-                                              cvr: _cvr.text,
-                                              newImage: _newPhoto,
-                                            );
-                                        if (!mounted) return;
-                                        if (ok) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Opdateret'),
-                                            ),
-                                          );
-                                          setState(() {
-                                            _editing = false;
-                                            _newPhoto = null;
-                                          });
-                                        } else {
-                                          final err =
-                                              context
-                                                  .read<ClientViewModel>()
-                                                  .error ??
-                                              'Ukendt fejl';
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(content: Text(err)),
-                                          );
-                                        }
-                                      },
-                                borderRadius: 12,
-                                color: cs.primary.withAlpha(200),
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onPrimary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            Expanded(
-                              child: CustomButton(
-                                text: "Rediger",
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.onSurface,
-                                ),
-                                onTap: () => setState(() => _editing = true),
-                                borderRadius: 12,
-                                icon: Icon(
-                                  Icons.edit_outlined,
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
-                                color: cs.onPrimary,
-                                borderStroke: Border.all(
-                                  color: cs.onSurface.withAlpha(200),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(
-                              child: CustomButton(
-                                text: "Slet",
-                                textStyle: AppTypography.button3.copyWith(
-                                  color: cs.error.withAlpha(200),
-                                ),
-                                onTap: () async {
-                                  final ok =
-                                      await showDialog<bool>(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text('Slet klient?'),
-                                          content: const Text(
-                                            'Dette kan ikke fortrydes.',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () => ctx.pop(false),
-                                              child: const Text('Annuller'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () => ctx.pop(true),
-                                              child: const Text('Slet'),
-                                            ),
-                                          ],
-                                        ),
-                                      ) ??
-                                      false;
-
-                                  if (!ok) return;
-                                  final vm = context.read<ClientViewModel>();
-                                  try {
-                                    await vm.delete(
-                                      widget.client.id!,
-                                      widget.client.image,
-                                    );
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Klient slettet'),
-                                      ),
-                                    );
-
-                                    context.pop();
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Kunne ikke slette: $e'),
-                                      ),
-                                    );
-                                  }
-                                },
-                                borderRadius: 12,
-                                icon: Icon(
-                                  Icons.delete,
-                                  color: cs.error.withAlpha(200),
-                                ),
-                                color: cs.onPrimary,
-                                borderStroke: Border.all(
-                                  color: cs.error.withAlpha(200),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ],
-        ),
-
-        if (vm.saving)
-          AbsorbPointer(
-            absorbing: true,
-            child: const Center(child: CircularProgressIndicator()),
           ),
-      ],
+          const SizedBox(height: 20),
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 14),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.assignment_outlined),
+                      const SizedBox(width: 10),
+                      Text(
+                        "Grundlæggende oplysninger",
+                        style: AppTypography.b7,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  _rowEditField(
+                    context,
+                    icon: Icons.phone_outlined,
+                    label: 'Telefon',
+                    child: SoftTextField(
+                      controller: _phone,
+                      keyboardType: TextInputType.phone,
+                      fill: cs.onPrimary,
+                      borderRadius: 8,
+                      showStroke: true,
+                      strokeColor: _active != 2
+                          ? cs.onSurface.withAlpha(50)
+                          : cs.primary,
+                      strokeWidth: _active != 2 ? 1 : 1.5,
+                      onTap: () => setState(() => _active = 2),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+                  Divider(thickness: 1.2),
+                  _rowEditField(
+                    context,
+                    icon: Icons.mail_outline,
+                    label: 'E-mail',
+
+                    child: SoftTextField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      fill: cs.onPrimary,
+                      borderRadius: 8,
+                      showStroke: true,
+                      strokeColor: _active != 3
+                          ? cs.onSurface.withAlpha(50)
+                          : cs.primary,
+                      strokeWidth: _active != 3 ? 1 : 1.5,
+                      onTap: () => setState(() => _active = 3),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+                  Divider(thickness: 1.2),
+
+                  _rowEditField(
+                    context,
+                    icon: Icons.map_outlined,
+                    label: 'Adresse',
+
+                    child: SoftTextField(
+                      controller: _address,
+                      keyboardType: TextInputType.streetAddress,
+                      fill: cs.onPrimary,
+                      borderRadius: 8,
+                      showStroke: true,
+                      strokeColor: _active != 4
+                          ? cs.onSurface.withAlpha(50)
+                          : cs.primary,
+                      strokeWidth: _active != 4 ? 1 : 1.5,
+                      onTap: () => setState(() => _active = 4),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  SoftTextField(
+                    controller: _postal,
+                    keyboardType: TextInputType.number,
+                    hintText: 'Postnummer',
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    showStroke: true,
+                    strokeColor: _active != 5
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 5 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 5),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  SoftTextField(
+                    controller: _city,
+                    hintText: 'By',
+                    fill: cs.onPrimary,
+                    borderRadius: 8,
+                    showStroke: true,
+                    strokeColor: _active != 6
+                        ? cs.onSurface.withAlpha(50)
+                        : cs.primary,
+                    strokeWidth: _active != 6 ? 1 : 1.5,
+                    onTap: () => setState(() => _active = 6),
+                  ),
+
+                  const SizedBox(height: 6),
+                  const Divider(thickness: 1.2),
+                  _rowEditField(
+                    context,
+                    icon: Icons.business_outlined,
+                    label: 'CVR',
+
+                    child: SoftTextField(
+                      controller: _cvr,
+                      keyboardType: TextInputType.number,
+                      hintText: 'CVR',
+                      fill: cs.onPrimary,
+                      borderRadius: 8,
+                      showStroke: true,
+                      strokeColor: _active != 7
+                          ? cs.onSurface.withAlpha(50)
+                          : cs.primary,
+                      strokeWidth: _active != 7 ? 1 : 1.5,
+                      onTap: () => setState(() => _active = 7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 30),
+          Selector<ClientViewModel, bool>(
+            selector: (_, vm) => vm.saving,
+            builder: (context, saving, _) => EditActionsRow(
+              saving: saving,
+              onCancel: widget.onCancel,
+              onConfirm: _save,
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Widget _rowField(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String read,
-    required Widget editChild,
-  }) {
-    final editing = _editing;
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Icon(icon, size: 20),
-            const SizedBox(width: 10),
-            Text(label, style: AppTypography.b8),
-          ],
+Widget _rowField(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required String read,
+}) {
+  return Column(
+    children: [
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.peach),
+          const SizedBox(width: 8),
+          Text(label, style: AppTypography.b7),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text(read, style: AppTypography.segPassiveNumber),
         ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.bottomLeft,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: editing
-                ? editChild
-                : Text(read, style: AppTypography.segPassiveNumber),
-          ),
+      ),
+    ],
+  );
+}
+
+Widget _rowEditField(
+  BuildContext context, {
+  required IconData icon,
+  required String label,
+  required Widget child,
+}) {
+  return Column(
+    children: [
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.peach),
+          const SizedBox(width: 10),
+          Text(label, style: AppTypography.b7),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: child,
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }

@@ -81,12 +81,27 @@ class ClientRepository {
     String id, {
     ClientModel? patch,
     Map<String, Object?>? fields,
+    Set<String> deletes = const {}, // <--- NEW
   }) async {
     final uid = _uidOrThrow;
-    final data = fields ?? _toFirestore(patch!, isCreate: false);
-    // Always set updatedAt server-side.
-    final withMeta = {...data, 'updatedAt': FieldValue.serverTimestamp()}
-      ..removeWhere((k, v) => v == null);
+
+    // Prefer explicit fields if provided; otherwise map from patch.
+    final base = fields ?? _toFirestore(patch!, isCreate: false);
+
+    // Build final payload, add server timestamp.
+    final withMeta = <String, Object?>{
+      ...base,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    // Translate deletes here (Firebase-specific).
+    for (final key in deletes) {
+      withMeta[key] = FieldValue.delete();
+    }
+
+    // Optional: still drop nulls from 'fields' to avoid writing null values.
+    withMeta.removeWhere((k, v) => v == null);
+
     await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
   }
 

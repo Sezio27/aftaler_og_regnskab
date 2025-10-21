@@ -153,7 +153,7 @@ class ServiceViewModel extends ChangeNotifier {
     String? duration,
     String? price,
     XFile? newImage,
-    bool removeImage = false, // <--- add this
+    bool removeImage = false,
   }) async {
     try {
       _saving = true;
@@ -161,11 +161,20 @@ class ServiceViewModel extends ChangeNotifier {
       notifyListeners();
 
       final fields = <String, Object?>{};
+      final deletes = <String>{};
 
+      // if provided:
+      //   empty string => delete
+      //   non-empty    => set value
+      //   null         => untouched
       void put(String k, String? v) {
         if (v == null) return;
         final t = v.trim();
-        fields[k] = t.isEmpty ? null : t;
+        if (t.isEmpty) {
+          deletes.add(k);
+        } else {
+          fields[k] = t;
+        }
       }
 
       put('name', name);
@@ -173,21 +182,25 @@ class ServiceViewModel extends ChangeNotifier {
       put('duration', duration);
       put('price', price);
 
-      if (removeImage) {
-        await _imageStorage.deleteServiceImage(id);
-        fields['image'] = null;
-      }
+      // Image precedence: new image > remove flag
       if (newImage != null) {
         final url = await _imageStorage.uploadServiceImage(
           serviceId: id,
           file: newImage,
         );
         fields['image'] = url;
+      } else if (removeImage) {
+        deletes.add('image');
+        // optional storage cleanup
+        try {
+          await _imageStorage.deleteServiceImage(id);
+        } catch (_) {}
       }
 
-      if (fields.isNotEmpty) {
-        await _repo.updateService(id, fields: fields);
+      if (fields.isNotEmpty || deletes.isNotEmpty) {
+        await _repo.updateService(id, fields: fields, deletes: deletes);
       }
+
       return true;
     } catch (e) {
       _error = 'Kunne ikke opdatere: $e';
@@ -214,9 +227,7 @@ class ServiceViewModel extends ChangeNotifier {
     // Try deleting the image first; ignore if it doesn’t exist.
     try {
       await _imageStorage.deleteServiceImage(id);
-    } catch (_) {
-      // optionally log, but ignore NotFound errors
-    }
+    } catch (_) {}
     await _repo.deleteService(id);
   }
 }

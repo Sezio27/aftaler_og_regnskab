@@ -70,11 +70,26 @@ class ServiceRepository {
     String id, {
     ServiceModel? patch,
     Map<String, Object?>? fields,
+    Set<String> deletes = const {}, // <-- NEW
   }) async {
     final uid = _uidOrThrow;
-    final data = fields ?? _toFirestore(patch!, isCreate: false);
-    final withMeta = {...data, 'updatedAt': FieldValue.serverTimestamp()}
-      ..removeWhere((k, v) => v == null);
+
+    // prefer explicit fields; otherwise map from patch
+    final base = fields ?? _toFirestore(patch!, isCreate: false);
+
+    final withMeta = <String, Object?>{
+      ...base,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    // translate deletes here (Firebase-specific)
+    for (final key in deletes) {
+      withMeta[key] = FieldValue.delete();
+    }
+
+    // keep dropping nulls, but don't drop FieldValue.delete()
+    withMeta.removeWhere((k, v) => v == null);
+
     await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
   }
 
