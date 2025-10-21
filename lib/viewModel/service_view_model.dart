@@ -18,7 +18,7 @@ class ServiceViewModel extends ChangeNotifier {
   List<ServiceModel> _all = const [];
   List<ServiceModel> _allFiltered = const [];
   List<ServiceModel> get allServices => _allFiltered;
-  final Map<String, ServiceModel> _byId = {};
+  final Map<String, ServiceModel> _serviceCache = {};
 
   @override
   void dispose() {
@@ -32,7 +32,7 @@ class ServiceViewModel extends ChangeNotifier {
 
     _sub = _repo.watchServices().listen((items) {
       _all = items;
-      _byId
+      _serviceCache
         ..clear()
         ..addEntries(
           items
@@ -45,14 +45,14 @@ class ServiceViewModel extends ChangeNotifier {
 
   ServiceModel? getById(String? id) {
     if (id == null || id.isEmpty) return null;
-    return _byId[id];
+    return _serviceCache[id];
   }
 
-  Future<void> prefetchById(String id) async {
-    if (_byId.containsKey(id)) return;
+  Future<void> prefetchService(String id) async {
+    if (_serviceCache.containsKey(id)) return;
     final one = await _repo.getServiceOnce(id);
     if (one != null && (one.id ?? '').isNotEmpty) {
-      _byId[one.id!] = one;
+      _serviceCache[one.id!] = one;
       notifyListeners();
     }
   }
@@ -83,7 +83,6 @@ class ServiceViewModel extends ChangeNotifier {
 
   Stream<List<ServiceModel>> get servicesStream => _repo.watchServices();
   Stream<ServiceModel?> watchService(String id) => _repo.watchService(id);
-  Future<ServiceModel?> getService(String id) => _repo.getServiceOnce(id);
 
   bool _saving = false;
   String? _error;
@@ -92,6 +91,19 @@ class ServiceViewModel extends ChangeNotifier {
   bool get saving => _saving;
   String? get error => _error;
   ServiceModel? get lastAdded => _lastAdded;
+
+  ServiceModel? getService(String id) {
+    final cached = _serviceCache[id];
+    if (cached != null) return cached;
+
+    for (final s in _all) {
+      if (s.id == id) {
+        _serviceCache[id] = s;
+        return s;
+      }
+    }
+    return null;
+  }
 
   Future<bool> addService({
     required String? name,

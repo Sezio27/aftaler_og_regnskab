@@ -1,6 +1,3 @@
-// lib/screens/client_details_screen.dart
-import 'dart:io';
-
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
@@ -91,7 +88,7 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
                   onDelete: () async {
                     await handleDelete(
                       context: context,
-                      componentLabel: 'Service',
+                      componentLabel: 'Klient',
                       onDelete: () => context.read<ClientViewModel>().delete(
                         widget.client.id!,
                       ),

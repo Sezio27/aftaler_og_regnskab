@@ -647,11 +647,10 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   // ────────────────────────────────────────────────────────────────────────────
-  Stream<Map<String, Set<int>>> watchChecklistProgressOnParent(
-    String appointmentId,
-  ) => _repo.watchChecklistProgress(appointmentId);
+  Stream<Map<String, Set<int>>> checklistProgressStream(String appointmentId) =>
+      _repo.watchChecklistProgress(appointmentId);
 
-  Future<void> setAllChecklistProgressOnParent({
+  Future<void> saveChecklistProgress({
     required String appointmentId,
     required Map<String, Set<int>> progress,
   }) => _repo.setAllChecklistProgress(appointmentId, progress);
