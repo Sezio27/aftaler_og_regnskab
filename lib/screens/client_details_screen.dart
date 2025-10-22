@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
@@ -244,7 +246,7 @@ class __ClientEditPaneState extends State<_ClientEditPane> {
   late final TextEditingController _cvr;
   int? _active;
 
-  XFile? _newPhoto;
+  ({Uint8List bytes, String name, String? mimeType})? _newPhoto;
   bool _removeImage = false;
 
   @override
@@ -320,7 +322,7 @@ class __ClientEditPaneState extends State<_ClientEditPane> {
                 children: [
                   AvatarImagePicker(
                     url: widget.client.image,
-                    newFile: _newPhoto,
+                    newImage: _newPhoto,
                     remove: _removeImage,
                     editable: true,
                     onChanged: (file, remove) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
@@ -136,7 +137,8 @@ class ClientViewModel extends ChangeNotifier {
     String? city,
     String? postal,
     String? cvr,
-    XFile? image, // keep as URL string (upload to Storage elsewhere)
+    ({Uint8List bytes, String name, String? mimeType})?
+    image, // keep as URL string (upload to Storage elsewhere)
   }) async {
     final nm = (name ?? '').trim();
     final em = (email ?? '').trim();
@@ -158,7 +160,7 @@ class ClientViewModel extends ChangeNotifier {
         debugPrint('upload start');
         imageUrl = await _imageStorage.uploadClientImage(
           clientId: docRef.id,
-          file: image,
+          image: image,
         );
         debugPrint('upload done: $imageUrl');
       }
@@ -195,7 +197,7 @@ class ClientViewModel extends ChangeNotifier {
     String? city,
     String? postal,
     String? cvr,
-    XFile? newImage,
+    ({Uint8List bytes, String name, String? mimeType})? newImage,
     bool removeImage = false,
   }) async {
     try {
@@ -206,12 +208,8 @@ class ClientViewModel extends ChangeNotifier {
       final fields = <String, Object?>{};
       final deletes = <String>{};
 
-      // Helper: if a param is provided
-      // - empty string  => delete field
-      // - non-empty     => set field
-      // - null          => untouched
       void put(String key, String? v) {
-        if (v == null) return; // not changed
+        if (v == null) return;
         final t = v.trim();
         if (t.isEmpty) {
           deletes.add(key);
@@ -232,7 +230,7 @@ class ClientViewModel extends ChangeNotifier {
       if (newImage != null) {
         final url = await _imageStorage.uploadClientImage(
           clientId: id,
-          file: newImage,
+          image: newImage,
         );
         fields['image'] = url;
       } else if (removeImage) {

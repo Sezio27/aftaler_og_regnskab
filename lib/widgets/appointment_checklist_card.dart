@@ -6,16 +6,16 @@ class AppointmentChecklistCard extends StatefulWidget {
   const AppointmentChecklistCard({
     super.key,
     required this.checklist,
-    required this.completed, // indices of done points
-    required this.onToggleItem,
+    this.completed, // indices of done points
+    this.onToggleItem,
     this.collapse = false,
     this.editing = false, // << NEW
     this.onRemove, // << NEW
   });
 
   final ChecklistModel checklist;
-  final Set<int> completed;
-  final void Function(int index, bool nowChecked) onToggleItem;
+  final Set<int>? completed;
+  final void Function(int index, bool nowChecked)? onToggleItem;
   final bool collapse;
   final bool editing; // << NEW
   final VoidCallback? onRemove; // << NEW
@@ -28,12 +28,15 @@ class AppointmentChecklistCard extends StatefulWidget {
 class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
   bool _expanded = false;
 
-  void _toggleExpanded() => setState(() => _expanded = !_expanded);
+  void _toggleExpanded() {
+    if (widget.editing) return; // no expand in edit mode
+    setState(() => _expanded = !_expanded);
+  }
 
   @override
   void didUpdateWidget(covariant AppointmentChecklistCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.collapse != oldWidget.collapse && _expanded) {
+    if ((widget.collapse && _expanded) || (widget.editing && _expanded)) {
       setState(() => _expanded = false);
     }
   }
@@ -41,9 +44,18 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final total = widget.checklist.points.length;
-    final done = widget.completed.length.clamp(0, total);
-    final pct = total == 0 ? 0 : ((done / total) * 100).round();
+    final bool isEdit = widget.editing;
+
+    // Always cheap to read:
+    final int total = widget.checklist.points.length;
+    final Set<int> completed = widget.completed ?? const <int>{};
+
+    // Only compute when not editing:
+    int? done, pct;
+    if (!isEdit) {
+      done = completed.length.clamp(0, total);
+      pct = total == 0 ? 0 : ((done / total) * 100).round();
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -68,13 +80,16 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
                       style: AppTypography.b6,
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  Text(
-                    '$done af $total færdige',
-                    style: AppTypography.num5.copyWith(
-                      color: cs.onSurface.withAlpha(180),
+
+                  if (!isEdit) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '$done af $total færdige',
+                      style: AppTypography.num5.copyWith(
+                        color: cs.onSurface.withAlpha(180),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               const SizedBox(width: 8),
@@ -82,9 +97,12 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _ProgressPill(percent: pct),
+                  if (!isEdit) ...[
+                    _ProgressPill(percent: pct!),
+                    const SizedBox(width: 20),
+                  ],
                   const SizedBox(width: 20),
-                  if (widget.editing)
+                  if (isEdit)
                     InkWell(
                       onTap: widget.onRemove,
                       child: Text(
@@ -105,7 +123,7 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
             ],
           ),
 
-          if (_expanded && total > 0) ...[
+          if (_expanded && !isEdit && total > 0) ...[
             const SizedBox(height: 14),
             Divider(height: 1, color: cs.onSurface.withAlpha(100)),
             const SizedBox(height: 8),
@@ -113,12 +131,12 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
             // Points
             ...List.generate(total, (i) {
               final text = widget.checklist.points[i];
-              final checked = widget.completed.contains(i);
+              final checked = widget.completed!.contains(i);
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => widget.onToggleItem(i, !checked),
+                  onTap: () => widget.onToggleItem!(i, !checked),
                   child: Row(
                     children: [
                       _CheckSquare(checked: checked),

@@ -19,14 +19,36 @@ class AppointmentRepository {
   // ────────────────────────────────────────────────────────────────────────────
   // Internals
   // ────────────────────────────────────────────────────────────────────────────
-  String get _requireUid {
+  String get _uidOrThrow {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw StateError('Not signed in');
     return uid;
   }
 
-  CollectionReference<Map<String, dynamic>> _userAppointments(String uid) =>
+  CollectionReference<Map<String, dynamic>> _collection(String uid) =>
       _db.collection('users').doc(uid).collection('appointments');
+
+  DocumentReference<Map<String, dynamic>> newAppointmentRef() {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc();
+  }
+
+  Stream<AppointmentModel?> watchAppointment(String id) {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc(id).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return _fromDoc(snap);
+    });
+  }
+
+  Future<void> createAppointmentWithId(
+    String id,
+    AppointmentModel model,
+  ) async {
+    final uid = _uidOrThrow;
+    final payload = _toFirestore(model.copyWith(id: id), isCreate: true);
+    await _collection(uid).doc(id).set(payload);
+  }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Reads (range & detail)
@@ -38,8 +60,8 @@ class AppointmentRepository {
     DateTime startInclusive,
     DateTime endInclusive,
   ) {
-    final uid = _requireUid;
-    return _userAppointments(uid)
+    final uid = _uidOrThrow;
+    return _collection(uid)
         .where(
           'dateTime',
           isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
@@ -53,19 +75,10 @@ class AppointmentRepository {
         .map((q) => q.docs.map(_fromDoc).toList());
   }
 
-  /// Watch a single appointment by id (detail screens).
-  Stream<AppointmentModel?> watchAppointmentById(String id) {
-    final uid = _requireUid;
-    return _userAppointments(uid).doc(id).snapshots().map((snap) {
-      if (!snap.exists) return null;
-      return _fromDoc(snap);
-    });
-  }
-
   /// One-time fetch of an appointment by id.
   Future<AppointmentModel?> getAppointmentOnce(String id) async {
-    final uid = _requireUid;
-    final snap = await _userAppointments(uid).doc(id).get();
+    final uid = _uidOrThrow;
+    final snap = await _collection(uid).doc(id).get();
     if (!snap.exists) return null;
     return _fromDoc(snap);
   }
@@ -76,7 +89,7 @@ class AppointmentRepository {
     DateTime startInclusive,
     DateTime endInclusive,
   ) async {
-    final uid = _requireUid;
+    final uid = _uidOrThrow;
     final endOfDay = DateTime(
       endInclusive.year,
       endInclusive.month,
@@ -87,7 +100,7 @@ class AppointmentRepository {
       999,
     );
 
-    final q = await _userAppointments(uid)
+    final q = await _collection(uid)
         .where(
           'dateTime',
           isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
@@ -105,8 +118,8 @@ class AppointmentRepository {
 
   /// Create a new appointment (id auto-generated).
   Future<AppointmentModel> addAppointment(AppointmentModel model) async {
-    final uid = _requireUid;
-    final doc = _userAppointments(uid).doc();
+    final uid = _uidOrThrow;
+    final doc = _collection(uid).doc();
     final payload = _toFirestore(model.copyWith(id: doc.id), isCreate: true);
     await doc.set(payload);
     return model.copyWith(id: doc.id);
@@ -117,30 +130,35 @@ class AppointmentRepository {
   Future<void> updateAppointment(
     String id, {
     AppointmentModel? patch, // optional: convert model into fields
-    Map<String, Object?>? fields, // preferred: direct fields map
+    Map<String, Object?>? fields,
+    Set<String> deletes = const {},
   }) async {
-    final uid = _requireUid;
+    final uid = _uidOrThrow;
 
     final data = fields ?? _toFirestore(patch!, isCreate: false);
     final withMeta = <String, Object?>{
       ...data,
       'updatedAt': FieldValue.serverTimestamp(),
-    }..removeWhere((_, v) => v == null);
+    };
+    for (final key in deletes) {
+      withMeta[key] = FieldValue.delete();
+    }
+    withMeta.removeWhere((k, v) => v == null);
 
-    await _userAppointments(uid).doc(id).set(withMeta, SetOptions(merge: true));
+    await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
   }
 
   Future<void> updateStatus(String id, String newStatus) async {
-    final uid = _requireUid;
-    await _userAppointments(uid).doc(id).set({
+    final uid = _uidOrThrow;
+    await _collection(uid).doc(id).set({
       'status': newStatus.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
   Stream<Map<String, Set<int>>> watchChecklistProgress(String apptId) {
-    final uid = _requireUid;
-    return _userAppointments(uid).doc(apptId).snapshots().map((snap) {
+    final uid = _uidOrThrow;
+    return _collection(uid).doc(apptId).snapshots().map((snap) {
       final data = snap.data() ?? const <String, dynamic>{};
       final raw = (data['progress'] as Map<String, dynamic>? ?? const {});
       final out = <String, Set<int>>{};
@@ -157,16 +175,14 @@ class AppointmentRepository {
     String apptId,
     Map<String, Set<int>> progress,
   ) async {
-    final uid = _requireUid;
+    final uid = _uidOrThrow;
     final payload = <String, dynamic>{
       'progress': {
         for (final e in progress.entries) e.key: (e.value.toList()..sort()),
       },
       'updatedAt': FieldValue.serverTimestamp(),
     };
-    await _userAppointments(
-      uid,
-    ).doc(apptId).set(payload, SetOptions(merge: true));
+    await _collection(uid).doc(apptId).set(payload, SetOptions(merge: true));
   }
 
   Future<void> updateChecklistSelectionAndResets({
@@ -175,8 +191,8 @@ class AppointmentRepository {
     Set<String> removedIds = const {},
     Set<String> resetProgressIds = const {},
   }) async {
-    final uid = _requireUid;
-    final doc = _userAppointments(uid).doc(apptId);
+    final uid = _uidOrThrow;
+    final doc = _collection(uid).doc(apptId);
 
     // Build payload for update(): dotted paths for deletes are supported here.
     final Map<String, Object?> payload = {
@@ -196,8 +212,8 @@ class AppointmentRepository {
 
   /// Delete an appointment document.
   Future<void> deleteAppointment(String id) async {
-    final uid = _requireUid;
-    await _userAppointments(uid).doc(id).delete();
+    final uid = _uidOrThrow;
+    await _collection(uid).doc(id).delete();
   }
 
   // ────────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
@@ -110,7 +111,7 @@ class ServiceViewModel extends ChangeNotifier {
     String? description,
     String? duration,
     String? price,
-    XFile? image,
+    ({Uint8List bytes, String name, String? mimeType})? image,
   }) async {
     final nm = (name ?? '').trim();
     if (nm.isEmpty) {
@@ -131,7 +132,7 @@ class ServiceViewModel extends ChangeNotifier {
         debugPrint('upload start');
         imageUrl = await _imageStorage.uploadServiceImage(
           serviceId: docRef.id,
-          file: image,
+          image: image,
         );
         debugPrint('upload done: $imageUrl');
       }
@@ -164,7 +165,7 @@ class ServiceViewModel extends ChangeNotifier {
     String? description,
     String? duration,
     String? price,
-    XFile? newImage,
+    ({Uint8List bytes, String name, String? mimeType})? newImage,
     bool removeImage = false,
   }) async {
     try {
@@ -198,7 +199,7 @@ class ServiceViewModel extends ChangeNotifier {
       if (newImage != null) {
         final url = await _imageStorage.uploadServiceImage(
           serviceId: id,
-          file: newImage,
+          image: newImage,
         );
         fields['image'] = url;
       } else if (removeImage) {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/checklistModel.dart';
@@ -144,7 +145,6 @@ class __AppointmentReadPaneState extends State<_AppointmentReadPane> {
   late DateTime? _date;
   late TimeOfDay? _time;
 
-  // Read-pane state
   Map<String, Set<int>> _ticks = {};
   bool _loadingTicks = true;
   bool _hasUnsaved = false;
@@ -585,25 +585,703 @@ class _AppointmentEditPane extends StatefulWidget {
 }
 
 class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
+  int? _active;
+  late DateTime? _payDate;
+  String? _selectedClientId;
+  String? _selectedServiceId;
+  late Set<String> _selectedChecklistIds;
+  late final TextEditingController _priceCtrl;
+  late final TextEditingController _locationCtrl;
+  late final TextEditingController _noteCtrl;
+  late PaymentStatus _status;
+  late bool _expandedStatus;
+  late final ClientViewModel _clientVM;
+  late final ServiceViewModel _serviceVM;
+  late final ChecklistViewModel _checklistVM;
+  late DateTime? _date;
+  late TimeOfDay? _time;
+  late List<String> _currentImages;
+  final bool _savingImages = false;
+  late List<String> _draftImageUrls;
+  final List<String> _removedImages = [];
+  List<({Uint8List bytes, String name, String? mimeType})> _newImages = [];
+
+  void _toggleStatus() => setState(() => _expandedStatus = !_expandedStatus);
+
+  @override
+  void dispose() {
+    _clientVM.clearSearch();
+    _serviceVM.clearSearch();
+    _checklistVM.clearSearch();
+    _priceCtrl.dispose();
+    _locationCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _priceCtrl = TextEditingController(text: widget.appointment.price ?? '');
+    _locationCtrl = TextEditingController(
+      text: widget.appointment.location ?? '',
+    );
+    _noteCtrl = TextEditingController(text: widget.appointment.note ?? '');
+    _status = PaymentStatusX.fromString(widget.appointment.status ?? '');
+    _expandedStatus = false;
+    _payDate = widget.appointment.payDate;
+    _selectedClientId = widget.appointment.clientId;
+    _selectedServiceId = widget.appointment.serviceId;
+    _selectedChecklistIds = {...widget.appointment.checklistIds};
+
+    _clientVM = context.read<ClientViewModel>();
+    _serviceVM = context.read<ServiceViewModel>();
+    _checklistVM = context.read<ChecklistViewModel>();
+
+    _clientVM.prefetchClient(_selectedClientId);
+    if ((_selectedServiceId ?? '').isNotEmpty) {
+      _serviceVM.prefetchService(_selectedServiceId!);
+    }
+    _checklistVM.ensureSubscribedToAll();
+    _checklistVM.prefetchByIds(widget.appointment.checklistIds);
+
+    final dt = widget.appointment.dateTime?.toLocal();
+    if (dt != null) {
+      _date = DateTime(dt.year, dt.month, dt.day);
+      _time = TimeOfDay(hour: dt.hour, minute: dt.minute);
+    } else {
+      _date = null;
+      _time = null;
+    }
+
+    _currentImages = List<String>.from(widget.appointment.imageUrls);
+    _draftImageUrls = List<String>.from(_currentImages);
+    _newImages = [];
+  }
+
+  DateTime? _combinedDateTime() {
+    if (_date == null || _time == null) return null;
+    return DateTime(
+      _date!.year,
+      _date!.month,
+      _date!.day,
+      _time!.hour,
+      _time!.minute,
+    );
+  }
+
+  void _clearFocus() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _active = null);
+  }
+
+  void _removeChecklistLocal(String id) {
+    setState(() {
+      _selectedChecklistIds.remove(id);
+    });
+  }
+
+  void _removeDraftUrlAt(int i) {
+    setState(() {
+      _removedImages.add(_draftImageUrls[i]);
+      _draftImageUrls.removeAt(i);
+    });
+  }
+
+  void _removeNewLocalAt(int index) {
+    setState(() => _newImages.removeAt(index));
+  }
+
+  Future<void> _addImagesStaged() async {
+    final picked = await ImagePicker().pickMultiImage();
+    if (picked.isEmpty || !mounted) return;
+
+    final newImages = <({Uint8List bytes, String name, String? mimeType})>[];
+    for (final p in picked) {
+      final bytes = await p.readAsBytes();
+      final name = p.name.isNotEmpty
+          ? p.name
+          : '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      newImages.add((
+        bytes: bytes,
+        name: name,
+        mimeType: p.mimeType ?? 'image/jpeg',
+      ));
+    }
+
+    setState(() => _newImages.addAll(newImages));
+  }
+
+  Future<void> _save() async {
+    await handleSave(
+      context: context,
+      // Keep validation simple for now (you can add rules later)
+      validate: () => null,
+      onSave: () =>
+          context.read<AppointmentViewModel>().updateAppointmentFields(
+            widget.appointment.id!,
+            clientId: _selectedClientId,
+            serviceId: _selectedServiceId,
+            checklistIds: _selectedChecklistIds.toList(),
+            dateTime: _combinedDateTime(),
+            payDate: _payDate,
+            location: _locationCtrl.text,
+            note: _noteCtrl.text,
+            customPrice: _priceCtrl.text,
+            status: _status.label,
+            currentImageUrls: _currentImages, // original URLs from initState
+            removedImageUrls: _removedImages, // URLs user removed in UI
+            newImages: _newImages,
+          ),
+
+      errorText: () =>
+          context.read<AppointmentViewModel>().error ?? 'Ukendt fejl',
+      onSuccess: widget.onSaved, // flips back to read mode
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    final cs = Theme.of(context).colorScheme;
+
+    final images = widget.appointment.imageUrls;
+
+    final client = context.select<ClientViewModel, ClientModel?>((vm) {
+      return _selectedClientId == null
+          ? null
+          : vm.getClient(_selectedClientId!);
+    });
+    final service = context.select<ServiceViewModel, ServiceModel?>((vm) {
+      return _selectedServiceId == null
+          ? null
+          : vm.getService(_selectedServiceId!);
+    });
+
+    final checklists = context.select<ChecklistViewModel, List<ChecklistModel>>(
+      (vm) => [
+        for (final id in _selectedChecklistIds)
+          if (vm.getById(id) != null) vm.getById(id)!,
+      ],
+    );
+
+    final isLoadingChecklists =
+        _selectedChecklistIds.isNotEmpty &&
+        checklists.length < _selectedChecklistIds.length;
+
+    return TapRegion(
+      onTapInside: (_) => _clearFocus(),
+      onTapOutside: (_) => _clearFocus(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 26),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.credit_card_outlined, size: 22),
+                      const SizedBox(width: 10),
+                      Text("Status og fakturering", style: AppTypography.b7),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  _rowField(
+                    context,
+                    label: 'Betalingsstatus',
+                    value: InkWell(
+                      onTap: _toggleStatus,
+                      child: StatusIconRect(status: _status.label),
+                    ),
+                  ),
+                  _expandedStatus
+                      ? Column(
+                          children: [
+                            const SizedBox(height: 20),
+                            StatusChoice(
+                              value: _status,
+                              onChanged: (s) {
+                                setState(() {
+                                  _status = s;
+                                  _expandedStatus = false;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 5),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
+
+                  const SizedBox(height: 5),
+                  Divider(thickness: 0.8, color: cs.onSurface),
+                  const SizedBox(height: 5),
+
+                  _rowField(
+                    context,
+                    label: 'Betalingsdato',
+                    value: DatePicker(
+                      value: _payDate,
+                      minimumDate: DateTime(2000),
+                      maximumDate: DateTime(2100),
+                      displayFormat: daDate,
+                      onChanged: (d) => setState(() => _payDate = d),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Divider(thickness: 0.8, color: cs.onSurface),
+                  const SizedBox(height: 5),
+                  _rowField(
+                    context,
+                    label: 'Pris',
+                    value: SizedBox(
+                      width: 140,
+                      child: SoftTextField(
+                        hintText: widget.appointment.price == null
+                            ? "---"
+                            : widget.appointment.price!,
+                        suffixText: "DKK",
+                        keyboardType: TextInputType.number,
+                        hintStyle: AppTypography.num6,
+                        controller: _priceCtrl,
+                        fill: cs.onPrimary,
+                        strokeColor: _active != 1
+                            ? cs.onSurface.withAlpha(50)
+                            : cs.primary,
+                        strokeWidth: _active != 1 ? 1 : 1.5,
+                        borderRadius: 8,
+                        showStroke: true,
+                        onTap: () => setState(() => _active = 1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 26),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outlined, size: 22),
+                      const SizedBox(width: 10),
+                      Text("Klient", style: AppTypography.b7),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (_selectedClientId == null) ...[
+                    TextButton.icon(
+                      onPressed: () async {
+                        await showOverlayPanel(
+                          context: context,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 40,
+                              horizontal: 25,
+                            ),
+                            child: ClientListOverlay(
+                              selectedId: _selectedClientId,
+                              onPick: (c) {
+                                setState(() => _selectedClientId = c.id);
+                              },
+                            ),
+                          ),
+                        );
+                        if (!mounted) return;
+                      },
+                      icon: const Icon(Icons.add),
+                      label: Text(
+                        'Tilføj klient',
+                        style: AppTypography.b3.copyWith(color: cs.primary),
+                      ),
+                    ),
+                  ] else ...[
+                    if (client == null)
+                      const SizedBox(
+                        height: 90,
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else
+                      ClientTile(c: client, border: false),
+
+                    const SizedBox(height: 10),
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() => _selectedClientId = null);
+                      },
+                      label: Text(
+                        'Fjern',
+                        style: AppTypography.b3.copyWith(color: cs.onSurface),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 26),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.event_note_outlined, size: 22),
+                      const SizedBox(width: 10),
+                      Text("Aftaleoplysninger", style: AppTypography.b7),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  _rowField(
+                    context,
+                    label: 'Dato',
+                    value: DatePicker(
+                      value: _date,
+                      minimumDate: DateTime(2000),
+                      maximumDate: DateTime(2100),
+                      displayFormat: daDate,
+                      onChanged: (d) => setState(
+                        () => _date = DateTime(d.year, d.month, d.day),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+                  Divider(thickness: 0.8, color: cs.onSurface),
+                  const SizedBox(height: 5),
+
+                  _rowField(
+                    context,
+                    label: 'Tid',
+                    value: TimePicker(
+                      value: _time,
+                      onChanged: (t) => setState(() => _time = t),
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+                  Divider(thickness: 0.8, color: cs.onSurface),
+                  const SizedBox(height: 5),
+
+                  _rowField(
+                    context,
+                    label: 'Lokation',
+                    value: SizedBox(
+                      width: 200,
+                      child: SoftTextField(
+                        hintText: widget.appointment.location == null
+                            ? "---"
+                            : widget.appointment.location!,
+                        hintStyle: AppTypography.num6.copyWith(),
+                        controller: _locationCtrl,
+                        fill: cs.onPrimary,
+                        strokeColor: _active != 2
+                            ? cs.onSurface.withAlpha(50)
+                            : cs.primary,
+                        strokeWidth: _active != 2 ? 1 : 1.5,
+                        borderRadius: 8,
+                        showStroke: true,
+                        onTap: () => setState(() => _active = 2),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+                  Divider(thickness: 0.8, color: cs.onSurface),
+                  const SizedBox(height: 5),
+
+                  _rowField(
+                    context,
+                    label: 'Service',
+                    value: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedServiceId != null && service != null) ...[
+                          Text(service.name ?? '—', style: AppTypography.num8),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: 'Fjern service',
+                            icon: Icon(Icons.close, color: cs.error),
+                            onPressed: () {
+                              setState(() {
+                                _selectedServiceId = null;
+                              });
+                            },
+                          ),
+                        ] else
+                          TextButton.icon(
+                            onPressed: () async {
+                              await showOverlayPanel(
+                                context: context,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 40,
+                                    horizontal: 25,
+                                  ),
+                                  child: ServiceListOverlay(
+                                    selectedId: _selectedServiceId,
+                                    onPick: (s) {
+                                      setState(() {
+                                        _selectedServiceId = s.id;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              );
+                              if (!mounted) return;
+                            },
+                            icon: const Icon(Icons.add),
+                            label: Text(
+                              'Tilføj service',
+                              style: AppTypography.b3.copyWith(
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 26),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.checklist, size: 22),
+                      const SizedBox(width: 10),
+                      Text("Checklister", style: AppTypography.b7),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (widget.appointment.checklistIds.isEmpty) ...[
+                    Text(
+                      'Ingen checklister tilknyttet',
+                      style: AppTypography.b5,
+                    ),
+                  ] else if (isLoadingChecklists) ...[
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('Henter checklister…', style: AppTypography.b6),
+                      ],
+                    ),
+                  ] else ...[
+                    Column(
+                      children: [
+                        for (final c in checklists) ...[
+                          AppointmentChecklistCard(
+                            checklist: c,
+                            editing: true,
+                            onRemove: () => _removeChecklistLocal(c.id!),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tilføj checkliste'),
+                      onPressed: () async {
+                        await showOverlayPanel(
+                          context: context,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 40,
+                              horizontal: 25,
+                            ),
+                            child: ChecklistListOverlay(
+                              initialSelectedIds:
+                                  _selectedChecklistIds, // <- local
+                              onDone: (newSelection, resetIds) async {
+                                if (!mounted) return;
+                                setState(() {
+                                  _selectedChecklistIds = {...newSelection};
+                                });
+                                _checklistVM.prefetchByIds(
+                                  _selectedChecklistIds.toList(),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 26),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.image_outlined, size: 22),
+                      const SizedBox(width: 10),
+                      Text("Billeder", style: AppTypography.b7),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  LayoutBuilder(
+                    builder: (ctx, c) {
+                      final cross = c.maxWidth >= 520 ? 3 : 2;
+                      final total = _draftImageUrls.length + _newImages.length;
+
+                      if (total == 0) {
+                        return Text(
+                          'Ingen billeder tilføjet',
+                          style: AppTypography.b5.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(150),
+                          ),
+                        );
+                      }
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: total,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: cross,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemBuilder: (ctx, i) {
+                          if (i < _draftImageUrls.length) {
+                            final url = _draftImageUrls[i];
+                            return _ImageTile(
+                              url: url,
+                              canRemove: true,
+                              onRemove: () => _removeDraftUrlAt(i),
+                            );
+                          } else {
+                            final j = i - _draftImageUrls.length;
+                            final img = _newImages[j];
+                            return _ImageTile(
+                              bytes: img.bytes,
+                              canRemove: true,
+                              onRemove: () => _removeNewLocalAt(j),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _savingImages ? null : _addImagesStaged,
+                        icon: _savingImages
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.add),
+                        label: const Text('Tilføj billeder'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          CustomCard(
+            field: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 26),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.create_outlined, size: 22),
+                      const SizedBox(width: 10),
+                      Text("Noter", style: AppTypography.b7),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: SoftTextField(
+                      hintText: "Tilføj note til denne aftale",
+                      controller: _noteCtrl,
+                      maxLines: 3,
+                      fill: cs.onPrimary,
+                      strokeColor: _active != 3
+                          ? cs.onSurface.withAlpha(50)
+                          : cs.primary,
+                      strokeWidth: _active != 3 ? 1 : 1.5,
+                      borderRadius: 8,
+                      showStroke: true,
+                      onTap: () => setState(() => _active = 3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+          Selector<AppointmentViewModel, bool>(
+            selector: (_, vm) => vm.saving,
+            builder: (context, saving, _) => EditActionsRow(
+              saving: saving,
+              onCancel: widget.onCancel,
+              onConfirm: _save,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _ImageTile extends StatelessWidget {
   const _ImageTile({
     this.url,
-    this.file,
+    this.bytes,
     this.onRemove,
     this.canRemove = false,
-    this.isXFile = false,
   });
   final String? url;
-  final XFile? file;
+  final Uint8List? bytes;
   final VoidCallback? onRemove;
   final bool canRemove;
-  final bool isXFile;
 
   @override
   Widget build(BuildContext context) {
@@ -613,8 +1291,13 @@ class _ImageTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          isXFile
-              ? Image.file(File(file!.path), fit: BoxFit.cover)
+          bytes != null
+              ? Image.memory(
+                  bytes!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      const ColoredBox(color: Colors.black12),
+                )
               : Image.network(url!, fit: BoxFit.cover),
           if (canRemove)
             Positioned(

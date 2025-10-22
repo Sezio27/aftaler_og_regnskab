@@ -16,7 +16,7 @@ class AppointmentModel {
 
   final String? location;
   final String? note;
-  final List<String> imageUrls; // already-uploaded URLs
+  final List<String> imageUrls;
 
   /// 'paid' | 'pending' | 'expired' | 'not_invoiced'
   final String? status;

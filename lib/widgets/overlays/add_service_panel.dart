@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
@@ -18,7 +20,7 @@ class AddServicePanel extends StatefulWidget {
 
 class _AddServicePanelState extends State<AddServicePanel> {
   int? _active;
-  XFile? _photo;
+  ({Uint8List bytes, String name, String? mimeType})? _photo;
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _durCtrl = TextEditingController();

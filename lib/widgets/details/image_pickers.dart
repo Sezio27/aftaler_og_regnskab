@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
@@ -8,7 +9,7 @@ class AvatarImagePicker extends StatelessWidget {
   const AvatarImagePicker({
     super.key,
     this.url,
-    this.newFile,
+    this.newImage,
     this.remove = false,
     this.editable = false,
     this.onChanged,
@@ -16,10 +17,14 @@ class AvatarImagePicker extends StatelessWidget {
   });
 
   final String? url;
-  final XFile? newFile;
+  final ({Uint8List bytes, String name, String? mimeType})? newImage;
   final bool remove;
   final bool editable;
-  final void Function(XFile? file, bool remove)? onChanged;
+  final void Function(
+    ({Uint8List bytes, String name, String? mimeType})? image,
+    bool remove,
+  )?
+  onChanged;
   final double radius;
 
   Future<void> _pick(BuildContext context) async {
@@ -31,10 +36,10 @@ class AvatarImagePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final hasUrl = (url ?? '').isNotEmpty;
-    final hasImage = (newFile != null) || (hasUrl && !remove);
+    final hasImage = (newImage != null) || (hasUrl && !remove);
 
-    final ImageProvider<Object>? provider = newFile != null
-        ? FileImage(File(newFile!.path))
+    final ImageProvider<Object>? provider = newImage != null
+        ? MemoryImage(newImage!.bytes)
         : (hasUrl && !remove ? NetworkImage(url!) : null);
 
     final avatar = CircleAvatar(
@@ -46,9 +51,9 @@ class AvatarImagePicker extends StatelessWidget {
 
     if (!editable) return avatar;
 
-    final showUndoNew = newFile != null;
-    final showUndoRemove = (newFile == null && remove);
-    final showDelete = (newFile == null && !remove && hasImage);
+    final showUndoNew = newImage != null;
+    final showUndoRemove = (newImage == null && remove);
+    final showDelete = (newImage == null && !remove && hasImage);
     final showChip = showUndoNew || showUndoRemove || showDelete;
 
     return Stack(
@@ -137,7 +142,7 @@ class BannerImagePicker extends StatelessWidget {
   const BannerImagePicker({
     super.key,
     this.url,
-    this.newFile,
+    this.newImage,
     this.remove = false,
     this.editable = false,
     this.onChanged,
@@ -146,10 +151,14 @@ class BannerImagePicker extends StatelessWidget {
   });
 
   final String? url;
-  final XFile? newFile;
+  final ({Uint8List bytes, String name, String? mimeType})? newImage;
   final bool remove;
   final bool editable;
-  final void Function(XFile? file, bool remove)? onChanged;
+  final void Function(
+    ({Uint8List bytes, String name, String? mimeType})? image,
+    bool remove,
+  )?
+  onChanged;
   final double aspectRatio;
   final double borderRadius;
 
@@ -162,11 +171,15 @@ class BannerImagePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final hasUrl = (url ?? '').isNotEmpty;
-    final hasImage = (newFile != null) || (hasUrl && !remove);
+    final hasImage = (newImage != null) || (hasUrl && !remove);
 
     Widget content;
-    if (newFile != null) {
-      content = Image.file(File(newFile!.path), fit: BoxFit.cover);
+    if (newImage != null) {
+      content = Image.memory(
+        newImage!.bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _placeholder(cs),
+      );
     } else if (hasUrl && !remove) {
       content = Image.network(
         url!,
@@ -191,9 +204,9 @@ class BannerImagePicker extends StatelessWidget {
 
     if (!editable) return image;
 
-    final showUndoNew = newFile != null;
-    final showUndoRemove = (newFile == null && remove);
-    final showDelete = (newFile == null && !remove && hasImage);
+    final showUndoNew = newImage != null;
+    final showUndoRemove = (newImage == null && remove);
+    final showDelete = (newImage == null && !remove && hasImage);
     final showChip = showUndoNew || showUndoRemove || showDelete;
 
     return Stack(

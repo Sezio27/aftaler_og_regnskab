@@ -1,20 +1,15 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-typedef UploadAppointmentImages =
-    Future<List<String>> Function({
-      required String appointmentId,
-      required List<XFile> files,
-    });
-typedef DeleteAppointmentImages = Future<void> Function(String appointmentId);
 
 typedef FetchClient = Future<ClientModel?> Function(String clientId);
 typedef FetchService = Future<ServiceModel?> Function(String serviceId);
@@ -24,11 +19,10 @@ typedef MonthChip = ({String title, String status, DateTime time});
 
 class AppointmentViewModel extends ChangeNotifier {
   AppointmentViewModel(
-    this._repo, {
+    this._repo,
+    this._imageStorage, {
     required this.fetchClient,
     required this.fetchService,
-    this.uploadImages,
-    this.deleteImages,
   });
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -37,8 +31,7 @@ class AppointmentViewModel extends ChangeNotifier {
   final AppointmentRepository _repo;
   final FetchClient fetchClient;
   final FetchService fetchService;
-  final UploadAppointmentImages? uploadImages;
-  final DeleteAppointmentImages? deleteImages;
+  final ImageStorage _imageStorage;
 
   // ────────────────────────────────────────────────────────────────────────────
   // Range-driven stream + current data
@@ -150,7 +143,7 @@ class AppointmentViewModel extends ChangeNotifier {
     String? location,
     String? note,
     String? customPriceText,
-    List<XFile>? images,
+    List<({Uint8List bytes, String name, String? mimeType})>? images,
     String status = 'not_invoiced',
   }) async {
     if ((clientId ?? '').isEmpty) {
@@ -169,7 +162,16 @@ class AppointmentViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Determine price: prefer custom, else service.price
+      final docRef = _repo.newAppointmentRef();
+      List<String> imageUrls = const [];
+
+      if (images != null && images.isNotEmpty) {
+        imageUrls = await _imageStorage.uploadAppointmentImages(
+          appointmentId: docRef.id,
+          images: images,
+        );
+      }
+
       String? chosenPrice = _trimOrNull(customPriceText);
       if ((chosenPrice == null || chosenPrice.isEmpty) &&
           (serviceId ?? '').isNotEmpty) {
@@ -177,53 +179,22 @@ class AppointmentViewModel extends ChangeNotifier {
         chosenPrice = _trimOrNull(svc?.price);
       }
 
-      final created = await _repo.addAppointment(
-        AppointmentModel(
-          clientId: clientId,
-          serviceId: serviceId,
-          checklistIds: checklistIds,
-          dateTime: dateTime,
-          payDate: payDate,
-          price: chosenPrice,
-          location: _trimOrNull(location),
-          note: _trimOrNull(note),
-          imageUrls: const [],
-          status: status,
-        ),
+      final model = AppointmentModel(
+        clientId: clientId,
+        serviceId: serviceId,
+        checklistIds: checklistIds
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
+        dateTime: dateTime,
+        payDate: payDate,
+        price: chosenPrice,
+        location: _trimOrNull(location),
+        note: _trimOrNull(note),
+        imageUrls: imageUrls,
+        status: status,
       );
-
-      // Optional image upload
-      if (uploadImages != null &&
-          (images?.isNotEmpty ?? false) &&
-          (created.id ?? '').isNotEmpty) {
-        final uploadedUrls = await uploadImages!(
-          appointmentId: created.id!,
-          files: images!,
-        );
-        if (uploadedUrls.isNotEmpty) {
-          await _repo.updateAppointment(
-            created.id!,
-            fields: {'imageUrls': uploadedUrls},
-          );
-          _lastCreatedAppointment = created.copyWith(imageUrls: uploadedUrls);
-        } else {
-          _lastCreatedAppointment = created;
-        }
-      } else {
-        _lastCreatedAppointment = created;
-      }
-
-      // ─────────────────────────────────────────────────────────────
-      // CLEAN UP stabilized temp files (safe to ignore errors)
-      // ─────────────────────────────────────────────────────────────
-      try {
-        for (final x in images ?? const <XFile>[]) {
-          if (x.path.isNotEmpty) {
-            await File(x.path).delete().catchError((_) {});
-          }
-        }
-      } catch (_) {}
-      // ─────────────────────────────────────────────────────────────
+      await _repo.createAppointmentWithId(docRef.id, model);
 
       return true;
     } catch (e) {
@@ -252,90 +223,91 @@ class AppointmentViewModel extends ChangeNotifier {
     String? customPrice,
     String? servicePrice,
     String? status,
-    List<String>? imageUrls, // explicit set/replace of URLs
-    List<XFile>? imagesToUpload, // stabilized files to upload now
-    bool replaceImages = false, // when uploading: replace or append
+    List<String>? currentImageUrls,
+    List<String> removedImageUrls = const [],
+    List<({Uint8List bytes, String name, String? mimeType})> newImages =
+        const [],
   }) async {
     _isSaving = true;
     _lastErrorMessage = null;
     notifyListeners();
 
     try {
-      // Build fields like before
-      final fields = <String, Object?>{};
-      void put(String key, Object? value) {
-        if (value != null) fields[key] = value;
-      }
-
-      put('clientId', _trimOrNull(clientId));
-      put('serviceId', _trimOrNull(serviceId));
-
-      if (checklistIds != null) {
-        put(
-          'checklistIds',
-          checklistIds.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-        );
-      }
-
-      if (dateTime != null) {
-        put('dateTime', Timestamp.fromDate(dateTime));
-      }
-
-      if (payDate != null) {
-        put('payDate', Timestamp.fromDate(payDate));
-      }
-
-      put('location', _trimOrNull(location));
-      put('note', _trimOrNull(note));
-      put('status', _trimOrNull(status));
-
-      if (imageUrls != null) {
-        // If the caller explicitly passes URLs, respect that and skip uploads.
-        put(
-          'imageUrls',
-          imageUrls.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-        );
-      } else if ((imagesToUpload?.isNotEmpty ?? false) &&
-          uploadImages != null) {
-        // Upload new images first, then decide to append or replace
-        final uploaded = await uploadImages!(
+      // 1) Upload new images first
+      List<String> uploadedUrls = const [];
+      if (newImages.isNotEmpty) {
+        uploadedUrls = await _imageStorage.uploadAppointmentImages(
           appointmentId: id,
-          files: imagesToUpload!,
+          images: newImages,
         );
+      }
 
-        if (uploaded.isNotEmpty) {
-          if (replaceImages) {
-            // Replace any existing URLs entirely
-            fields['imageUrls'] = uploaded;
-          } else {
-            // Append to existing
-            final current = await _repo.getAppointmentOnce(id);
-            final existing = current?.imageUrls ?? const <String>[];
-            fields['imageUrls'] = [...existing, ...uploaded];
-          }
+      // 2) Base image list (0 reads if currentImageUrls provided)
+      final existingImages =
+          currentImageUrls ??
+          (await _repo.getAppointmentOnce(id))?.imageUrls ??
+          const <String>[];
+
+      // 3) Compute final list locally (remove + add + dedupe)
+      final removedSet = removedImageUrls.toSet();
+      final kept = existingImages.where((u) => !removedSet.contains(u));
+      final finalImageUrls = <String>{...kept, ...uploadedUrls}.toList();
+
+      // 4) Build fields (empty string => delete), like Client updater
+      final fields = <String, Object?>{'imageUrls': finalImageUrls};
+      final deletes = <String>{};
+
+      void putStr(String key, String? v) {
+        if (v == null) return;
+        final t = v.trim();
+        if (t.isEmpty) {
+          deletes.add(key);
+        } else {
+          fields[key] = t;
         }
+      }
 
-        // CLEAN UP stabilized temp files (ignore errors)
+      void putTs(String key, DateTime? v) {
+        if (v != null) fields[key] = Timestamp.fromDate(v);
+      }
+
+      // Scalars
+      putStr('clientId', clientId);
+      putStr('serviceId', serviceId);
+      putStr('location', location);
+      putStr('note', note);
+      putStr('status', status);
+      putTs('dateTime', dateTime);
+      putTs('payDate', payDate);
+
+      // Price: prefer custom, else service, and allow clearing
+      if (customPrice != null || servicePrice != null) {
+        final chosen =
+            ((customPrice ?? '').isNotEmpty ? customPrice : servicePrice) ?? '';
+        final t = chosen.trim();
+        if (t.isEmpty) {
+          deletes.add('price');
+        } else {
+          fields['price'] = t;
+        }
+      }
+
+      // Lists
+      if (checklistIds != null) {
+        fields['checklistIds'] = checklistIds
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      if (fields.isNotEmpty || deletes.isNotEmpty) {
+        await _repo.updateAppointment(id, fields: fields, deletes: deletes);
+      }
+
+      if (removedImageUrls.isNotEmpty) {
         try {
-          for (final x in imagesToUpload!) {
-            if (x.path.isNotEmpty) {
-              await File(x.path).delete().catchError((_) {});
-            }
-          }
+          await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
         } catch (_) {}
-      }
-
-      // Price: prefer custom over service price if provided
-      final chosenPrice = _firstNonEmpty([
-        _trimOrNull(customPrice),
-        _trimOrNull(servicePrice),
-      ]);
-      if (chosenPrice != null) {
-        put('price', chosenPrice);
-      }
-
-      if (fields.isNotEmpty) {
-        await _repo.updateAppointment(id, fields: fields);
       }
 
       return true;
@@ -415,16 +387,16 @@ class AppointmentViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> delete(String id, {bool deleteStorage = true}) async {
-    if (deleteStorage && deleteImages != null) {
-      await deleteImages!(id);
-    }
+  Future<void> delete(String id) async {
+    try {
+      await _imageStorage.deleteAppointmentImages(id);
+    } catch (_) {}
     await _repo.deleteAppointment(id);
   }
 
   // Detail helpers
   Stream<AppointmentModel?> watchAppointmentById(String id) =>
-      _repo.watchAppointmentById(id);
+      _repo.watchAppointment(id);
 
   Future<AppointmentModel?> getAppointment(String id) =>
       _repo.getAppointmentOnce(id);

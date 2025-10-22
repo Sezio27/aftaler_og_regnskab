@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path/path.dart' as p;
@@ -24,22 +25,17 @@ class ImageStorage {
 
   Future<String> uploadClientImage({
     required String clientId,
-    required XFile file,
+    required ({Uint8List bytes, String name, String? mimeType}) image,
   }) async {
     final uid = _uidOrThrow;
     final ref = _storage.ref('users/$uid/clients/$clientId/image');
-
     final meta = SettableMetadata(
-      contentType: file.mimeType ?? 'image/jpeg',
+      contentType: image.mimeType ?? 'image/jpeg',
       cacheControl: 'public,max-age=3600',
     );
-
-    // Always use bytes; avoids scoped-storage/path issues.
-    final bytes = await file.readAsBytes();
-
     try {
       final snap = await ref
-          .putData(bytes, meta)
+          .putData(image.bytes, meta)
           .timeout(const Duration(seconds: 10)); // don’t hang forever
       return await snap.ref.getDownloadURL();
     } on TimeoutException {
@@ -52,21 +48,17 @@ class ImageStorage {
 
   Future<String> uploadServiceImage({
     required String serviceId,
-    required XFile file,
+    required ({Uint8List bytes, String name, String? mimeType}) image,
   }) async {
     final uid = _uidOrThrow;
     final ref = _storage.ref('users/$uid/services/$serviceId/image');
-
     final meta = SettableMetadata(
-      contentType: file.mimeType ?? 'image/jpeg',
+      contentType: image.mimeType ?? 'image/jpeg',
       cacheControl: 'public,max-age=3600',
     );
-
-    final bytes = await file.readAsBytes();
-
     try {
       final snap = await ref
-          .putData(bytes, meta)
+          .putData(image.bytes, meta)
           .timeout(const Duration(seconds: 10)); // don’t hang forever
       return await snap.ref.getDownloadURL();
     } on TimeoutException {
@@ -79,28 +71,27 @@ class ImageStorage {
 
   Future<List<String>> uploadAppointmentImages({
     required String appointmentId,
-    required List<XFile> files,
+    required List<({Uint8List bytes, String name, String? mimeType})> images,
   }) async {
-    if (files.isEmpty) return const [];
+    if (images.isEmpty) return const [];
 
     final uid = _uidOrThrow;
     final folder = _storage.ref('users/$uid/appointments/$appointmentId');
 
     final uploads = <Future<String>>[];
-    for (final file in files) {
-      final name = '${DateTime.now().microsecondsSinceEpoch}_${file.name}';
+    for (final img in images) {
+      final name = '${DateTime.now().microsecondsSinceEpoch}_${img.name}';
       final ref = folder.child(name);
 
       final meta = SettableMetadata(
-        contentType: file.mimeType ?? 'image/jpeg',
+        contentType: img.mimeType ?? 'image/jpeg',
         cacheControl: 'public,max-age=3600',
       );
 
       uploads.add(() async {
-        final bytes = await file.readAsBytes();
         try {
           final snap = await ref
-              .putData(bytes, meta)
+              .putData(img.bytes, meta)
               .timeout(const Duration(seconds: 20));
           return await snap.ref.getDownloadURL();
         } on TimeoutException {
@@ -142,20 +133,16 @@ class ImageStorage {
     final folder = _storage.ref('users/$uid/appointments/$appointmentId');
     try {
       final list = await folder.listAll();
-      // delete all files in the folder
       for (final item in list.items) {
         await item.delete();
       }
-      // (optional) try deleting the (now empty) folder:
-      // Firebase Storage treats folders virtually, so nothing else to do.
     } on FirebaseException catch (e) {
-      if (e.code == 'object-not-found') return; // nothing to delete
+      if (e.code == 'object-not-found') return;
       rethrow;
     }
   }
 
-  // lib/services/image_storage.dart
-  Future<void> deleteByUrls(Iterable<String> urls) async {
+  Future<void> deleteAppointmentImagesByUrls(Iterable<String> urls) async {
     for (final url in urls) {
       try {
         final ref = _storage.refFromURL(url);
@@ -166,23 +153,4 @@ class ImageStorage {
       }
     }
   }
-}
-
-Future<XFile> stabilizeXFile(XFile x) async {
-  final tmp = await getTemporaryDirectory();
-  final safePath = p.join(
-    tmp.path,
-    '${DateTime.now().microsecondsSinceEpoch}_${p.basename(x.path)}',
-  );
-
-  // Make sure parent exists (very defensive).
-  await Directory(p.dirname(safePath)).create(recursive: true);
-
-  await File(x.path).copy(safePath);
-  return XFile(safePath, name: x.name, mimeType: x.mimeType);
-}
-
-/// Convenience for many at once.
-Future<List<XFile>> stabilizeAll(Iterable<XFile> files) async {
-  return Future.wait(files.map(stabilizeXFile));
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +14,7 @@ class PhotoCircle extends StatelessWidget {
     this.showStroke = false,
   });
 
-  final XFile? image;
+  final ({Uint8List bytes, String name, String? mimeType})? image;
   final VoidCallback onTap;
   final VoidCallback onClear;
   final bool showStroke;
@@ -36,8 +37,8 @@ class PhotoCircle extends StatelessWidget {
       );
     } else {
       inner = ClipOval(
-        child: Image.file(
-          File(image!.path),
+        child: Image.memory(
+          image!.bytes,
           width: size,
           height: size,
           fit: BoxFit.cover,

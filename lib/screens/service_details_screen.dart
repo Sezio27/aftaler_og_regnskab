@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
@@ -194,7 +195,7 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
   late final TextEditingController _desc;
   int? _active;
 
-  XFile? _newPhoto;
+  ({Uint8List bytes, String name, String? mimeType})? _newPhoto;
   bool _removeImage = false;
 
   @override
@@ -259,7 +260,7 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
                 children: [
                   BannerImagePicker(
                     url: widget.service.image,
-                    newFile: _newPhoto,
+                    newImage: _newPhoto,
                     remove: _removeImage,
                     editable: true,
                     aspectRatio: 16 / 9,

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
@@ -17,7 +19,7 @@ class AddClientPanel extends StatefulWidget {
 }
 
 class _AddClientPanelState extends State<AddClientPanel> {
-  XFile? _photo;
+  ({Uint8List bytes, String name, String? mimeType})? _photo;
   int? _active;
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();

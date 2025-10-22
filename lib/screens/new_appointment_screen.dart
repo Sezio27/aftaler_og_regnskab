@@ -1,4 +1,6 @@
-﻿import 'package:aftaler_og_regnskab/services/image_storage.dart';
+﻿import 'dart:typed_data';
+
+import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -56,7 +58,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   DateTime _date = DateTime.now();
   TimeOfDay _time = const TimeOfDay(hour: 12, minute: 0);
   int? _active;
-  List<XFile> _images = [];
+  List<({Uint8List bytes, String name, String? mimeType})> _images = [];
 
   @override
   void initState() {
@@ -373,10 +375,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           title: 'Billeder',
                           child: ImagesPickerGrid(
                             initial: _images,
-                            onChanged: (picked) async {
-                              final stable = await stabilizeAll(picked);
-                              if (!mounted) return;
-                              setState(() => _images = stable);
+                            onChanged: (updatedImages) {
+                              setState(() => _images = updatedImages);
                             },
                           ),
                         ),

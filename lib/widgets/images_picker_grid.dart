@@ -1,5 +1,6 @@
 ﻿// lib/widgets/images_picker_grid.dart
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,8 +16,9 @@ class ImagesPickerGrid extends StatefulWidget {
     this.viewOnly = false,
   });
 
-  final List<XFile>? initial;
-  final ValueChanged<List<XFile>>? onChanged;
+  final List<({Uint8List bytes, String name, String? mimeType})>? initial;
+  final ValueChanged<List<({Uint8List bytes, String name, String? mimeType})>>?
+  onChanged;
   final String addLabel;
   final String emptyLabel;
   final bool viewOnly;
@@ -26,25 +28,27 @@ class ImagesPickerGrid extends StatefulWidget {
 }
 
 class _ImagesPickerGridState extends State<ImagesPickerGrid> {
-  late List<XFile> _files;
+  late List<({Uint8List bytes, String name, String? mimeType})> _images;
 
   @override
   void initState() {
     super.initState();
-    _files = List<XFile>.from(widget.initial ?? const []);
+    _images = List<({Uint8List bytes, String name, String? mimeType})>.from(
+      widget.initial ?? const [],
+    );
   }
 
-  void _notify() => widget.onChanged?.call(List.unmodifiable(_files));
+  void _notify() => widget.onChanged?.call(List.unmodifiable(_images));
 
   Future<void> _addImages() async {
     final picked = await pickImagesViaSheet(context);
     if (picked.isEmpty) return;
-    setState(() => _files.addAll(picked));
+    setState(() => _images.addAll(picked));
     _notify();
   }
 
   void _removeAt(int index) {
-    setState(() => _files.removeAt(index));
+    setState(() => _images.removeAt(index));
     _notify();
   }
 
@@ -54,7 +58,7 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
 
     // Empty state: just a "+ Tilføj billeder" button
 
-    if (_files.isEmpty) {
+    if (_images.isEmpty) {
       return Center(
         child: widget.viewOnly
             ? Text("Ingen billeder tilføjet", style: AppTypography.b3)
@@ -79,14 +83,14 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _files.length,
+              itemCount: _images.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
               itemBuilder: (ctx, i) => _ImageTile(
-                file: _files[i],
+                bytes: _images[i].bytes,
                 onRemove: () => _removeAt(i),
                 canRemove: !widget.viewOnly,
               ),
@@ -113,11 +117,11 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
 
 class _ImageTile extends StatelessWidget {
   const _ImageTile({
-    required this.file,
+    required this.bytes,
     required this.onRemove,
     this.canRemove = true,
   });
-  final XFile file;
+  final Uint8List bytes;
   final VoidCallback onRemove;
   final bool canRemove;
 
@@ -129,7 +133,12 @@ class _ImageTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.file(File(file.path), fit: BoxFit.cover),
+          Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+                const ColoredBox(color: Colors.black12),
+          ),
           if (canRemove)
             Positioned(
               right: 6,

@@ -91,15 +91,9 @@ class MyApp extends StatelessWidget {
             final storage = ctx.read<ImageStorage>();
             return AppointmentViewModel(
               apptRepo,
+              storage,
               fetchClient: (id) => clientRepo.getClientOnce(id),
               fetchService: (id) => serviceRepo.getServiceOnce(id),
-              uploadImages: ({required appointmentId, required files}) =>
-                  storage.uploadAppointmentImages(
-                    appointmentId: appointmentId,
-                    files: files,
-                  ),
-              deleteImages: (appointmentId) =>
-                  storage.deleteAppointmentImages(appointmentId),
             );
           },
         ),
