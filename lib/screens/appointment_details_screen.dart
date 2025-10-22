@@ -432,7 +432,12 @@ class __AppointmentReadPaneState extends State<_AppointmentReadPane> {
                 ),
                 const SizedBox(height: 20),
                 if (widget.appointment.checklistIds.isEmpty) ...[
-                  Text('Ingen checklister tilknyttet', style: AppTypography.b5),
+                  Text(
+                    'Ingen checklister tilknyttet',
+                    style: AppTypography.b5.copyWith(
+                      color: cs.onSurface.withAlpha(150),
+                    ),
+                  ),
                 ] else if (isLoadingChecklists || _loadingTicks) ...[
                   Row(
                     children: [
@@ -555,7 +560,9 @@ class __AppointmentReadPaneState extends State<_AppointmentReadPane> {
                             widget.appointment.note!.isEmpty
                         ? "Ingen note"
                         : widget.appointment.note!,
-                    style: AppTypography.b5,
+                    style: AppTypography.b5.copyWith(
+                      color: cs.onSurface.withAlpha(150),
+                    ),
                   ),
                 ),
               ],
@@ -715,13 +722,25 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
   Future<void> _save() async {
     await handleSave(
       context: context,
-      // Keep validation simple for now (you can add rules later)
-      validate: () => null,
+      validate: () {
+        final noClient =
+            _selectedClientId == null || _selectedClientId!.trim().isEmpty;
+        if (noClient) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text('Vælg en kunde, før du gemmer.'),
+            ),
+          );
+          return 'Mangler kunde';
+        }
+        return null;
+      },
       onSave: () =>
           context.read<AppointmentViewModel>().updateAppointmentFields(
             widget.appointment.id!,
             clientId: _selectedClientId,
-            serviceId: _selectedServiceId,
+            serviceId: _selectedServiceId ?? '',
             checklistIds: _selectedChecklistIds.toList(),
             dateTime: _combinedDateTime(),
             payDate: _payDate,
@@ -743,8 +762,6 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
-    final images = widget.appointment.imageUrls;
 
     final client = context.select<ClientViewModel, ClientModel?>((vm) {
       return _selectedClientId == null
@@ -1074,7 +1091,9 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                   if (widget.appointment.checklistIds.isEmpty) ...[
                     Text(
                       'Ingen checklister tilknyttet',
-                      style: AppTypography.b5,
+                      style: AppTypography.b5.copyWith(
+                        color: cs.onSurface.withAlpha(150),
+                      ),
                     ),
                   ] else if (isLoadingChecklists) ...[
                     Row(
@@ -1163,9 +1182,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                         return Text(
                           'Ingen billeder tilføjet',
                           style: AppTypography.b5.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(150),
+                            color: cs.onSurface.withAlpha(150),
                           ),
                         );
                       }
