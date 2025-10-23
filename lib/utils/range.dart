@@ -8,6 +8,7 @@ DateTime mondayOf(DateTime d) {
 }
 
 DateTime startOfMonth(DateTime d) => DateTime(d.year, d.month, 1);
+
 DateTime endOfMonthInclusive(DateTime d) =>
     DateTime(d.year, d.month + 1, 0, 23, 59, 59, 999);
 DateTime endOfDayInclusive(DateTime d) =>
@@ -32,6 +33,9 @@ DateTime endOfDayInclusive(DateTime d) =>
   final start = d.subtract(const Duration(days: 31));
   return (start: start, end: d);
 }
+
+DateTime addMonths(DateTime d, int months) =>
+    DateTime(d.year, d.month + months, 1);
 
 ({DateTime start, DateTime end}) yearRange(DateTime d) {
   final start = DateTime(d.year, 1, 1);

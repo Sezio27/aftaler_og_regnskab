@@ -82,7 +82,7 @@ class _WeekViewBody extends StatelessWidget {
     final weekEnd = weekStart.add(const Duration(days: 6));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      apptVm.setActiveRange(weekStart, weekEnd);
+      apptVm.setActiveWindow(weekEnd);
     });
 
     return Column(

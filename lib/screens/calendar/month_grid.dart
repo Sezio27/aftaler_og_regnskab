@@ -34,7 +34,7 @@ class _MonthGridState extends State<MonthGrid> {
       _lastEnd = end;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        apptVm.setActiveRange(start, end);
+        apptVm.setActiveWindow(visibleMonth);
       });
     }
 
