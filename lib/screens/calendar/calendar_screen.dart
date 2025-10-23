@@ -6,6 +6,7 @@ import 'package:aftaler_og_regnskab/screens/calendar/week_day_header.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
+import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
@@ -67,29 +68,19 @@ class _MonthViewBody extends StatelessWidget {
 class _WeekViewBody extends StatelessWidget {
   const _WeekViewBody({super.key});
 
-  // Monday of the given date's week (Mon=1..Sun=7)
-  DateTime _mondayOf(DateTime any) {
-    final d = DateTime(any.year, any.month, any.day);
-    return d.subtract(Duration(days: d.weekday - DateTime.monday));
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Rebuild list when the selected day changes
     final selectedDay = context.select<CalendarViewModel, DateTime>(
       (vm) => vm.selectedDay,
     );
 
-    // Rebuild header/range when visible week changes
     final calVm = context.watch<CalendarViewModel>();
 
-    // We only need methods here; no need to rebuild on VM changes
     final apptVm = context.read<AppointmentViewModel>();
 
-    final weekStart = _mondayOf(calVm.visibleWeek);
+    final weekStart = mondayOf(calVm.visibleWeek);
     final weekEnd = weekStart.add(const Duration(days: 6));
 
-    // Drive the range subscription in AppointmentViewModel
     WidgetsBinding.instance.addPostFrameCallback((_) {
       apptVm.setActiveRange(weekStart, weekEnd);
     });

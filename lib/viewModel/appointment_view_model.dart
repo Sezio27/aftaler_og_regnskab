@@ -7,6 +7,7 @@ import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -80,17 +81,68 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   /// Call this whenever month/week visible range changes.
   /// Subscribes only to appointments within [start]..[end] (by `dateTime`).
+  ///
+  StreamSubscription<List<AppointmentModel>>? _pinnedSubscription;
+  DateTime? _pinnedStart; // inclusive
+  DateTime? _pinnedEnd; // inclusive
+  Set<String> _pinnedIds = {}; // ids currently covered by pinned snapshot
+  // Master cache (union of pinned + active). We’ll index days from this.
+  final Map<String, AppointmentModel> _allById = {};
+
+  // Track which ids belong to the active listener (so we don’t remove those
+  // when pinned snapshot drops them, and vice versa)
+  Set<String> _activeIds = {};
+
+  Future<void> setInitialRange({String label = 'VM:setInitialRange'}) async {
+    if (_pinnedSubscription != null) return; // already set
+
+    final now = DateTime.now();
+    final start = startOfMonth(now);
+    // End of NEXT month (two full months total)
+    final end = endOfMonthInclusive(DateTime(now.year, now.month + 1, 1));
+
+    _pinnedStart = start;
+    _pinnedEnd = end;
+
+    final startedAt = DateTime.now();
+    var firstSnapshot = true;
+    _pinnedSubscription = _repo.watchAppointmentsBetween(start, end).listen((
+      fetched,
+    ) async {
+      _rangeAppointments = fetched;
+      _rebuildDailyIndexes(fetched);
+      if (!isReady) isReady = true;
+      notifyListeners();
+      if (firstSnapshot) {
+        debugPrint(
+          '$label first_snapshot=${DateTime.now().difference(startedAt).inMilliseconds}ms',
+        );
+        firstSnapshot = false;
+      }
+
+      final changed = await _prefetchNamesForActiveRange();
+      if (changed) {
+        notifyListeners();
+      }
+    });
+  }
+
   void setActiveRange(
-    DateTime start,
-    DateTime end, {
+    DateTime? start,
+    DateTime? end, {
     String label = 'VM:setActiveRange',
   }) {
-    final rangeStart = _asDateOnly(start);
-    final rangeEnd = _asDateOnly(end);
+    if (start == null && end == null) return;
+
+    final rangeStart = start != null ? _asDateOnly(start) : null;
+    final rangeEnd = end != null ? _asDateOnly(end) : null;
+
     if (_activeRangeStart != null && _activeRangeEnd != null) {
-      final newIsWithinCurrent =
-          !rangeStart.isBefore(_activeRangeStart!) &&
-          !rangeEnd.isAfter(_activeRangeEnd!);
+      bool isStartBefore =
+          rangeStart != null && rangeStart.isBefore(_activeRangeStart!);
+      bool isEndAfter = rangeEnd != null && rangeEnd.isAfter(_activeRangeEnd!);
+
+      final newIsWithinCurrent = !isStartBefore && !isEndAfter;
       if (newIsWithinCurrent) {
         return;
       }
@@ -99,7 +151,9 @@ class AppointmentViewModel extends ChangeNotifier {
         _activeRangeStart == rangeStart && _activeRangeEnd == rangeEnd;
     if (rangeIsSame) return;
 
-    _activeRangeStart = rangeStart;
+    if (rangeStart != null) {
+      _activeRangeStart = rangeStart;
+    }
     _activeRangeEnd = rangeEnd;
 
     _rangeSubscription?.cancel();
@@ -321,8 +375,8 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
-    final s = _asDateOnly(start);
-    final e = _endOfDayInclusive(_asDateOnly(end));
+    final s = dateOnly(start);
+    final e = endOfDayInclusive(dateOnly(end));
     return _appointmentsInWindowFromMemory(s, e);
   }
 
@@ -405,9 +459,6 @@ class AppointmentViewModel extends ChangeNotifier {
   // Helpers
   // ───────────────────────────────────────────────────────────
 
-  DateTime _endOfDayInclusive(DateTime d) =>
-      DateTime(d.year, d.month, d.day, 23, 59, 59, 999);
-
   List<AppointmentModel> _appointmentsInWindowFromMemory(
     DateTime start,
     DateTime endInclusive,
@@ -450,8 +501,8 @@ class AppointmentViewModel extends ChangeNotifier {
   // Unified: always call this one
   // ───────────────────────────────────────────────────────────
   List<AppointmentCardModel> cardsForRange(DateTime start, DateTime end) {
-    final s = _asDateOnly(start);
-    final e = _endOfDayInclusive(_asDateOnly(end));
+    final s = dateOnly(start);
+    final e = endOfDayInclusive(dateOnly(end));
     final appts = _appointmentsInWindowFromMemory(s, e);
     return _mapToCards(appts);
   }
@@ -463,8 +514,8 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   /// Month grid chips (synchronous, cheap)
   List<MonthChip> monthChipsOn(DateTime day) {
-    final dateOnly = _asDateOnly(day);
-    final items = _appointmentsByDay[dateOnly] ?? const <AppointmentModel>[];
+    final date = dateOnly(day);
+    final items = _appointmentsByDay[date] ?? const <AppointmentModel>[];
 
     final chips = <MonthChip>[];
     for (final appt in items) {
@@ -477,14 +528,14 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   bool hasEventsOn(DateTime day) {
-    final d = _asDateOnly(day);
+    final d = dateOnly(day);
     final list = _appointmentsByDay[d];
     return list != null && list.isNotEmpty;
   }
 
   /// Build UI-ready cards for a specific date (prefetches client/service first).
   Future<List<AppointmentCardModel>> cardsForDate(DateTime day) async {
-    final date = _asDateOnly(day);
+    final date = dateOnly(day);
     final appointmentsOnDay =
         _appointmentsByDay[date] ?? const <AppointmentModel>[];
     // No sort needed: repo orders by dateTime and _rebuildDailyIndexes preserves it.
@@ -539,7 +590,7 @@ class AppointmentViewModel extends ChangeNotifier {
     for (final appt in items) {
       final dt = appt.dateTime;
       if (dt == null) continue;
-      final day = _asDateOnly(dt);
+      final day = dateOnly(dt);
       (_appointmentsByDay[day] ??= <AppointmentModel>[]).add(appt);
     }
     // no per-day sort needed
@@ -644,7 +695,6 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   // Utilities
   // ────────────────────────────────────────────────────────────────────────────
-  DateTime _asDateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
   String? _trimOrNull(String? s) {
     final t = (s ?? '').trim();

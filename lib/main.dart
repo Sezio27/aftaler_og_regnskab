@@ -10,6 +10,7 @@ import 'package:aftaler_og_regnskab/firebase_options.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
+import 'package:aftaler_og_regnskab/utils/Range.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
@@ -120,12 +121,9 @@ class _AppBootstrapState extends State<_AppBootstrap> {
   StreamSubscription<User?>? _authSub;
   bool _didBootstrap = false;
 
-  void _bootstrapYearRange() {
+  void _bootstrapTwoMonthRange() {
     final vm = context.read<AppointmentViewModel>();
-    final now = DateTime.now();
-    final start = DateTime(now.year, 1, 1);
-    final end = DateTime(now.year, 12, 31, 23, 59, 59, 999);
-    vm.setActiveRange(start, end, label: 'AppBootstrap:initYearRange');
+    vm.setInitialRange();
   }
 
   @override
@@ -138,7 +136,7 @@ class _AppBootstrapState extends State<_AppBootstrap> {
     if (auth.currentUser != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_didBootstrap) {
-          _bootstrapYearRange();
+          _bootstrapTwoMonthRange();
           _didBootstrap = true;
         }
       });
@@ -148,11 +146,11 @@ class _AppBootstrapState extends State<_AppBootstrap> {
     _authSub = auth.authStateChanges().listen((user) {
       if (user != null) {
         if (!_didBootstrap) {
-          _bootstrapYearRange();
+          _bootstrapTwoMonthRange();
           _didBootstrap = true;
         } else {
           // Switching accounts? Re-bootstrap cleanly
-          _bootstrapYearRange();
+          _bootstrapTwoMonthRange();
         }
       }
     });
