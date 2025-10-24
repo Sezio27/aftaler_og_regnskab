@@ -17,9 +17,9 @@ import 'package:aftaler_og_regnskab/widgets/appointment_card_status.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 
-enum Tabs { week, month, year }
+enum Tabs { month, year, lifetime }
 
-typedef DateRange = ({DateTime start, DateTime end});
+typedef DateRange = ({DateTime? start, DateTime? end});
 
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
@@ -28,12 +28,15 @@ class FinanceScreen extends StatefulWidget {
 }
 
 class _FinanceScreenState extends State<FinanceScreen> {
-  Tabs _tab = Tabs.week;
+  Tabs _tab = Tabs.month;
 
-  DateRange _rangeForTab(Tabs t, DateTime now) => switch (t) {
-    Tabs.week => weekRange(now),
-    Tabs.month => monthRange(now),
-    Tabs.year => yearRange(now),
+  final Map<Tabs, ({int count, double income})> _sumCache = {};
+  final Map<Tabs, ({int paid, int waiting, int missing, int uninvoiced})>
+  _statusCache = {};
+  Segment _segForTab(Tabs t) => switch (t) {
+    Tabs.month => Segment.month,
+    Tabs.year => Segment.year,
+    Tabs.lifetime => Segment.total,
   };
 
   @override
@@ -45,12 +48,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
       decimalDigits: 0,
     );
 
+    final hPad = LayoutMetrics.horizontalPadding(context);
+    final vm = context.watch<AppointmentViewModel>(); // <-- watch
+    final seg = _segForTab(_tab);
+
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(
-          vertical: 20,
-          horizontal: LayoutMetrics.minHPadPhone,
-        ),
+        padding: EdgeInsets.symmetric(vertical: 20, horizontal: hPad / 2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -61,25 +65,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
               onValueChanged: (v) {
                 if (v == null) return;
                 setState(() => _tab = v);
-                // No setActiveRange here — top-level manages a year window.
-                // If you want the "recent" list to follow the tab, you can:
-                // _buildRecentFuture(); setState(() {});
               },
               children: {
-                Tabs.week: SegItem(
-                  icon: Icons.face_retouching_natural,
-                  text: 'Uge',
-                  active: _tab == Tabs.week,
-                ),
-                Tabs.month: SegItem(
-                  icon: Icons.event_note_outlined,
-                  text: 'Måned',
-                  active: _tab == Tabs.month,
-                ),
-                Tabs.year: SegItem(
-                  icon: Icons.event_note_outlined,
-                  text: 'År',
-                  active: _tab == Tabs.year,
+                Tabs.month: SegItem(text: 'Måned', active: _tab == Tabs.month),
+                Tabs.year: SegItem(text: 'År', active: _tab == Tabs.year),
+                Tabs.lifetime: SegItem(
+                  text: 'Total',
+                  active: _tab == Tabs.lifetime,
                 ),
               },
             ),
@@ -87,18 +79,18 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: 16),
 
             // Summary cards (income + count) — only these rebuild when VM data changes.
-            Selector<AppointmentViewModel, ({int count, double income})>(
-              selector: (_, vm) {
-                final r = _rangeForTab(_tab, DateTime.now());
-                return (
-                  count: vm.countAppointmentsInRange(r.start, r.end),
-                  income: vm.sumPaidInRangeDKK(r.start, r.end),
-                );
-              },
-              shouldRebuild: (a, b) =>
-                  a.count != b.count || a.income != b.income,
-              builder: (_, data, __) {
+            FutureBuilder<({int count, double income})>(
+              key: ValueKey('summary-$seg-${vm.hasChanges}'),
+              future: vm.getSummaryBySegment(_segForTab(_tab)),
+              initialData: _sumCache[_tab],
+              builder: (_, snapshot) {
+                if (snapshot.hasData) _sumCache[_tab] = snapshot.data!;
+                final data =
+                    snapshot.data ??
+                    (_sumCache[_tab] ?? (count: 0, income: 0.0));
+
                 return Row(
+                  key: ValueKey('sum-${data.count}-${data.income.round()}'),
                   children: [
                     _SummaryCard(
                       title: 'Indtægt',
@@ -121,26 +113,20 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: 16),
 
             // KPI block (status buckets) — rebuilt independently via Selector.
-            Selector<
-              AppointmentViewModel,
+            // KPI block (status buckets)
+            FutureBuilder<
               ({int paid, int waiting, int missing, int uninvoiced})
             >(
-              selector: (_, vm) {
-                final r = _rangeForTab(_tab, DateTime.now());
-                final s = vm.statusCount(r.start, r.end);
-                return (
-                  paid: s.paid,
-                  waiting: s.waiting,
-                  missing: s.missing,
-                  uninvoiced: s.uninvoiced,
-                );
-              },
-              shouldRebuild: (a, b) =>
-                  a.paid != b.paid ||
-                  a.waiting != b.waiting ||
-                  a.missing != b.missing ||
-                  a.uninvoiced != b.uninvoiced,
-              builder: (_, s, __) {
+              key: ValueKey('status-$seg-${vm.hasChanges}'),
+              future: vm.getStatusCountsBySegment(_segForTab(_tab)),
+              initialData: _statusCache[_tab],
+              builder: (_, snapshot) {
+                final s =
+                    snapshot.data ??
+                    (_statusCache[_tab] ??
+                        (paid: 0, waiting: 0, missing: 0, uninvoiced: 0));
+                _statusCache[_tab] = s;
+
                 final k = [
                   (
                     Icons.check_circle_outlined,
@@ -167,24 +153,27 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     'Ufaktureret',
                   ),
                 ];
-                return CustomCard(
-                  field: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 30,
-                      horizontal: 16,
-                    ),
-                    child: Row(
-                      children: [
-                        for (final e in k)
-                          Expanded(
-                            child: _KpiCard(
-                              icon: e.$1,
-                              color: e.$2,
-                              value: e.$3,
-                              label: e.$4,
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: CustomCard(
+                    field: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 30,
+                        horizontal: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          for (final e in k)
+                            Expanded(
+                              child: _KpiCard(
+                                icon: e.$1,
+                                color: e.$2,
+                                value: e.$3,
+                                label: e.$4,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -195,6 +184,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             // Recent list (cached Future + per-row Stream so only changed row rebuilds)
             CustomCard(
+              color: cs.surface,
               field: Padding(
                 padding: const EdgeInsets.symmetric(
                   vertical: 20,
@@ -233,7 +223,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     Selector<AppointmentViewModel, List<AppointmentCardModel>>(
                       selector: (_, vm) {
                         final now = DateTime.now();
-                        final r = monthRange(now); // or whatever you want here
+                        final r = monthRange(now);
                         return vm.cardsForRange(r.start, r.end);
                       },
                       shouldRebuild: (a, b) {
@@ -273,7 +263,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
+                            horizontal: 10,
                             vertical: 8,
                           ),
                           itemCount: items.length,
@@ -291,7 +281,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                               title: a.clientName,
                               service: a.serviceName,
                               dateText: dateText,
-                              priceText: a.price,
+                              price: a.price,
                               status: a.status,
                               onSeeDetails: () {},
                               onChangeStatus: (newStatus) {

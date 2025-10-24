@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 class SegItem extends StatelessWidget {
   const SegItem({
     super.key,
-    required this.icon,
+    this.icon,
     required this.text,
     required this.active,
     this.amount,
   });
-  final IconData icon;
+  final IconData? icon;
   final String text;
   final bool active;
   final String? amount;
@@ -27,7 +27,7 @@ class SegItem extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: fg),
+              if (icon != null) ...[Icon(icon, size: 18, color: fg)],
               const SizedBox(width: 8),
               Text(
                 text,

@@ -1,6 +1,7 @@
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:flutter/material.dart';
 
 class ServiceTile extends StatelessWidget {
@@ -57,7 +58,9 @@ class ServiceTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 46),
-                      _Info(text: s.price),
+                      _Info(
+                        text: s.price != null ? formatPrice(s.price) : null,
+                      ),
                       Text(
                         " Kr.",
                         style: AppTypography.num6.copyWith(

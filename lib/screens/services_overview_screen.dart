@@ -2,6 +2,7 @@ import 'package:aftaler_og_regnskab/model/checklistModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
@@ -29,7 +30,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
 
   Tabs _tab = Tabs.services;
   final _searchCtrl = TextEditingController();
-  String _query = '';
+
   @override
   void initState() {
     super.initState();
@@ -66,7 +67,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
                     if (v == null) return;
                     setState(() {
                       _tab = v;
-                      _query = "";
+
                       _searchCtrl.clear();
                     });
 
@@ -96,7 +97,6 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
 
                   placeholder: 'Søg',
                   onChanged: (q) => setState(() {
-                    _query = q.trim();
                     _tab == Tabs.services
                         ? _serviceVM.setServiceSearch(q)
                         : _checklistVM.setChecklistSearch(q);
@@ -105,7 +105,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
                   itemColor: cs.onSurface.withAlpha(150),
                   style: AppTypography.b2.copyWith(color: cs.onSurface),
                   placeholderStyle: AppTypography.b2.copyWith(
-                    color: cs.onSurface.withAlpha(150),
+                    color: cs.onSurface.withAlpha(180),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -114,14 +114,6 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
                   decoration: BoxDecoration(
                     color: cs.onPrimary,
                     borderRadius: BorderRadius.all(Radius.circular(10)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: cs.onSurface.withAlpha(180),
-                        offset: Offset(0, 1),
-                        blurRadius: 0.1,
-                        blurStyle: BlurStyle.outer,
-                      ),
-                    ],
                   ),
                 ),
 
@@ -159,7 +151,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
               elevation: 2,
               shape: const CircleBorder(),
               backgroundColor: cs.secondary,
-              foregroundColor: cs.onPrimary,
+              foregroundColor: Colors.white,
               child: const Icon(Icons.add),
             ),
           ),
@@ -261,12 +253,7 @@ class ServiceItem extends StatelessWidget {
               children: [
                 Text(service.name ?? "", style: AppTypography.b3),
                 SizedBox(height: 12),
-                Text(
-                  service.price != null
-                      ? "${service.price!} Kr."
-                      : "Ingen pris",
-                  style: AppTypography.segPassiveNumber,
-                ),
+                Text(formatDKK(service.price), style: AppTypography.num3),
               ],
             ),
           ),

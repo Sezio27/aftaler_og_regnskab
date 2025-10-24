@@ -11,6 +11,7 @@ class CustomCard extends StatelessWidget {
   final double? blurRadius;
   final Widget? field;
   final BoxConstraints? constraints;
+  final Color? color;
 
   const CustomCard({
     super.key,
@@ -23,6 +24,7 @@ class CustomCard extends StatelessWidget {
     this.field,
     this.constraints,
     this.blurStyle = BlurStyle.normal,
+    this.color,
   });
 
   @override
@@ -42,7 +44,7 @@ class CustomCard extends StatelessWidget {
             blurStyle: blurStyle!,
           ),
         ],
-        color: cs.onPrimary,
+        color: color ?? cs.onPrimary,
         borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
       clipBehavior: Clip.antiAlias,

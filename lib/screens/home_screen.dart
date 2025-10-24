@@ -21,8 +21,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final vm = context.watch<AppointmentViewModel>();
     final now = DateTime.now();
-    final m = monthRange(now);
+
     final twoWeek = twoWeekRange(now);
 
     return SafeArea(
@@ -31,42 +32,51 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           children: [
             // KPIs via Selector (fast, minimal rebuilds)
-            Row(
-              children: [
-                Selector<AppointmentViewModel, double>(
-                  selector: (_, vm) => vm.sumPaidInRangeDKK(m.start, m.end),
-                  builder: (_, monthlyPaid, __) => StatCard(
-                    title: "Omsætning",
-                    subtitle: "Denne måned",
-                    value: '${monthlyPaid.toStringAsFixed(0)} Kr.',
-                    icon: const Icon(
-                      Icons.account_balance_outlined,
-                      size: 20,
-                      color: AppColors.greenMain,
+            // KPIs via FutureBuilder (uses new async aggregate methods)
+            FutureBuilder<({double income, int count})>(
+              future: vm.getSummaryBySegment(Segment.month),
+              builder: (_, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final income = snap.data?.income ?? 0.0;
+                final count = snap.data?.count ?? 0;
+
+                return Row(
+                  children: [
+                    StatCard(
+                      title: "Omsætning",
+                      subtitle: "Denne måned",
+                      value: '${income.toStringAsFixed(0)} Kr.',
+                      icon: const Icon(
+                        Icons.account_balance_outlined,
+                        size: 20,
+                        color: AppColors.greenMain,
+                      ),
+                      valueColor: AppColors.greenMain,
+                      iconBgColor: AppColors.greenBackground,
                     ),
-                    valueColor: AppColors.greenMain,
-                    iconBgColor: AppColors.greenBackground,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Selector<AppointmentViewModel, int>(
-                  selector: (_, vm) =>
-                      vm.countAppointmentsInRange(m.start, m.end),
-                  builder: (_, monthlyCount, __) => StatCard(
-                    title: "Aftaler",
-                    subtitle: "Denne måned",
-                    value: monthlyCount.toString(),
-                    icon: const Icon(
-                      Icons.calendar_today_outlined,
-                      size: 20,
-                      color: AppColors.peach,
+                    const SizedBox(width: 16),
+                    StatCard(
+                      title: "Aftaler",
+                      subtitle: "Denne måned",
+                      value: count.toString(),
+                      icon: const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 20,
+                        color: AppColors.peach,
+                      ),
+                      valueColor: cs.onSurface,
+                      iconBgColor: AppColors.peachBackground,
                     ),
-                    valueColor: cs.onSurface,
-                    iconBgColor: AppColors.peachBackground,
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
+
             const SizedBox(height: 26),
 
             CustomButton(

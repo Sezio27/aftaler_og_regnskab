@@ -110,7 +110,7 @@ class ServiceViewModel extends ChangeNotifier {
     required String? name,
     String? description,
     String? duration,
-    String? price,
+    double? price,
     ({Uint8List bytes, String name, String? mimeType})? image,
   }) async {
     final nm = (name ?? '').trim();
@@ -143,7 +143,7 @@ class ServiceViewModel extends ChangeNotifier {
             ? null
             : description!.trim(),
         duration: (duration ?? '').trim().isEmpty ? null : duration!.trim(),
-        price: (price ?? '').trim().isEmpty ? null : price!.trim(),
+        price: price,
         image: imageUrl,
       );
       await _repo.createServiceWithId(docRef.id, model);
@@ -164,7 +164,8 @@ class ServiceViewModel extends ChangeNotifier {
     String? name,
     String? description,
     String? duration,
-    String? price,
+    double? price,
+    bool clearPrice = false,
     ({Uint8List bytes, String name, String? mimeType})? newImage,
     bool removeImage = false,
   }) async {
@@ -193,7 +194,12 @@ class ServiceViewModel extends ChangeNotifier {
       put('name', name);
       put('description', description);
       put('duration', duration);
-      put('price', price);
+
+      if (clearPrice) {
+        deletes.add('price');
+      } else if (price != null) {
+        fields['price'] = price;
+      }
 
       // Image precedence: new image > remove flag
       if (newImage != null) {
@@ -225,12 +231,11 @@ class ServiceViewModel extends ChangeNotifier {
   }
 
   // in ServiceViewModel
-  String? priceFor(String? id) {
+  double? priceFor(String? id) {
     if (id == null) return null;
     for (final s in _all) {
       if (s.id == id) {
-        final p = (s.price ?? '').trim();
-        return p.isEmpty ? null : p;
+        return s.price;
       }
     }
     return null;

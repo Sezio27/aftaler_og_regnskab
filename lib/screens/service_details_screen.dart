@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
@@ -138,10 +139,9 @@ class _ServiceReadPane extends StatelessWidget {
                 _InfoRow(
                   icon: Icons.sell_outlined,
                   label: 'Pris',
-                  value: service.price?.isNotEmpty == true
-                      ? service.price!
-                      : '—',
+                  value: formatPrice(service.price),
                 ),
+
                 const SizedBox(height: 26),
 
                 // Duration
@@ -202,7 +202,10 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.service.name ?? '');
-    _price = TextEditingController(text: widget.service.price ?? '');
+    final initialPrice = widget.service.price;
+    _price = TextEditingController(
+      text: initialPrice == null ? '' : formatPrice(initialPrice),
+    );
     _dur = TextEditingController(text: widget.service.duration ?? '');
     _desc = TextEditingController(text: widget.service.description ?? '');
   }
@@ -229,7 +232,8 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
         name: _name.text.trim(),
         description: _desc.text,
         duration: _dur.text,
-        price: _price.text,
+        price: parsePrice(_price.text),
+        clearPrice: _price.text.trim().isEmpty,
         newImage: _newPhoto,
         removeImage: _removeImage,
       ),

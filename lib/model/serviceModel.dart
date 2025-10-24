@@ -6,7 +6,7 @@ class ServiceModel {
   final String? name;
   final String? description;
   final String? duration;
-  final String? price;
+  final double? price;
   final String? image;
 
   const ServiceModel({
@@ -23,7 +23,7 @@ class ServiceModel {
     String? name,
     String? description,
     String? duration,
-    String? price,
+    double? price,
     String? image,
   }) {
     return ServiceModel(
@@ -41,7 +41,7 @@ class ServiceModel {
     'name': name,
     'description': description,
     'duration': duration,
-    'price': price,
+    if (price != null) 'price': price,
     'image': image,
   };
 
@@ -51,7 +51,7 @@ class ServiceModel {
       name: json['name'] as String?,
       description: json['description'] as String?,
       duration: json['duration'] as String?,
-      price: json['price'] as String?,
+      price: (json['price'] as num?)?.toDouble(),
       image: json['image'] as String?,
     );
   }

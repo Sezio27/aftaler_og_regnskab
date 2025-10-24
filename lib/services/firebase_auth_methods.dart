@@ -5,6 +5,7 @@ import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class FirebaseAuthMethods {
   final FirebaseAuth _auth;
@@ -81,11 +82,15 @@ class FirebaseAuthMethods {
   }
 
   // SIGN OUT
+
   Future<void> signOut(BuildContext context) async {
     try {
       await _auth.signOut();
+      if (context.mounted) context.go('/gate'); // ⬅️ reset to AuthGate
     } on FirebaseAuthException catch (e) {
-      showSnackBar(context, e.message!); // Displaying the error message
+      showSnackBar(context, e.message ?? 'Kunne ikke logge ud');
+    } catch (e) {
+      showSnackBar(context, 'Kunne ikke logge ud');
     }
   }
 

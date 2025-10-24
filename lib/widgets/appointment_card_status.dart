@@ -1,4 +1,5 @@
 // widgets/appointment_status_card.dart
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/widgets/status.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,7 @@ class AppointmentStatusCard extends StatefulWidget {
     required this.title,
     required this.service,
     required this.dateText,
-    required this.priceText,
+    required this.price,
     required this.status,
     required this.onChangeStatus,
     this.onSeeDetails,
@@ -20,7 +21,7 @@ class AppointmentStatusCard extends StatefulWidget {
   final String title;
   final String service;
   final String dateText;
-  final double? priceText;
+  final double? price;
   final String status;
   final ValueChanged<PaymentStatus> onChangeStatus;
   final VoidCallback? onSeeDetails;
@@ -69,10 +70,7 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
                 ),
                 Text(widget.dateText, style: AppTypography.f1),
 
-                Text(
-                  widget.priceText == null ? "---" : "${widget.priceText}",
-                  style: AppTypography.num3,
-                ),
+                Text(formatDKK(widget.price), style: AppTypography.num3),
               ],
             ),
             const SizedBox(height: 4),

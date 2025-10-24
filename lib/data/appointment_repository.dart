@@ -1,6 +1,7 @@
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// Repository for reading/writing appointments under:
 ///   users/{uid}/appointments/{appointmentId}
@@ -216,15 +217,16 @@ class AppointmentRepository {
     String? status,
   }) async {
     final uid = _uidOrThrow;
-    Query<Map<String, dynamic>> query = _collection(uid);
+    Query<Map<String, dynamic>> q = _collection(uid);
+
     if (startInclusive != null) {
-      query = query.where(
+      q = q.where(
         'dateTime',
         isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
       );
     }
     if (endInclusive != null) {
-      final endOfDay = DateTime(
+      final eod = DateTime(
         endInclusive.year,
         endInclusive.month,
         endInclusive.day,
@@ -233,16 +235,26 @@ class AppointmentRepository {
         59,
         999,
       );
-      query = query.where(
-        'dateTime',
-        isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
-      );
+      q = q.where('dateTime', isLessThanOrEqualTo: Timestamp.fromDate(eod));
     }
-    if (status != null) {
-      query = query.where('status', isEqualTo: status);
+    if (status != null && status.isNotEmpty) {
+      q = q.where('status', isEqualTo: status);
     }
-    final agg = await query.count().get();
-    return agg.count ?? 0;
+
+    debugPrint(
+      '[countAppointments] uid=$uid start=$startInclusive end=$endInclusive status=$status',
+    );
+
+    try {
+      final agg = await q.count().get();
+      final c = agg.count ?? 0;
+      debugPrint('[countAppointments] result=$c');
+      return c;
+    } catch (e, st) {
+      // This will print the "requires index" link whether it's FirebaseException or PlatformException
+      debugPrint('[countAppointments] ERROR: $e\n$st');
+      rethrow;
+    }
   }
 
   Future<double> sumPaidInRange({
@@ -252,7 +264,8 @@ class AppointmentRepository {
     final uid = _uidOrThrow;
     Query<Map<String, dynamic>> query = _collection(
       uid,
-    ).where('status', isEqualTo: 'paid');
+    ).where('status', isEqualTo: 'Betalt');
+
     if (startInclusive != null) {
       query = query.where(
         'dateTime',
@@ -274,9 +287,23 @@ class AppointmentRepository {
         isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
       );
     }
+
     final aggregateQuery = query.aggregate(sum('price'));
-    final agg = await aggregateQuery.get();
-    return agg.getSum('price') ?? 0.0;
+
+    // 🔎 Log BEFORE awaiting, so we know the function was called
+    debugPrint(
+      '[sumPaidInRange] uid=$uid start=$startInclusive end=$endInclusive',
+    );
+
+    try {
+      final agg = await aggregateQuery.get();
+      final val = agg.getSum('price');
+      debugPrint('[sumPaidInRange] result=$val');
+      return (val ?? 0.0).toDouble();
+    } catch (e, st) {
+      debugPrint('[sumPaidInRange] ERROR: $e\n$st');
+      rethrow; // let UI show the error too
+    }
   }
 
   Future<void> deleteAppointment(String id) async {

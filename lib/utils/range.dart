@@ -9,6 +9,12 @@ DateTime startOfMonth(DateTime d) => DateTime(d.year, d.month, 1);
 
 DateTime endOfMonthInclusive(DateTime d) =>
     DateTime(d.year, d.month + 1, 0, 23, 59, 59, 999);
+DateTime startOfYear(DateTime d) => DateTime(d.year, 1, 1);
+
+// (optional, to match your month helper style)
+DateTime endOfYearInclusive(DateTime d) =>
+    DateTime(d.year + 1, 1, 0, 23, 59, 59, 999);
+
 DateTime endOfDayInclusive(DateTime d) =>
     DateTime(d.year, d.month, d.day, 23, 59, 59, 999);
 DateTime getWeek(DateTime dt) {

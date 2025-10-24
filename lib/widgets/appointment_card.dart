@@ -1,6 +1,7 @@
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/material.dart';
@@ -68,10 +69,7 @@ class AppointmentCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
 
-                        Text(
-                          price != null ? "${price!} Kr." : "---",
-                          style: AppTypography.num3,
-                        ),
+                        Text(formatDKK(price), style: AppTypography.num3),
                       ],
                     ),
                     const SizedBox(height: 12),

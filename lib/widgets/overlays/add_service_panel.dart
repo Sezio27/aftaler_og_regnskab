@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
@@ -57,11 +58,21 @@ class _AddServicePanelState extends State<AddServicePanel> {
   Future<void> _createService(ServiceViewModel vm) async {
     FocusScope.of(context).unfocus();
 
+    final priceText = _priceCtrl.text.trim();
+    final priceValue = parsePrice(priceText);
+
+    if (priceText.isNotEmpty && priceValue == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Angiv en gyldig pris')));
+      return;
+    }
+
     final created = await vm.addService(
       name: _nameCtrl.text,
       description: _descCtrl.text,
       duration: _durCtrl.text,
-      price: _priceCtrl.text,
+      price: priceValue,
       image: _photo,
     );
 

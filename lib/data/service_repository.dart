@@ -105,7 +105,7 @@ class ServiceRepository {
       name: data['name'] as String?,
       description: data['description'] as String?,
       duration: data['duration'] as String?,
-      price: data['price'] as String?,
+      price: (data['price'] as num?)?.toDouble(),
       image: data['image'] as String?,
     );
   }

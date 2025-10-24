@@ -3,6 +3,7 @@
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
@@ -103,11 +104,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   Future<bool> submit(BuildContext context) async {
     final dateTime = _combine(_date, _time);
 
-    final customPriceText = _customPriceCtrl.text.trim();
-    double? customPrice;
-    if (customPriceText.isNotEmpty) {
-      customPrice = double.tryParse(customPriceText.replaceAll(',', '.'));
-    }
+    final customPrice = parsePrice(_customPriceCtrl.text);
 
     // call the VM that resolves the final price etc.
     return await context.read<AppointmentViewModel>().addAppointment(
@@ -131,12 +128,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
     final checklistVM = context.read<ChecklistViewModel>();
     final isSaving = context.watch<AppointmentViewModel>().saving;
 
-    final servicePrice = context.select<ServiceViewModel, String?>(
+    final servicePrice = context.select<ServiceViewModel, double?>(
       (vm) => vm.priceFor(_selectedServiceId),
     );
 
-    final priceHint = servicePrice != null && servicePrice.isNotEmpty
-        ? servicePrice
+    final priceHint = servicePrice != null
+        ? formatPrice(servicePrice)
         : 'Indtast pris';
 
     return SafeArea(
@@ -267,11 +264,21 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
                                 const SizedBox(height: 10),
                               ],
-                              //Her
+
                               ServiceList(
                                 selectedId: _selectedServiceId,
                                 onPick: (s) {
-                                  setState(() => _selectedServiceId = s.id);
+                                  setState(() {
+                                    _selectedServiceId = s.id;
+                                    final formatted = s.price == null
+                                        ? ''
+                                        : formatPrice(s.price);
+                                    _customPriceCtrl
+                                      ..text = formatted
+                                      ..selection = TextSelection.fromPosition(
+                                        TextPosition(offset: formatted.length),
+                                      );
+                                  });
                                 },
                               ),
                               const SizedBox(height: 10),
@@ -280,9 +287,10 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                 child: _selectedServiceId != null
                                     ? TextButton.icon(
                                         onPressed: () {
-                                          setState(
-                                            () => _selectedServiceId = null,
-                                          );
+                                          setState(() {
+                                            _selectedServiceId = null;
+                                            _customPriceCtrl.clear();
+                                          });
                                         },
                                         label: Text(
                                           'Fotryd',
