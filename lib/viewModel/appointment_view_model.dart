@@ -50,14 +50,60 @@ class AppointmentViewModel extends ChangeNotifier {
   AppointmentModel? _lastCreatedAppointment;
 
   // ---- change flag ----
-  bool hasChanges = false;
-  void markChanged({bool notify = false}) {
-    hasChanges = true;
-    if (notify) notifyListeners();
+
+  bool hasMonthSumChanges = false;
+  bool hasYearSumChanges = false;
+  bool hasAllTimeSumChanges = false;
+  bool hasMonthCountChanges = false;
+  bool hasYearCountChanges = false;
+  bool hasAllTimeCountChanges = false;
+
+  void _bumpFlagsFor(DateTime? date) {
+    hasAllTimeSumChanges = true;
+    hasAllTimeCountChanges = true;
+    if (date == null) return;
+    final now = DateTime.now();
+    if (date.year == now.year) {
+      hasYearSumChanges = true;
+      hasYearCountChanges = true;
+      if (date.month == now.month) {
+        hasMonthSumChanges = true;
+        hasMonthCountChanges = true;
+      }
+    }
   }
 
-  void clearChanged() {
-    hasChanges = false;
+  void clearSumChangesFor(Segment seg) {
+    switch (seg) {
+      case Segment.month:
+        hasMonthSumChanges = false;
+        break;
+      case Segment.year:
+        hasYearSumChanges = false;
+        break;
+      case Segment.total:
+        hasAllTimeSumChanges = false;
+        break;
+    }
+  }
+
+  void clearCountChangesFor(Segment seg) {
+    switch (seg) {
+      case Segment.month:
+        hasMonthCountChanges = false;
+        break;
+      case Segment.year:
+        hasYearCountChanges = false;
+        break;
+      case Segment.total:
+        hasAllTimeCountChanges = false;
+        break;
+    }
+  }
+
+  void markChanged(DateTime date) {
+    _bumpFlagsFor(date);
+    notifyListeners();
   }
 
   bool get saving => _isSaving;
@@ -285,7 +331,7 @@ class AppointmentViewModel extends ChangeNotifier {
         status: status,
       );
       await _repo.createAppointmentWithId(docRef.id, model);
-      markChanged();
+      markChanged(dateTime);
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke oprette aftale: $e';
@@ -296,9 +342,9 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateStatus(String id, String newStatus) async {
+  Future<void> updateStatus(String id, String newStatus, DateTime? date) async {
     await _repo.updateStatus(id, newStatus);
-    markChanged(notify: true);
+    _bumpFlagsFor(date);
   }
 
   Future<bool> updateAppointmentFields(
@@ -398,7 +444,7 @@ class AppointmentViewModel extends ChangeNotifier {
           await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
         } catch (_) {}
       }
-      markChanged();
+      markChanged(dateTime!);
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke opdatere: $e';
@@ -439,13 +485,15 @@ class AppointmentViewModel extends ChangeNotifier {
     // 1) return cached if no changes and we have it
     switch (seg) {
       case Segment.month:
-        if (!hasChanges && _summaryMonth != null) return _summaryMonth!;
+        if (!hasMonthSumChanges && _summaryMonth != null) return _summaryMonth!;
         break;
       case Segment.year:
-        if (!hasChanges && _summaryYear != null) return _summaryYear!;
+        if (!hasYearSumChanges && _summaryYear != null) return _summaryYear!;
         break;
       case Segment.total:
-        if (!hasChanges && _summaryTotal != null) return _summaryTotal!;
+        if (!hasAllTimeSumChanges && _summaryTotal != null) {
+          return _summaryTotal!;
+        }
         break;
     }
 
@@ -472,7 +520,6 @@ class AppointmentViewModel extends ChangeNotifier {
         _summaryTotal = result;
         break;
     }
-
     return result;
   }
 
@@ -480,13 +527,15 @@ class AppointmentViewModel extends ChangeNotifier {
   getStatusCountsBySegment(Segment seg) async {
     switch (seg) {
       case Segment.month:
-        if (!hasChanges && _statusMonth != null) return _statusMonth!;
+        if (!hasMonthCountChanges && _statusMonth != null) return _statusMonth!;
         break;
       case Segment.year:
-        if (!hasChanges && _statusYear != null) return _statusYear!;
+        if (!hasYearCountChanges && _statusYear != null) return _statusYear!;
         break;
       case Segment.total:
-        if (!hasChanges && _statusTotal != null) return _statusTotal!;
+        if (!hasAllTimeCountChanges && _statusTotal != null) {
+          return _statusTotal!;
+        }
         break;
     }
 
@@ -539,12 +588,12 @@ class AppointmentViewModel extends ChangeNotifier {
     return (paid: r[0], waiting: r[1], missing: r[2], uninvoiced: r[3]);
   }
 
-  Future<void> delete(String id) async {
+  Future<void> delete(String id, DateTime date) async {
     try {
       await _imageStorage.deleteAppointmentImages(id);
     } catch (_) {}
     await _repo.deleteAppointment(id);
-    markChanged();
+    markChanged(date);
   }
 
   // Detail helpers

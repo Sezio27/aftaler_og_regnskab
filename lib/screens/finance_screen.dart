@@ -38,9 +38,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
     Tabs.year => Segment.year,
     Tabs.lifetime => Segment.total,
   };
+  bool _isCurrentRoute(BuildContext context) =>
+      (ModalRoute.of(context)?.isCurrent ?? true);
 
   @override
   Widget build(BuildContext context) {
+    final isCurrent = _isCurrentRoute(context);
     final cs = Theme.of(context).colorScheme;
     final nf = NumberFormat.currency(
       locale: 'da',
@@ -80,11 +83,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             // Summary cards (income + count) — only these rebuild when VM data changes.
             FutureBuilder<({int count, double income})>(
-              key: ValueKey('summary-$seg-${vm.hasChanges}'),
-              future: vm.getSummaryBySegment(_segForTab(_tab)),
+              future: vm.getSummaryBySegment(seg),
               initialData: _sumCache[_tab],
               builder: (_, snapshot) {
-                if (snapshot.hasData) _sumCache[_tab] = snapshot.data!;
+                if (snapshot.hasData) {
+                  _sumCache[_tab] = snapshot.data!;
+                  // clear after both builders had a chance to run this frame
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    vm.clearSumChangesFor(seg);
+                  });
+                }
                 final data =
                     snapshot.data ??
                     (_sumCache[_tab] ?? (count: 0, income: 0.0));
@@ -117,7 +125,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
             FutureBuilder<
               ({int paid, int waiting, int missing, int uninvoiced})
             >(
-              key: ValueKey('status-$seg-${vm.hasChanges}'),
               future: vm.getStatusCountsBySegment(_segForTab(_tab)),
               initialData: _statusCache[_tab],
               builder: (_, snapshot) {
@@ -126,6 +133,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     (_statusCache[_tab] ??
                         (paid: 0, waiting: 0, missing: 0, uninvoiced: 0));
                 _statusCache[_tab] = s;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  vm.clearCountChangesFor(seg);
+                });
 
                 final k = [
                   (
@@ -283,11 +293,20 @@ class _FinanceScreenState extends State<FinanceScreen> {
                               dateText: dateText,
                               price: a.price,
                               status: a.status,
-                              onSeeDetails: () {},
+                              onSeeDetails: () {
+                                context.pushNamed(
+                                  AppRoute.appointmentDetails.name,
+                                  pathParameters: {'id': a.id},
+                                );
+                              },
                               onChangeStatus: (newStatus) {
                                 context
                                     .read<AppointmentViewModel>()
-                                    .updateStatus(a.id, newStatus.label);
+                                    .updateStatus(
+                                      a.id,
+                                      newStatus.label,
+                                      a.time,
+                                    );
                               },
                             );
                           },

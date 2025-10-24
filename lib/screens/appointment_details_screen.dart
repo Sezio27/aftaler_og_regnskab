@@ -114,9 +114,11 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                     await handleDelete(
                       context: context,
                       componentLabel: 'Aftale',
-                      onDelete: () => context
-                          .read<AppointmentViewModel>()
-                          .delete(widget.appointment.id!),
+                      onDelete: () =>
+                          context.read<AppointmentViewModel>().delete(
+                            widget.appointment.id!,
+                            widget.appointment.dateTime!,
+                          ),
                     );
                   },
                 ),

@@ -42,7 +42,6 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
     final sel = PaymentStatusX.fromString(widget.status);
 
     return CustomCard(
-      width: double.infinity,
       constraints: const BoxConstraints(minHeight: 88),
       field: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -52,25 +51,41 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                StatusIconRound(status: widget.status),
-
-                Column(
-                  children: [
-                    Text(
-                      widget.title,
-                      style: AppTypography.acTtitle,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      widget.service,
-                      style: AppTypography.acSubtitle,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                Expanded(
+                  child: Row(
+                    children: [
+                      StatusIconRound(status: widget.status),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: AppTypography.acTtitle,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            widget.service,
+                            style: AppTypography.acSubtitle,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                Text(widget.dateText, style: AppTypography.f1),
+                SizedBox(
+                  width: 110,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(widget.dateText, style: AppTypography.f1),
 
-                Text(formatDKK(widget.price), style: AppTypography.num3),
+                      Text(formatDKK(widget.price), style: AppTypography.num3),
+                    ],
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 4),

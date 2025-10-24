@@ -3,6 +3,7 @@ import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
+import 'package:aftaler_og_regnskab/widgets/appointment_card_status.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
@@ -27,6 +28,7 @@ class AllAppointmentsScreen extends StatefulWidget {
 class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final Map<String, String> _statusOverride = {};
 
   String _query = '';
   ApptType _type = ApptType.all;
@@ -89,6 +91,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
     if (!_to.isBefore(_from)) {
       // optional: scroll to top so the user sees new results
       if (_scrollCtrl.hasClients) _scrollCtrl.jumpTo(0);
+      _statusOverride.clear();
       context.read<AppointmentViewModel>().beginListRange(_from, _to);
     }
   }
@@ -101,7 +104,8 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
 
     // Filter visible items for the list (status/type/query)
     final items = vm.listCards.where((a) {
-      return _statusMatches(a.status) &&
+      final effectiveStatus = _statusOverride[a.id] ?? a.status;
+      return _statusMatches(effectiveStatus) &&
           _typeMatches(_type, a) &&
           _queryMatches(_query, a.clientName, a.serviceName);
     }).toList();
@@ -276,21 +280,30 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
               TimeOfDay.fromDateTime(a.time),
               alwaysUse24HourFormat: true,
             );
-
+            final effectiveStatus = _statusOverride[a.id] ?? a.status;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: AppointmentCard(
-                avatar: Avatar(imageUrl: a.imageUrl),
+              child: AppointmentStatusCard(
                 title: a.clientName,
-                subtitle: a.serviceName,
+                service: a.serviceName,
                 price: a.price,
-                date: dateText,
-                time: timeText,
-                color: statusColor(a.status),
-                onTap: () {
+                dateText: dateText,
+                status: effectiveStatus,
+                onSeeDetails: () {
                   context.pushNamed(
                     AppRoute.appointmentDetails.name,
                     pathParameters: {'id': a.id},
+                  );
+                },
+                onChangeStatus: (newStatus) {
+                  setState(() {
+                    _statusOverride[a.id] =
+                        newStatus.label; // instant UI change
+                  });
+                  context.read<AppointmentViewModel>().updateStatus(
+                    a.id,
+                    newStatus.label,
+                    a.time,
                   );
                 },
               ),

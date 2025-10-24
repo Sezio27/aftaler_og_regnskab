@@ -58,6 +58,18 @@ DateTime addWeeks(DateTime monday, int delta) =>
   return (start: start, end: start.add(const Duration(days: 14)));
 }
 
+bool isInCurrentMonth(DateTime date) {
+  final now = DateTime.now();
+  final d = date.toLocal();
+  return !d.isBefore(startOfMonth(now)) && !d.isAfter(endOfMonthInclusive(now));
+}
+
+bool isInCurrentYear(DateTime date) {
+  final now = DateTime.now();
+  final d = date.toLocal();
+  return d.year == now.year;
+}
+
 // -------- ISO week utilities --------
 // ISO week number: week containing Thursday is week of the year.
 int isoWeekNumber(DateTime date) {

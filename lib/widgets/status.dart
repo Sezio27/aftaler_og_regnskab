@@ -106,11 +106,11 @@ class StatusIconRound extends StatelessWidget {
       switchOutCurve: Curves.easeIn,
       child: Container(
         key: ValueKey(status), // animate on change
-        width: 26,
-        height: 26,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
         alignment: Alignment.center,
-        child: Icon(icon, size: 18, color: fg),
+        child: Icon(icon, size: 24, color: fg),
       ),
     );
   }
