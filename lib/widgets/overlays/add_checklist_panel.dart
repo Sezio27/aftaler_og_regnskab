@@ -1,6 +1,7 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
+import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +11,10 @@ class AddChecklistPanel extends StatefulWidget {
   const AddChecklistPanel({super.key});
 
   @override
-  State<AddChecklistPanel> createState() => _AddServicePanelState();
+  State<AddChecklistPanel> createState() => _AddChecklistPanelState();
 }
 
-class _AddServicePanelState extends State<AddChecklistPanel> {
+class _AddChecklistPanelState extends State<AddChecklistPanel> {
   int? _active;
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
@@ -42,6 +43,34 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _createChecklist(ChecklistViewModel vm) async {
+    FocusScope.of(context).unfocus();
+
+    final pointTexts = _points
+        .map((c) => c.text.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    final ok = await vm.addChecklist(
+      name: _nameCtrl.text,
+      description: _descCtrl.text,
+      pointTexts: pointTexts,
+    );
+
+    if (!mounted) return;
+
+    if (ok) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Checkliste tilføjet')));
+      context.pop();
+    } else if (vm.error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(vm.error!)));
+    }
   }
 
   @override
@@ -157,63 +186,11 @@ class _AddServicePanelState extends State<AddChecklistPanel> {
             }),
 
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    text: "Annuller",
-                    color: cs.onPrimary,
-                    borderStroke: Border.all(
-                      color: cs.onSurface.withAlpha(100),
-                      width: 0.6,
-                    ),
-                    elevation: 0,
-                    borderRadius: 14,
-                    textStyle: AppTypography.b2.copyWith(color: cs.onSurface),
-                    onTap: () => context.pop(),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: CustomButton(
-                    text: "Tilføj checkliste",
-                    borderRadius: 14,
-                    textStyle: AppTypography.b3,
-                    onTap: vm.saving
-                        ? () {}
-                        : () async {
-                            final pointTexts = _points
-                                .map((c) => c.text)
-                                .map((t) => t.trim())
-                                .where((t) => t.isNotEmpty)
-                                .toList();
-                            // Let the VM do the work
-                            final ok = await context
-                                .read<ChecklistViewModel>()
-                                .addChecklist(
-                                  name: _nameCtrl.text,
-                                  description: _descCtrl.text,
-                                  pointTexts: pointTexts,
-                                );
-
-                            if (!mounted) return;
-
-                            if (ok) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Checkliste tilføjet'),
-                                ),
-                              );
-                              context.pop(); // close panel
-                            } else if (vm.error != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(vm.error!)),
-                              );
-                            }
-                          },
-                  ),
-                ),
-              ],
+            AddActionRow(
+              name: 'checkliste',
+              saving: vm.saving,
+              onCancel: vm.saving ? () {} : () => context.pop(),
+              onConfirm: vm.saving ? () {} : () => _createChecklist(vm),
             ),
           ],
         ),

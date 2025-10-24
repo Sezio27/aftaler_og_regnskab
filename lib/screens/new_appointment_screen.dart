@@ -30,7 +30,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class NewAppointmentScreen extends StatefulWidget {
-  const NewAppointmentScreen({super.key});
+  const NewAppointmentScreen({super.key, this.initialDate});
+  final DateTime? initialDate;
 
   @override
   State<NewAppointmentScreen> createState() => _NewAppointmentScreenState();
@@ -54,8 +55,8 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   String? _selectedServiceId;
 
   final Set<String> _selectedChecklistIds = {};
+  late DateTime _date;
 
-  DateTime _date = DateTime.now();
   TimeOfDay _time = const TimeOfDay(hour: 12, minute: 0);
   int? _active;
   List<({Uint8List bytes, String name, String? mimeType})> _images = [];
@@ -63,6 +64,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   @override
   void initState() {
     super.initState();
+    _date = widget.initialDate ?? DateTime.now();
     _clientVM = context.read<ClientViewModel>();
     _serviceVM = context.read<ServiceViewModel>();
     _checklistVM = context.read<ChecklistViewModel>();
@@ -153,10 +155,31 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           child: Column(
                             children: [
                               if (_selectedClientId == null) ...[
-                                CustomSearchBar(
+                                CupertinoSearchTextField(
                                   controller: clientSearchCtrl,
+                                  placeholder: 'Søg',
                                   onChanged: clientVM.setClientSearch,
+                                  onSubmitted: (_) =>
+                                      FocusScope.of(context).unfocus(),
+                                  itemColor: cs.onSurface.withAlpha(180),
+                                  style: AppTypography.b2.copyWith(
+                                    color: cs.onSurface,
+                                  ),
+                                  placeholderStyle: AppTypography.b2.copyWith(
+                                    color: cs.onSurface.withAlpha(180),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cs.onPrimary,
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.circular(10),
+                                    ),
+                                  ),
                                 ),
+
                                 const SizedBox(height: 10),
                               ],
 
@@ -211,10 +234,31 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                             children: [
                               const SizedBox(height: 6),
                               if (_selectedServiceId == null) ...[
-                                CustomSearchBar(
+                                CupertinoSearchTextField(
                                   controller: serviceSearchCtrl,
+                                  placeholder: 'Søg',
                                   onChanged: serviceVM.setServiceSearch,
+                                  onSubmitted: (_) =>
+                                      FocusScope.of(context).unfocus(),
+                                  itemColor: cs.onSurface.withAlpha(180),
+                                  style: AppTypography.b2.copyWith(
+                                    color: cs.onSurface,
+                                  ),
+                                  placeholderStyle: AppTypography.b2.copyWith(
+                                    color: cs.onSurface.withAlpha(180),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cs.onPrimary,
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.circular(10),
+                                    ),
+                                  ),
                                 ),
+
                                 const SizedBox(height: 10),
                               ],
                               //Her
@@ -266,10 +310,31 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           title: 'Tilknyt checklister',
                           child: Column(
                             children: [
-                              CustomSearchBar(
+                              CupertinoSearchTextField(
                                 controller: checklistSearchCtrl,
+                                placeholder: 'Søg',
                                 onChanged: checklistVM.setChecklistSearch,
+                                onSubmitted: (_) =>
+                                    FocusScope.of(context).unfocus(),
+                                itemColor: cs.onSurface.withAlpha(180),
+                                style: AppTypography.b2.copyWith(
+                                  color: cs.onSurface,
+                                ),
+                                placeholderStyle: AppTypography.b2.copyWith(
+                                  color: cs.onSurface.withAlpha(180),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: cs.onPrimary,
+                                  borderRadius: const BorderRadius.all(
+                                    Radius.circular(10),
+                                  ),
+                                ),
                               ),
+
                               const SizedBox(height: 10),
 
                               ChecklistList(
@@ -358,7 +423,11 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                             hintText: priceHint,
                             suffixText: "DKK",
                             keyboardType: TextInputType.number,
-                            hintStyle: AppTypography.num6,
+                            hintStyle: priceHint == "Indtast pris"
+                                ? null
+                                : AppTypography.num6.copyWith(
+                                    color: cs.onSurface.withAlpha(200),
+                                  ),
                             controller: _customPriceCtrl,
                             fill: cs.onPrimary,
                             strokeColor: _active != 1

@@ -81,7 +81,7 @@ class StatusPill extends StatelessWidget {
           child: Text(
             label,
             style: AppTypography.button2.copyWith(
-              color: selected ? cs.onPrimary : cs.onSurface, // text color
+              color: selected ? Colors.white : cs.onSurface, // text color
             ),
           ),
         ),

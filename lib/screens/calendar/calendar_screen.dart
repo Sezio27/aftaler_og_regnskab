@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_grid.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_switcher.dart';
@@ -11,6 +12,8 @@ import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
+import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -70,13 +73,14 @@ class _WeekViewBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final selectedDay = context.select<CalendarViewModel, DateTime>(
       (vm) => vm.selectedDay,
     );
 
     final calVm = context.watch<CalendarViewModel>();
 
-    final apptVm = context.read<AppointmentViewModel>();
+    final apptVm = context.watch<AppointmentViewModel>();
 
     final weekStart = mondayOf(calVm.visibleWeek);
     final weekEnd = weekStart.add(const Duration(days: 6));
@@ -89,9 +93,9 @@ class _WeekViewBody extends StatelessWidget {
       children: [
         const SizedBox(height: 14),
         const WeekSwitcher(),
-        const SizedBox(height: 20),
+        const SizedBox(height: 18),
         const WeekdayHeader(weekView: true),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         Expanded(
           child: FutureBuilder<List<AppointmentCardModel>>(
             key: ValueKey(
@@ -99,47 +103,76 @@ class _WeekViewBody extends StatelessWidget {
             ),
             future: apptVm.cardsForDate(selectedDay),
             builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
+              final waiting = snap.connectionState == ConnectionState.waiting;
               final items = snap.data ?? const [];
-              if (items.isEmpty) {
-                return const _EmptyDayState();
+
+              Widget listPart;
+              if (waiting) {
+                listPart = const Center(child: CircularProgressIndicator());
+              } else if (items.isEmpty) {
+                listPart = const _EmptyDayState();
+              } else {
+                listPart = ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, i) {
+                    final a = items[i];
+                    final dateText = DateFormat('d/M', 'da').format(a.time);
+                    final timeText = MaterialLocalizations.of(context)
+                        .formatTimeOfDay(
+                          TimeOfDay.fromDateTime(a.time),
+                          alwaysUse24HourFormat: true,
+                        );
+                    return AppointmentCard(
+                      avatar: Avatar(imageUrl: a.imageUrl),
+                      title: a.clientName,
+                      subtitle: a.serviceName,
+                      price: a.price,
+                      date: dateText,
+                      time: timeText,
+                      color: statusColor(a.status),
+                      onTap: () {
+                        context.pushNamed(
+                          AppRoute.appointmentDetails.name,
+                          pathParameters: {'id': a.id},
+                        );
+                      },
+                    );
+                  },
+                );
               }
 
-              return ListView.separated(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, i) {
-                  final a = items[i];
-                  final dateText = DateFormat('d/M', 'da').format(a.time);
-                  final timeText = MaterialLocalizations.of(context)
-                      .formatTimeOfDay(
-                        TimeOfDay.fromDateTime(a.time),
-                        alwaysUse24HourFormat: true,
-                      );
-
-                  return AppointmentCard(
-                    avatar: Avatar(imageUrl: a.imageUrl),
-                    title: a.clientName,
-                    subtitle: a.serviceName,
-                    price: a.price,
-                    date: dateText,
-                    time: timeText,
-                    color: statusColor(a.status),
-                    onTap: () {
-                      context.pushNamed(
-                        'appointmentDetails',
-                        pathParameters: {'id': a.id},
-                      );
-                    },
-                  );
-                },
+              return Column(
+                children: [
+                  Expanded(child: listPart),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.center,
+                    child: CustomButton(
+                      text: "Ny aftale",
+                      icon: Icon(Icons.add, size: 18, color: cs.onSurface),
+                      color: cs.surface,
+                      width: 170,
+                      borderRadius: 18,
+                      textStyle: AppTypography.button2.copyWith(
+                        color: cs.onSurface,
+                      ),
+                      borderStroke: Border.all(color: cs.secondary, width: 1),
+                      // pass the selected day to the route
+                      onTap: () => context.pushNamed(
+                        AppRoute.newAppointment.name,
+                        queryParameters: {
+                          'date': selectedDay.toIso8601String(),
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               );
             },
           ),

@@ -60,13 +60,12 @@ class AppointmentCard extends StatelessWidget {
                   children: [
                     //Top row
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: AppTypography.acTtitle,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Text(
+                          title,
+                          style: AppTypography.acTtitle,
+                          overflow: TextOverflow.ellipsis,
                         ),
 
                         Text(
@@ -80,10 +79,9 @@ class AppointmentCard extends StatelessWidget {
                     //Bottom row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Service (flex 5)
                         Expanded(
-                          flex: 5,
                           child: Text(
                             (subtitle?.trim().isNotEmpty ?? false)
                                 ? subtitle!.trim()
@@ -94,17 +92,9 @@ class AppointmentCard extends StatelessWidget {
                           ),
                         ),
 
-                        // spacer (flex 1)
-                        const Expanded(flex: 1, child: SizedBox.shrink()),
-
-                        // timeblock (flex 2)
-                        Expanded(
-                          flex: 2,
-                          child: FittedBox(
-                            // allows this chunk to shrink without overflow
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Row(
+                        Row(
+                          children: [
+                            Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.schedule, size: 16),
@@ -116,45 +106,34 @@ class AppointmentCard extends StatelessWidget {
                                     Text(time ?? '', style: AppTypography.f1),
                                   ],
                                 ),
+                                SizedBox(width: 20),
+                                Row(
+                                  children: const [
+                                    // phone (flex 1)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Icon(
+                                        Icons.phone_outlined,
+                                        size: 24,
+                                        color: AppColors.peach,
+                                      ),
+                                    ),
+                                    // empty space (flex 1)
+                                    SizedBox(width: 20),
+                                    // text (flex 1)
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Icon(
+                                        Icons.chat_bubble_outline,
+                                        color: AppColors.peach,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ),
-                        ),
-
-                        // spacer (flex 1)
-                        const Expanded(flex: 1, child: SizedBox.shrink()),
-
-                        // phone + text (flex 3)
-                        Expanded(
-                          flex: 3,
-                          child: Row(
-                            children: const [
-                              // phone (flex 1)
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Icon(
-                                    Icons.phone_outlined,
-                                    size: 24,
-                                    color: AppColors.peach,
-                                  ),
-                                ),
-                              ),
-                              // empty space (flex 1)
-                              Expanded(child: SizedBox.shrink()),
-                              // text (flex 1)
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Icon(
-                                    Icons.chat_bubble_outline,
-                                    color: AppColors.peach,
-                                    size: 24,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ],
                     ),

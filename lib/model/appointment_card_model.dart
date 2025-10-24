@@ -15,6 +15,7 @@ class AppointmentCardModel {
   final String? duration;
   final String? price;
   final String status;
+  final bool isBusiness;
 
   const AppointmentCardModel({
     required this.id,
@@ -27,5 +28,6 @@ class AppointmentCardModel {
     this.duration,
     this.price,
     required this.status,
+    this.isBusiness = false,
   });
 }

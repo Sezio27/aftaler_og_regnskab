@@ -2,13 +2,12 @@ import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
+import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/photo_circle.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class AddServicePanel extends StatefulWidget {
@@ -55,6 +54,31 @@ class _AddServicePanelState extends State<AddServicePanel> {
     });
   }
 
+  Future<void> _createService(ServiceViewModel vm) async {
+    FocusScope.of(context).unfocus();
+
+    final created = await vm.addService(
+      name: _nameCtrl.text,
+      description: _descCtrl.text,
+      duration: _durCtrl.text,
+      price: _priceCtrl.text,
+      image: _photo,
+    );
+
+    if (!mounted) return;
+
+    if (created) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Service tilføjet')));
+      context.pop();
+    } else if (vm.error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(vm.error!)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -75,10 +99,7 @@ class _AddServicePanelState extends State<AddServicePanel> {
                 alignment: Alignment.center,
                 children: [
                   Center(
-                    child: Text(
-                      'Tilføj ny service',
-                      style: AppTypography.b1.copyWith(color: cs.onSurface),
-                    ),
+                    child: Text('Tilføj ny service', style: AppTypography.b1),
                   ),
                   Positioned(
                     right: 0,
@@ -161,59 +182,11 @@ class _AddServicePanelState extends State<AddServicePanel> {
               ),
 
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    text: "Annuller",
-                    color: cs.onPrimary,
-                    borderStroke: Border.all(
-                      color: cs.onSurface.withAlpha(100),
-                      width: 0.6,
-                    ),
-                    elevation: 0,
-                    borderRadius: 14,
-                    textStyle: AppTypography.b2.copyWith(color: cs.onSurface),
-                    onTap: vm.saving ? () {} : () => context.pop(),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: CustomButton(
-                    text: "Tilføj service",
-                    borderRadius: 14,
-                    textStyle: AppTypography.b3,
-                    onTap: vm.saving
-                        ? () {}
-                        : () async {
-                            final created = await context
-                                .read<ServiceViewModel>()
-                                .addService(
-                                  name: _nameCtrl.text,
-                                  description: _descCtrl.text,
-                                  duration: _durCtrl.text,
-                                  price: _priceCtrl.text,
-                                  image: _photo,
-                                );
-
-                            if (!mounted) return;
-
-                            if (created) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Service tilføjet'),
-                                ),
-                              );
-                              context.pop();
-                            } else if (vm.error != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(vm.error!)),
-                              );
-                            }
-                          },
-                  ),
-                ),
-              ],
+            AddActionRow(
+              name: 'service',
+              saving: vm.saving,
+              onCancel: vm.saving ? () {} : () => context.pop(),
+              onConfirm: vm.saving ? () {} : () => _createService(vm),
             ),
           ],
         ),

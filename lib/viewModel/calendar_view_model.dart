@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
@@ -5,8 +6,8 @@ enum Tabs { month, week }
 
 class CalendarViewModel extends ChangeNotifier {
   CalendarViewModel({DateTime? initial})
-    : _visibleMonth = _getMonth(initial ?? DateTime.now()),
-      _visibleWeek = _getWeek(initial ?? DateTime.now());
+    : _visibleMonth = getMonth(initial ?? DateTime.now()),
+      _visibleWeek = getWeek(initial ?? DateTime.now());
   DateTime _selectedDay = DateTime.now();
   DateTime get selectedDay => _selectedDay;
 
@@ -15,7 +16,7 @@ class CalendarViewModel extends ChangeNotifier {
     final d = DateTime(day.year, day.month, day.day);
     if (_selectedDay == d) return;
     _selectedDay = d;
-    _visibleWeek = _getWeek(d);
+    _visibleWeek = getWeek(d);
     notifyListeners();
   }
 
@@ -26,74 +27,57 @@ class CalendarViewModel extends ChangeNotifier {
   String get monthTitle => DateFormat('MMMM y', 'da').format(_visibleMonth);
 
   void prevMonth() {
-    _visibleMonth = _addMonths(_visibleMonth, -1);
+    _visibleMonth = addMonths(_visibleMonth, -1);
     notifyListeners();
   }
 
   void nextMonth() {
-    _visibleMonth = _addMonths(_visibleMonth, 1);
+    _visibleMonth = addMonths(_visibleMonth, 1);
     notifyListeners();
   }
 
   void jumpToCurrentMonth() {
-    _visibleMonth = _getMonth(DateTime.now());
+    _visibleMonth = getMonth(DateTime.now());
     notifyListeners();
-  }
-
-  static DateTime _getMonth(DateTime dt) => DateTime(dt.year, dt.month, 1);
-
-  static DateTime _addMonths(DateTime base, int delta) {
-    final m = base.month + delta;
-    final y = m == 0
-        ? base.year - 1
-        : m == 13
-        ? base.year + 1
-        : base.year;
-    final nm = ((m - 1) % 12) + 1;
-
-    return DateTime(y, nm, 1);
   }
 
   // -------- Week state (Monday-based) --------
   DateTime _visibleWeek; // Monday of visible week
   DateTime get visibleWeek => _visibleWeek;
 
-  /// ISO-like title: "Uge 37, 2025"
+  /// ISO-like title: "Uge 1, 2026"
   String get weekTitle =>
-      'Uge ${_isoWeekNumber(_visibleWeek)}, ${_weekYear(_visibleWeek)}';
+      'Uge ${isoWeekNumber(_visibleWeek)}, ${weekYear(_visibleWeek)}';
 
-  /// Optional sublabel for UI: e.g. "September 2025"
-  String get weekSubTitle => DateFormat('MMMM y', 'da').format(_visibleWeek);
+  /// Use the ISO anchor (Thursday) so month/year line up with week-year.
+  String get weekSubTitle {
+    final anchor = toThursday(_visibleWeek);
+    return DateFormat('MMMM y', 'da').format(anchor);
+  }
 
   /// The 7 dates (Mon..Sun) of the visible week.
   List<DateTime> get weekDays =>
       List.generate(7, (i) => _visibleWeek.add(Duration(days: i)));
 
   void prevWeek() {
-    _visibleWeek = _addWeeks(_visibleWeek, -1);
+    final m = addWeeks(_visibleWeek, -1);
+    _visibleWeek = m;
+    _selectedDay = m;
     notifyListeners();
   }
 
   void nextWeek() {
-    _visibleWeek = _addWeeks(_visibleWeek, 1);
+    final m = addWeeks(_visibleWeek, 1);
+    _visibleWeek = m;
+    _selectedDay = m;
     notifyListeners();
   }
 
   void jumpToCurrentWeek() {
     _selectedDay = DateTime.now();
-    _visibleWeek = _getWeek(DateTime.now());
+    _visibleWeek = getWeek(DateTime.now());
     notifyListeners();
   }
-
-  static DateTime _getWeek(DateTime dt) {
-    // Normalize to local date (midnight), then step back to Monday.
-    final d = DateTime(dt.year, dt.month, dt.day);
-    final shift = (d.weekday - DateTime.monday) % 7; // Mon=1..Sun=7
-    return d.subtract(Duration(days: shift));
-  }
-
-  static DateTime _addWeeks(DateTime monday, int delta) =>
-      monday.add(Duration(days: 7 * delta));
 
   // -------- Tabs --------
   Tabs _tab = Tabs.month;
@@ -102,27 +86,5 @@ class CalendarViewModel extends ChangeNotifier {
     if (_tab == value) return;
     _tab = value;
     notifyListeners();
-  }
-
-  // -------- ISO week utilities --------
-  // ISO week number: week containing Thursday is week of the year.
-  static int _isoWeekNumber(DateTime date) {
-    final thursday = _toThursday(date);
-    final firstThursday = _toThursday(DateTime(thursday.year, 1, 4));
-    return (thursday.difference(_mondayOf(firstThursday)).inDays ~/ 7) + 1;
-  }
-
-  // ISO week-year (week may belong to prev/next year)
-  static int _weekYear(DateTime date) => _toThursday(date).year;
-
-  static DateTime _toThursday(DateTime d) => DateTime(
-    d.year,
-    d.month,
-    d.day,
-  ).add(Duration(days: (4 - (d.weekday == 7 ? 0 : d.weekday))));
-
-  static DateTime _mondayOf(DateTime d) {
-    final shift = (d.weekday - DateTime.monday) % 7;
-    return DateTime(d.year, d.month, d.day).subtract(Duration(days: shift));
   }
 }

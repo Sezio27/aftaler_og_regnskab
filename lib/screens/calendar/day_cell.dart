@@ -1,7 +1,9 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
+import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
+import 'package:provider/provider.dart';
 
 class DayCell extends StatelessWidget {
   const DayCell({
@@ -18,22 +20,29 @@ class DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Center(
-          child: Text(
-            '${date.day}',
-            style: AppTypography.date1.copyWith(
-              color: cs.onSurface.withAlpha(inCurrentMonth ? 255 : 150),
+    return InkWell(
+      splashFactory: NoSplash.splashFactory,
+      onTap: () {
+        context.read<CalendarViewModel>().selectDay(date);
+        context.read<CalendarViewModel>().setTab(Tabs.week);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Text(
+              '${date.day}',
+              style: AppTypography.date1.copyWith(
+                color: cs.onSurface.withAlpha(inCurrentMonth ? 255 : 150),
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
-        ),
-        const SizedBox(height: 4),
+          const SizedBox(height: 4),
 
-        _MonthChipsArea(chips: monthChips),
-      ],
+          _MonthChipsArea(chips: monthChips),
+        ],
+      ),
     );
   }
 }
@@ -63,7 +72,7 @@ class _MonthChipsArea extends StatelessWidget {
           if (remaining > 0) ...[
             const SizedBox(height: 3),
             Text(
-              '...+ $remaining mere',
+              '+ $remaining mere',
               style: AppTypography.calChip.copyWith(
                 color: cs.onSurface.withAlpha(200),
               ),
@@ -89,7 +98,7 @@ class _ChipLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(left: 6, top: 4, bottom: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       decoration: BoxDecoration(
         color: statusColor(chip.status).withAlpha(220),
         borderRadius: BorderRadius.circular(6),

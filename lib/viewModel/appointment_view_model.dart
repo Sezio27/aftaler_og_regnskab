@@ -577,6 +577,9 @@ class AppointmentViewModel extends ChangeNotifier {
             duration: _serviceCache[appt.serviceId ?? '']?.duration,
             status: appt.status ?? 'ufaktureret',
             imageUrl: _clientCache[appt.clientId ?? '']?.image,
+            isBusiness: ((_clientCache[appt.clientId ?? '']?.cvr ?? '')
+                .trim()
+                .isNotEmpty),
           ),
     ];
   }
@@ -710,4 +713,170 @@ class AppointmentViewModel extends ChangeNotifier {
     }
     return null;
   }
+
+  // ===== List mode (paged months) =====
+  DateTime? _listStart, _listEnd;
+  List<DateTime> _listMonths = const [];
+  int _listNext = 0; // next month index to load
+  bool _listLoading = false;
+  bool _listHasMore = false;
+
+  final Map<DateTime, List<AppointmentModel>> _pagedByMonth =
+      {}; // monthStart -> items
+
+  List<AppointmentModel> _listAll = const [];
+  bool get listLoading => _listLoading;
+  bool get listHasMore => _listHasMore;
+
+  bool _isMonthLive(DateTime mStart) {
+    // live if covered by the initial pin OR already has a window subscription
+    if (_initialStart != null && _initialEnd != null) {
+      final mEnd = endOfMonthInclusive(mStart);
+      final coveredByInitial =
+          !mStart.isBefore(_initialStart!) && !mEnd.isAfter(_initialEnd!);
+      if (coveredByInitial) return true;
+    }
+    return _windowSubscriptions.containsKey(mStart);
+  }
+
+  List<DateTime> _monthsInRange(DateTime start, DateTime end) {
+    final first = startOfMonth(start);
+    final lastStart = startOfMonth(end);
+    final out = <DateTime>[];
+    for (var m = first; !m.isAfter(lastStart); m = addMonths(m, 1)) {
+      out.add(m);
+    }
+    return out;
+  }
+
+  Future<void> beginListRange(DateTime start, DateTime end) async {
+    _listStart = dateOnly(start);
+    _listEnd = endOfDayInclusive(dateOnly(end));
+    _pagedByMonth.clear();
+
+    _listMonths = _monthsInRange(_listStart!, _listEnd!);
+    _listNext = 0;
+    _listHasMore = _listMonths.isNotEmpty;
+
+    // Build initial union (will include live months already fetched)
+    _rebuildListUnion();
+    notifyListeners();
+
+    // Kick off the first one or two non-live months
+    await loadNextListMonth(count: 2);
+  }
+
+  Future<void> loadNextListMonth({int count = 1}) async {
+    if (!_listHasMore || _listLoading) return;
+    if (_listStart == null || _listEnd == null) return;
+
+    _listLoading = true;
+    notifyListeners();
+
+    var loadedAny = false;
+
+    try {
+      var remaining = count;
+      while (_listNext < _listMonths.length && remaining > 0) {
+        final mStart = _listMonths[_listNext];
+        _listNext++;
+
+        if (_isMonthLive(mStart)) {
+          // Already covered by initial/active listeners → skip read
+          continue;
+        }
+
+        final mEnd = endOfMonthInclusive(mStart);
+        final items = await _repo.getAppointmentsBetween(mStart, mEnd);
+        _pagedByMonth[mStart] = items;
+
+        // warm names for this month (optional)
+        await _prefetchClientsAndServices(mStart, mEnd);
+
+        remaining--;
+        loadedAny = true;
+      }
+    } finally {
+      _listHasMore = _listNext < _listMonths.length;
+      _listLoading = false;
+
+      if (loadedAny) _rebuildListUnion();
+      notifyListeners();
+    }
+  }
+
+  void _rebuildListUnion() {
+    if (_listStart == null || _listEnd == null) {
+      // list not active – nothing to build
+      return;
+    }
+
+    // Live data already in memory from calendar:
+    final live = <AppointmentModel>[
+      ..._initialAppointments,
+      for (final v in _windowAppointments.values) ...v,
+    ];
+
+    // Paged data:
+    final paged = <AppointmentModel>[
+      for (final v in _pagedByMonth.values) ...v,
+    ];
+
+    // Merge & de-dupe by id; let LIVE win on conflicts
+    final byId = <String, AppointmentModel>{};
+    for (final a in paged) {
+      final id = a.id;
+      if (id != null) byId[id] = a;
+    }
+    for (final a in live) {
+      final id = a.id;
+      if (id != null) byId[id] = a; // live overrides
+    }
+
+    // Filter to list range, sort newest first (or flip if you prefer)
+    final all =
+        byId.values.where((a) {
+          final dt = a.dateTime;
+          return dt != null &&
+              !dt.isBefore(_listStart!) &&
+              !dt.isAfter(_listEnd!);
+        }).toList()..sort(
+          (a, b) =>
+              (a.dateTime ?? DateTime(0)).compareTo(b.dateTime ?? DateTime(0)),
+        );
+
+    _listAll = all;
+  }
+
+  // Add this helper anywhere in the class (near your other mappers)
+  AppointmentCardModel _toCard(AppointmentModel appt) {
+    final client = _clientCache[appt.clientId ?? ''];
+    final service = _serviceCache[appt.serviceId ?? ''];
+    final chosenPrice = _firstNonEmpty([
+      _trimOrNull(appt.price),
+      _trimOrNull(service?.price),
+    ]);
+
+    final hasCvr = ((client?.cvr ?? '').trim().isNotEmpty);
+
+    return AppointmentCardModel(
+      id: appt.id!,
+      clientName: client?.name ?? '',
+      serviceName: service?.name ?? '',
+      phone: client?.phone,
+      email: client?.email,
+      time: appt.dateTime!,
+      price: chosenPrice,
+      duration: service?.duration,
+      status: appt.status ?? 'ufaktureret',
+      imageUrl: client?.image,
+      isBusiness: hasCvr,
+    );
+  }
+
+  // Expose listCards (used by AllAppointmentsScreen)
+  List<AppointmentCardModel> get listCards => _listAll
+      .where((a) => a.id != null && a.dateTime != null)
+      .map(_toCard)
+      .toList();
 }

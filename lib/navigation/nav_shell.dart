@@ -52,19 +52,14 @@ class _NavShellState extends State<NavShell> {
         widget.routeName ?? routeNameFromLocation(widget.location);
     final idx = tabIndexForRouteName(effectiveName);
     final hideBars = effectiveName == 'newAppointment';
-    final isCalendar = effectiveName == 'calendar';
+
     final appLayout = AppLayout(
       idx: idx,
       showNavBar: !hideBars,
       routeName: effectiveName,
       child: widget.child,
     );
-    if (isCalendar) {
-      return ChangeNotifierProvider(
-        create: (_) => CalendarViewModel(),
-        child: appLayout,
-      );
-    }
+
     return appLayout;
   }
 }

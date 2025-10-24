@@ -90,9 +90,9 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
       key: const PageStorageKey('appointmentDetailsScroll'),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          hPad,
+          hPad / 2,
           10,
-          hPad,
+          hPad / 2,
           50 + LayoutMetrics.navBarHeight(context),
         ),
         child: AnimatedSwitcher(

@@ -108,3 +108,53 @@ class EditActionsRow extends StatelessWidget {
     );
   }
 }
+
+class AddActionRow extends StatelessWidget {
+  const AddActionRow({
+    super.key,
+    required this.onCancel,
+    required this.onConfirm,
+    required this.saving,
+    required this.name,
+  });
+  final bool saving;
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: CustomButton(
+            text: "Annuller",
+            color: cs.onPrimary,
+            borderStroke: Border.all(color: cs.onSurface.withAlpha(200)),
+            elevation: 0,
+            borderRadius: 14,
+            textStyle: AppTypography.button3.copyWith(
+              color: cs.onSurface.withAlpha(200),
+            ),
+            onTap: saving ? () {} : onCancel,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: CustomButton(
+            text: !saving ? "Tilføj $name" : "",
+            icon: saving
+                ? CircularProgressIndicator(color: Colors.white)
+                : null,
+            onTap: saving ? () {} : onConfirm,
+            borderRadius: 14,
+            textStyle: AppTypography.button3.copyWith(
+              color: Colors.white.withAlpha(200),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

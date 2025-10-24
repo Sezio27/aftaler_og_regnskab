@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,6 +17,7 @@ Future<T?> showOverlayPanel<T>({
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, __, ___) {
       final curved = CurvedAnimation(parent: anim, curve: Curves.easeInOut);
+      final cs = Theme.of(context).colorScheme;
       return SafeArea(
         child: Stack(
           children: [
@@ -31,7 +33,7 @@ Future<T?> showOverlayPanel<T>({
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Material(
-                      color: Colors.white,
+                      color: cs.onPrimary,
                       elevation: 8,
                       borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,

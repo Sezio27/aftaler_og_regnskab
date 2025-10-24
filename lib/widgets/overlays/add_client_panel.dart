@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
+import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/photo_circle.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
@@ -59,6 +60,34 @@ class _AddClientPanelState extends State<AddClientPanel> {
     setState(() {
       _active = null;
     });
+  }
+
+  Future<void> _createClient(ClientViewModel vm) async {
+    FocusScope.of(context).unfocus();
+
+    final created = await vm.addClient(
+      name: _nameCtrl.text,
+      phone: _phoneCtrl.text,
+      email: _emailCtrl.text,
+      address: _addressCtrl.text,
+      city: _cityCtrl.text,
+      postal: _postalCtrl.text,
+      cvr: _cvrCtrl.text,
+      image: _photo,
+    );
+
+    if (!mounted) return;
+
+    if (created) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Klient tilføjet')));
+      context.pop();
+    } else if (vm.error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(vm.error!)));
+    }
   }
 
   @override
@@ -189,63 +218,11 @@ class _AddClientPanelState extends State<AddClientPanel> {
               ),
 
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    text: "Annuller",
-                    color: cs.onPrimary,
-                    borderStroke: Border.all(
-                      color: cs.onSurface.withAlpha(100),
-                      width: 0.6,
-                    ),
-                    elevation: 0,
-                    borderRadius: 14,
-                    textStyle: AppTypography.b2.copyWith(color: cs.onSurface),
-                    onTap: vm.saving ? () {} : () => context.pop(),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: CustomButton(
-                    text: vm.saving ? "Tilføjer..." : "Tilføj klient",
-                    borderRadius: 14,
-                    textStyle: AppTypography.b3,
-                    onTap: vm.saving
-                        ? () {}
-                        : () async {
-                            // Let the VM do the work
-                            final created = await context
-                                .read<ClientViewModel>()
-                                .addClient(
-                                  name: _nameCtrl.text,
-                                  phone: _phoneCtrl.text,
-                                  email: _emailCtrl.text,
-                                  address: _addressCtrl.text,
-                                  city: _cityCtrl.text,
-                                  postal: _postalCtrl.text,
-                                  cvr: _cvrCtrl.text,
-                                  image: _photo,
-                                );
-
-                            if (!mounted) return;
-
-                            if (created) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Klient tilføjet'),
-                                ),
-                              );
-                              context.pop(); // close panel
-                            } else if (vm.error != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(vm.error!)),
-                              );
-                            }
-                          },
-                  ),
-                ),
-              ],
+            AddActionRow(
+              name: 'klient',
+              saving: vm.saving,
+              onCancel: vm.saving ? () {} : () => context.pop(),
+              onConfirm: vm.saving ? () {} : () => _createClient(vm),
             ),
           ],
         ),

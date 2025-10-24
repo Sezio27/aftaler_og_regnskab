@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 
-enum PaymentStatus { paid, waiting, missing, uninvoiced }
+enum PaymentStatus { all, paid, waiting, missing, uninvoiced }
 
 extension PaymentStatusX on PaymentStatus {
   String get label => switch (this) {
+    PaymentStatus.all => 'Alle',
     PaymentStatus.paid => 'Betalt',
     PaymentStatus.waiting => 'Afventer',
     PaymentStatus.missing => 'Forfalden',
@@ -13,6 +14,8 @@ extension PaymentStatusX on PaymentStatus {
 
   static PaymentStatus fromString(String? s) {
     switch ((s ?? '').trim().toLowerCase()) {
+      case 'alle':
+        return PaymentStatus.all;
       case 'betalt':
         return PaymentStatus.paid;
       case 'afventer':

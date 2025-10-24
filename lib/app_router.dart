@@ -13,9 +13,11 @@ import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_sc
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/service_details_screen.dart';
+import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import 'auth_gate.dart';
 import 'screens/home_screen.dart';
@@ -102,11 +104,16 @@ GoRouter createRouter() {
       ),
 
       ShellRoute(
-        builder: (context, state, child) => NavShell(
-          location: state.uri.toString(),
-          routeName: state.name,
-          child: child,
-        ),
+        builder: (context, state, child) {
+          return ChangeNotifierProvider(
+            create: (_) => CalendarViewModel(),
+            child: NavShell(
+              location: state.uri.toString(),
+              routeName: state.name,
+              child: child,
+            ),
+          );
+        },
         routes: [
           GoRoute(
             path: '/home',
@@ -141,8 +148,15 @@ GoRouter createRouter() {
           GoRoute(
             path: '/appointments/new',
             name: AppRoute.newAppointment.name,
-            pageBuilder: (_, state) =>
-                const NoTransitionPage(child: NewAppointmentScreen()),
+            pageBuilder: (_, state) {
+              final dateStr = state.uri.queryParameters['date'];
+              final initialDate = dateStr != null
+                  ? DateTime.tryParse(dateStr)
+                  : null;
+              return NoTransitionPage(
+                child: NewAppointmentScreen(initialDate: initialDate),
+              );
+            },
           ),
           GoRoute(
             path: '/appointments/all',
