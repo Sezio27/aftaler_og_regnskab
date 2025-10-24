@@ -20,7 +20,7 @@ class AppointmentStatusCard extends StatefulWidget {
   final String title;
   final String service;
   final String dateText;
-  final String priceText;
+  final double? priceText;
   final String status;
   final ValueChanged<PaymentStatus> onChangeStatus;
   final VoidCallback? onSeeDetails;
@@ -69,7 +69,10 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
                 ),
                 Text(widget.dateText, style: AppTypography.f1),
 
-                Text(widget.priceText, style: AppTypography.num3),
+                Text(
+                  widget.priceText == null ? "---" : "${widget.priceText}",
+                  style: AppTypography.num3,
+                ),
               ],
             ),
             const SizedBox(height: 4),

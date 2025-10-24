@@ -103,6 +103,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
   Future<bool> submit(BuildContext context) async {
     final dateTime = _combine(_date, _time);
 
+    final customPriceText = _customPriceCtrl.text.trim();
+    double? customPrice;
+    if (customPriceText.isNotEmpty) {
+      customPrice = double.tryParse(customPriceText.replaceAll(',', '.'));
+    }
+
     // call the VM that resolves the final price etc.
     return await context.read<AppointmentViewModel>().addAppointment(
       clientId: _selectedClientId,
@@ -111,7 +117,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       checklistIds: _selectedChecklistIds.toList(),
       location: _locationCtrl.text,
       note: _noteCtrl.text,
-      customPriceText: _customPriceCtrl.text, // UI override (optional)
+      price: customPrice, // UI override (optional)
       images: _images,
       status: _status.label,
     );

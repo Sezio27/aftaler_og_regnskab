@@ -291,7 +291,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                               title: a.clientName,
                               service: a.serviceName,
                               dateText: dateText,
-                              priceText: a.price ?? '---',
+                              priceText: a.price,
                               status: a.status,
                               onSeeDetails: () {},
                               onChangeStatus: (newStatus) {

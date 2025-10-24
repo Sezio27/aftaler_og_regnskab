@@ -14,7 +14,7 @@ class AppointmentCard extends StatelessWidget {
   final Avatar? avatar;
   final String? date;
   final String? time;
-  final String? price;
+  final double? price;
   final Widget? endingIcons;
   final VoidCallback? onTap;
 

@@ -226,7 +226,7 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime? payDate,
     String? location,
     String? note,
-    String? customPriceText,
+    double? price,
     List<({Uint8List bytes, String name, String? mimeType})>? images,
     String status = 'not_invoiced',
   }) async {
@@ -256,13 +256,6 @@ class AppointmentViewModel extends ChangeNotifier {
         );
       }
 
-      String? chosenPrice = _trimOrNull(customPriceText);
-      if ((chosenPrice == null || chosenPrice.isEmpty) &&
-          (serviceId ?? '').isNotEmpty) {
-        final svc = await _fetchServiceCached(serviceId!);
-        chosenPrice = _trimOrNull(svc?.price);
-      }
-
       final model = AppointmentModel(
         clientId: clientId,
         serviceId: serviceId,
@@ -272,7 +265,7 @@ class AppointmentViewModel extends ChangeNotifier {
             .toList(),
         dateTime: dateTime,
         payDate: payDate,
-        price: chosenPrice,
+        price: price,
         location: _trimOrNull(location),
         note: _trimOrNull(note),
         imageUrls: imageUrls,
@@ -304,8 +297,8 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime? payDate,
     String? location,
     String? note,
-    String? customPrice,
-    String? servicePrice,
+    double? price,
+    double? servicePrice,
     String? status,
     List<String>? currentImageUrls,
     List<String> removedImageUrls = const [],
@@ -365,14 +358,13 @@ class AppointmentViewModel extends ChangeNotifier {
       putTs('payDate', payDate);
 
       // Price: prefer custom, else service, and allow clearing
-      if (customPrice != null || servicePrice != null) {
-        final chosen =
-            ((customPrice ?? '').isNotEmpty ? customPrice : servicePrice) ?? '';
-        final t = chosen.trim();
-        if (t.isEmpty) {
+      // Price: prefer custom, else service, and allow clearing
+      if (price != null || servicePrice != null) {
+        final chosen = price ?? servicePrice;
+        if (chosen == null) {
           deletes.add('price');
         } else {
-          fields['price'] = t;
+          fields['price'] = chosen;
         }
       }
 
@@ -423,18 +415,10 @@ class AppointmentViewModel extends ChangeNotifier {
     for (final a in items) {
       final status = (a.status ?? '').toLowerCase();
       if (status == 'betalt') {
-        total += _parsePrice(a.price);
+        total += a.price ?? 0;
       }
     }
     return total;
-  }
-
-  double _parsePrice(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return 0;
-    var s = raw.toLowerCase();
-    s = s.replaceAll(RegExp(r'(dkk|kr|\s)'), '');
-    s = s.replaceAll('.', '').replaceAll(',', '.');
-    return double.tryParse(s) ?? 0;
   }
 
   ({int paid, int waiting, int missing, int uninvoiced}) statusCount(
@@ -489,10 +473,7 @@ class AppointmentViewModel extends ChangeNotifier {
       if (appt.id == null || appt.dateTime == null) continue;
       final client = _clientCache[appt.clientId ?? ''];
       final service = _serviceCache[appt.serviceId ?? ''];
-      final chosenPrice = _firstNonEmpty([
-        _trimOrNull(appt.price),
-        _trimOrNull(service?.price),
-      ]);
+      final chosenPrice = appt.price;
       out.add(
         AppointmentCardModel(
           id: appt.id!,
@@ -570,10 +551,7 @@ class AppointmentViewModel extends ChangeNotifier {
             phone: _clientCache[appt.clientId ?? '']?.phone,
             email: _clientCache[appt.clientId ?? '']?.email,
             time: appt.dateTime!,
-            price: _firstNonEmpty([
-              _trimOrNull(appt.price),
-              _trimOrNull(_serviceCache[appt.serviceId ?? '']?.price),
-            ]),
+            price: appt.price,
             duration: _serviceCache[appt.serviceId ?? '']?.duration,
             status: appt.status ?? 'ufaktureret',
             imageUrl: _clientCache[appt.clientId ?? '']?.image,
@@ -852,10 +830,7 @@ class AppointmentViewModel extends ChangeNotifier {
   AppointmentCardModel _toCard(AppointmentModel appt) {
     final client = _clientCache[appt.clientId ?? ''];
     final service = _serviceCache[appt.serviceId ?? ''];
-    final chosenPrice = _firstNonEmpty([
-      _trimOrNull(appt.price),
-      _trimOrNull(service?.price),
-    ]);
+    final chosenPrice = appt.price;
 
     final hasCvr = ((client?.cvr ?? '').trim().isNotEmpty);
 

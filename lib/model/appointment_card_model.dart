@@ -13,7 +13,7 @@ class AppointmentCardModel {
   final String? imageUrl;
   final DateTime time;
   final String? duration;
-  final String? price;
+  final double? price;
   final String status;
   final bool isBusiness;
 

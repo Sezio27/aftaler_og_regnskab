@@ -12,7 +12,7 @@ class AppointmentModel {
   final DateTime? payDate;
 
   /// Stored, resolved price (custom price if provided; otherwise service price; otherwise null).
-  final String? price;
+  final double? price;
 
   final String? location;
   final String? note;
@@ -42,7 +42,7 @@ class AppointmentModel {
     List<String>? checklistIds,
     DateTime? dateTime,
     DateTime? payDate,
-    String? price,
+    double? price,
     String? location,
     String? note,
     List<String>? imageUrls,
@@ -70,7 +70,7 @@ class AppointmentModel {
     'checklistIds': checklistIds,
     'dateTime': dateTime,
     'payDate': payDate,
-    'price': price,
+    if (price != null) 'price': price,
     'location': location,
     'note': note,
     'imageUrls': imageUrls,
@@ -96,7 +96,7 @@ class AppointmentModel {
           .toList(),
       dateTime: dtParsed,
       payDate: payDtParsed,
-      price: json['price'] as String?,
+      price: (json['price'] as num?)?.toDouble(),
       location: json['location'] as String?,
       note: json['note'] as String?,
       imageUrls: ((json['imageUrls'] as List?) ?? const [])

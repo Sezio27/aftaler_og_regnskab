@@ -629,7 +629,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
   @override
   void initState() {
     super.initState();
-    _priceCtrl = TextEditingController(text: widget.appointment.price ?? '');
+    _priceCtrl = TextEditingController(text: '${widget.appointment.price}');
     _locationCtrl = TextEditingController(
       text: widget.appointment.location ?? '',
     );
@@ -720,6 +720,12 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
   }
 
   Future<void> _save() async {
+    final priceText = _priceCtrl.text.trim();
+    double? customPrice;
+    if (priceText.isNotEmpty) {
+      customPrice = double.tryParse(priceText.replaceAll(',', '.'));
+    }
+
     await handleSave(
       context: context,
       validate: () {
@@ -746,7 +752,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
             payDate: _payDate,
             location: _locationCtrl.text,
             note: _noteCtrl.text,
-            customPrice: _priceCtrl.text,
+            price: customPrice,
             status: _status.label,
             currentImageUrls: _currentImages, // original URLs from initState
             removedImageUrls: _removedImages, // URLs user removed in UI
@@ -857,7 +863,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                       child: SoftTextField(
                         hintText: widget.appointment.price == null
                             ? "---"
-                            : widget.appointment.price!,
+                            : '${widget.appointment.price!}',
                         suffixText: "DKK",
                         keyboardType: TextInputType.number,
                         hintStyle: AppTypography.num6,

@@ -210,7 +210,75 @@ class AppointmentRepository {
     await doc.update(payload);
   }
 
-  /// Delete an appointment document.
+  Future<int> countAppointments({
+    DateTime? startInclusive,
+    DateTime? endInclusive,
+    String? status,
+  }) async {
+    final uid = _uidOrThrow;
+    Query<Map<String, dynamic>> query = _collection(uid);
+    if (startInclusive != null) {
+      query = query.where(
+        'dateTime',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
+      );
+    }
+    if (endInclusive != null) {
+      final endOfDay = DateTime(
+        endInclusive.year,
+        endInclusive.month,
+        endInclusive.day,
+        23,
+        59,
+        59,
+        999,
+      );
+      query = query.where(
+        'dateTime',
+        isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+      );
+    }
+    if (status != null) {
+      query = query.where('status', isEqualTo: status);
+    }
+    final agg = await query.count().get();
+    return agg.count ?? 0;
+  }
+
+  Future<double> sumPaidInRange({
+    DateTime? startInclusive,
+    DateTime? endInclusive,
+  }) async {
+    final uid = _uidOrThrow;
+    Query<Map<String, dynamic>> query = _collection(
+      uid,
+    ).where('status', isEqualTo: 'paid');
+    if (startInclusive != null) {
+      query = query.where(
+        'dateTime',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
+      );
+    }
+    if (endInclusive != null) {
+      final endOfDay = DateTime(
+        endInclusive.year,
+        endInclusive.month,
+        endInclusive.day,
+        23,
+        59,
+        59,
+        999,
+      );
+      query = query.where(
+        'dateTime',
+        isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+      );
+    }
+    final aggregateQuery = query.aggregate(sum('price'));
+    final agg = await aggregateQuery.get();
+    return agg.getSum('price') ?? 0.0;
+  }
+
   Future<void> deleteAppointment(String id) async {
     final uid = _uidOrThrow;
     await _collection(uid).doc(id).delete();
@@ -248,7 +316,7 @@ class AppointmentRepository {
       checklistIds: checklistIds,
       dateTime: dateTime,
       payDate: payDate,
-      price: data['price'] as String?,
+      price: (data['price'] as num?)?.toDouble(),
       location: data['location'] as String?,
       note: data['note'] as String?,
       imageUrls: imageUrls,
