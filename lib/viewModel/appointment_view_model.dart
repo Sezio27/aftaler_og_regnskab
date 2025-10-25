@@ -6,6 +6,7 @@ import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/clientModel.dart';
 import 'package:aftaler_og_regnskab/model/serviceModel.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -50,61 +51,6 @@ class AppointmentViewModel extends ChangeNotifier {
   AppointmentModel? _lastCreatedAppointment;
 
   // ---- change flag ----
-
-  bool hasMonthSumChanges = false;
-  bool hasYearSumChanges = false;
-  bool hasAllTimeSumChanges = false;
-  bool hasMonthCountChanges = false;
-  bool hasYearCountChanges = false;
-  bool hasAllTimeCountChanges = false;
-
-  void _bumpFlagsFor(DateTime? date) {
-    hasAllTimeSumChanges = true;
-    hasAllTimeCountChanges = true;
-    if (date == null) return;
-    final now = DateTime.now();
-    if (date.year == now.year) {
-      hasYearSumChanges = true;
-      hasYearCountChanges = true;
-      if (date.month == now.month) {
-        hasMonthSumChanges = true;
-        hasMonthCountChanges = true;
-      }
-    }
-  }
-
-  void clearSumChangesFor(Segment seg) {
-    switch (seg) {
-      case Segment.month:
-        hasMonthSumChanges = false;
-        break;
-      case Segment.year:
-        hasYearSumChanges = false;
-        break;
-      case Segment.total:
-        hasAllTimeSumChanges = false;
-        break;
-    }
-  }
-
-  void clearCountChangesFor(Segment seg) {
-    switch (seg) {
-      case Segment.month:
-        hasMonthCountChanges = false;
-        break;
-      case Segment.year:
-        hasYearCountChanges = false;
-        break;
-      case Segment.total:
-        hasAllTimeCountChanges = false;
-        break;
-    }
-  }
-
-  void markChanged(DateTime date) {
-    _bumpFlagsFor(date);
-    notifyListeners();
-  }
 
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
@@ -331,7 +277,7 @@ class AppointmentViewModel extends ChangeNotifier {
         status: status,
       );
       await _repo.createAppointmentWithId(docRef.id, model);
-      markChanged(dateTime);
+
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke oprette aftale: $e';
@@ -342,9 +288,41 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateStatus(String id, String newStatus, DateTime? date) async {
-    await _repo.updateStatus(id, newStatus);
-    _bumpFlagsFor(date);
+  Future<void> updateStatus(
+    String id,
+    String oldStatus,
+    double? price,
+    String newStatus,
+    DateTime date,
+  ) async {
+    final old = PaymentStatusX.fromString(oldStatus);
+    final now = PaymentStatusX.fromString(newStatus);
+    final p = price ?? 0.0;
+
+    // Which segments does this appointment belong to?
+    final segments = <Segment>[Segment.total];
+    if (isInCurrentYear(date)) segments.add(Segment.year);
+    if (isInCurrentMonth(date)) segments.add(Segment.month);
+
+    final wasPaid = (old == PaymentStatus.paid);
+    final isPaid = (now == PaymentStatus.paid);
+
+    //Sum updated
+    for (final seg in segments) {
+      final t = _financeTotals[seg]!;
+      if (isPaid) t.paidSum += p;
+      if (wasPaid) t.paidSum -= p;
+    }
+
+    //Status count updates
+    for (final seg in segments) {
+      final t = _financeTotals[seg]!;
+      t.dec(old);
+      t.inc(now);
+    }
+
+    await _repo.updateStatus(id, newStatus.trim());
+    notifyListeners();
   }
 
   Future<bool> updateAppointmentFields(
@@ -444,7 +422,7 @@ class AppointmentViewModel extends ChangeNotifier {
           await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
         } catch (_) {}
       }
-      markChanged(dateTime!);
+
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke opdatere: $e';
@@ -464,97 +442,41 @@ class AppointmentViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  ({int count, double income})? _summaryMonth, _summaryYear, _summaryTotal;
-  ({int paid, int waiting, int missing, int uninvoiced})? _statusMonth,
-      _statusYear,
-      _statusTotal;
+  bool get totalsReady => _totalsReady;
 
-  ({DateTime? start, DateTime? end}) _rangeFor(Segment s) {
-    final now = DateTime.now();
-    switch (s) {
-      case Segment.month:
-        return (start: startOfMonth(now), end: endOfMonthInclusive(now));
-      case Segment.year:
-        return (start: startOfYear(now), end: endOfYearInclusive(now));
-      case Segment.total:
-        return (start: null, end: null);
-    }
+  ({int count, double income}) summaryNow(Segment seg) {
+    final t = _financeTotals[seg]!;
+    return (count: t.totalCount, income: t.paidSum);
+  }
+
+  ({int paid, int waiting, int missing, int uninvoiced}) statusNow(
+    Segment seg,
+  ) {
+    final t = _financeTotals[seg]!;
+    return (
+      paid: t.getCount(PaymentStatus.paid),
+      waiting: t.getCount(PaymentStatus.waiting),
+      missing: t.getCount(PaymentStatus.missing),
+      uninvoiced: t.getCount(PaymentStatus.uninvoiced),
+    );
   }
 
   Future<({int count, double income})> getSummaryBySegment(Segment seg) async {
-    // 1) return cached if no changes and we have it
-    switch (seg) {
-      case Segment.month:
-        if (!hasMonthSumChanges && _summaryMonth != null) return _summaryMonth!;
-        break;
-      case Segment.year:
-        if (!hasYearSumChanges && _summaryYear != null) return _summaryYear!;
-        break;
-      case Segment.total:
-        if (!hasAllTimeSumChanges && _summaryTotal != null) {
-          return _summaryTotal!;
-        }
-        break;
-    }
-
-    final r = _rangeFor(seg);
-    final count = await _repo.countAppointments(
-      startInclusive: r.start,
-      endInclusive: r.end,
-    );
-    final income = await _repo.sumPaidInRange(
-      startInclusive: r.start,
-      endInclusive: r.end,
-    );
-
-    final result = (count: count, income: income);
-
-    switch (seg) {
-      case Segment.month:
-        _summaryMonth = result;
-        break;
-      case Segment.year:
-        _summaryYear = result;
-        break;
-      case Segment.total:
-        _summaryTotal = result;
-        break;
-    }
-    return result;
+    if (!_totalsReady) await ensureFinanceTotalsSeeded();
+    final t = _financeTotals[seg]!;
+    return (count: t.totalCount, income: t.paidSum);
   }
 
   Future<({int paid, int waiting, int missing, int uninvoiced})>
   getStatusCountsBySegment(Segment seg) async {
-    switch (seg) {
-      case Segment.month:
-        if (!hasMonthCountChanges && _statusMonth != null) return _statusMonth!;
-        break;
-      case Segment.year:
-        if (!hasYearCountChanges && _statusYear != null) return _statusYear!;
-        break;
-      case Segment.total:
-        if (!hasAllTimeCountChanges && _statusTotal != null) {
-          return _statusTotal!;
-        }
-        break;
-    }
-
-    final r = _rangeFor(seg);
-    final out = await statusCount(r.start, r.end);
-
-    switch (seg) {
-      case Segment.month:
-        _statusMonth = out;
-        break;
-      case Segment.year:
-        _statusYear = out;
-        break;
-      case Segment.total:
-        _statusTotal = out;
-        break;
-    }
-
-    return out;
+    if (!_totalsReady) await ensureFinanceTotalsSeeded();
+    final t = _financeTotals[seg]!;
+    return (
+      paid: t.getCount(PaymentStatus.paid),
+      waiting: t.getCount(PaymentStatus.waiting),
+      missing: t.getCount(PaymentStatus.missing),
+      uninvoiced: t.getCount(PaymentStatus.uninvoiced),
+    );
   }
 
   Future<({int paid, int waiting, int missing, int uninvoiced})> statusCount(
@@ -593,7 +515,6 @@ class AppointmentViewModel extends ChangeNotifier {
       await _imageStorage.deleteAppointmentImages(id);
     } catch (_) {}
     await _repo.deleteAppointment(id);
-    markChanged(date);
   }
 
   // Detail helpers
@@ -989,4 +910,105 @@ class AppointmentViewModel extends ChangeNotifier {
       .where((a) => a.id != null && a.dateTime != null)
       .map(_toCard)
       .toList();
+
+  ({DateTime? start, DateTime? end}) _rangeFor(Segment s) {
+    final now = DateTime.now();
+    switch (s) {
+      case Segment.month:
+        return (start: startOfMonth(now), end: endOfMonthInclusive(now));
+      case Segment.year:
+        return (start: startOfYear(now), end: endOfYearInclusive(now));
+      case Segment.total:
+        return (start: null, end: null);
+    }
+  }
+
+  Future<void> ensureFinanceTotalsSeeded() async {
+    if (_totalsReady) return;
+
+    // Seed TOTAL, YEAR, MONTH in parallel
+    for (final seg in Segment.values) {
+      final r = _rangeFor(seg);
+      final totals = _financeTotals[seg]!;
+
+      // total count + paid sum
+      final totalCountF = _repo.countAppointments(
+        startInclusive: r.start,
+        endInclusive: r.end,
+      );
+      final paidSumF = _repo.sumPaidInRange(
+        startInclusive: r.start,
+        endInclusive: r.end,
+      );
+
+      // per-status counts
+      final perStatusF = Future.wait<int>([
+        _repo.countAppointments(
+          startInclusive: r.start,
+          endInclusive: r.end,
+          status: PaymentStatus.paid.label,
+        ),
+        _repo.countAppointments(
+          startInclusive: r.start,
+          endInclusive: r.end,
+          status: PaymentStatus.waiting.label,
+        ),
+        _repo.countAppointments(
+          startInclusive: r.start,
+          endInclusive: r.end,
+          status: PaymentStatus.missing.label,
+        ),
+        _repo.countAppointments(
+          startInclusive: r.start,
+          endInclusive: r.end,
+          status: PaymentStatus.uninvoiced.label,
+        ),
+      ]);
+
+      final results = await Future.wait([totalCountF, paidSumF, perStatusF]);
+      totals.totalCount = results[0] as int;
+      totals.paidSum = results[1] as double;
+
+      final buckets = results[2] as List<int>;
+      totals.counts[PaymentStatus.paid] = buckets[0];
+      totals.counts[PaymentStatus.waiting] = buckets[1];
+      totals.counts[PaymentStatus.missing] = buckets[2];
+      totals.counts[PaymentStatus.uninvoiced] = buckets[3];
+    }
+
+    _totalsReady = true;
+    notifyListeners();
+  }
 }
+
+class FinanceTotals {
+  int totalCount; // all appointments in segment (any status)
+  double paidSum; // sum(price) where status == 'Betalt'
+  final Map<PaymentStatus, int> counts; // per-status counts (no 'all')
+
+  FinanceTotals({
+    this.totalCount = 0,
+    this.paidSum = 0.0,
+    Map<PaymentStatus, int>? counts,
+  }) : counts = {
+         for (final s in PaymentStatus.values)
+           if (s != PaymentStatus.all) s: counts?[s] ?? 0,
+       };
+
+  int getCount(PaymentStatus s) =>
+      s == PaymentStatus.all ? totalCount : (counts[s] ?? 0);
+  void inc(PaymentStatus s) {
+    if (s != PaymentStatus.all) counts[s] = (counts[s] ?? 0) + 1;
+  }
+
+  void dec(PaymentStatus s) {
+    if (s != PaymentStatus.all) counts[s] = (counts[s] ?? 0) - 1;
+  }
+}
+
+final Map<Segment, FinanceTotals> _financeTotals = {
+  Segment.month: FinanceTotals(),
+  Segment.year: FinanceTotals(),
+  Segment.total: FinanceTotals(),
+};
+bool _totalsReady = false;

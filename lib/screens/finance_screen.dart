@@ -30,20 +30,24 @@ class FinanceScreen extends StatefulWidget {
 class _FinanceScreenState extends State<FinanceScreen> {
   Tabs _tab = Tabs.month;
 
-  final Map<Tabs, ({int count, double income})> _sumCache = {};
-  final Map<Tabs, ({int paid, int waiting, int missing, int uninvoiced})>
-  _statusCache = {};
   Segment _segForTab(Tabs t) => switch (t) {
     Tabs.month => Segment.month,
     Tabs.year => Segment.year,
     Tabs.lifetime => Segment.total,
   };
-  bool _isCurrentRoute(BuildContext context) =>
-      (ModalRoute.of(context)?.isCurrent ?? true);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppointmentViewModel>().ensureFinanceTotalsSeeded();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isCurrent = _isCurrentRoute(context);
     final cs = Theme.of(context).colorScheme;
     final nf = NumberFormat.currency(
       locale: 'da',
@@ -52,7 +56,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
 
     final hPad = LayoutMetrics.horizontalPadding(context);
-    final vm = context.watch<AppointmentViewModel>(); // <-- watch
     final seg = _segForTab(_tab);
 
     return SafeArea(
@@ -82,34 +85,25 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: 16),
 
             // Summary cards (income + count) — only these rebuild when VM data changes.
-            FutureBuilder<({int count, double income})>(
-              future: vm.getSummaryBySegment(seg),
-              initialData: _sumCache[_tab],
-              builder: (_, snapshot) {
-                if (snapshot.hasData) {
-                  _sumCache[_tab] = snapshot.data!;
-                  // clear after both builders had a chance to run this frame
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    vm.clearSumChangesFor(seg);
-                  });
-                }
-                final data =
-                    snapshot.data ??
-                    (_sumCache[_tab] ?? (count: 0, income: 0.0));
-
+            Selector<AppointmentViewModel, ({int count, double income})>(
+              selector: (_, vm) =>
+                  vm.totalsReady ? vm.summaryNow(seg) : (count: 0, income: 0.0),
+              builder: (_, summary, __) {
                 return Row(
-                  key: ValueKey('sum-${data.count}-${data.income.round()}'),
+                  key: ValueKey(
+                    'sum-${summary.count}-${summary.income.round()}',
+                  ),
                   children: [
                     _SummaryCard(
                       title: 'Indtægt',
-                      value: nf.format(data.income),
+                      value: nf.format(summary.income),
                       change: '+12% siden sidste uge',
                       changeColor: Colors.green,
                     ),
                     const SizedBox(width: 16),
                     _SummaryCard(
                       title: 'Aftaler',
-                      value: '${data.count}',
+                      value: '${summary.count}',
                       change: '+8% siden sidste uge',
                       changeColor: Colors.green,
                     ),
@@ -122,44 +116,37 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             // KPI block (status buckets) — rebuilt independently via Selector.
             // KPI block (status buckets)
-            FutureBuilder<
+            Selector<
+              AppointmentViewModel,
               ({int paid, int waiting, int missing, int uninvoiced})
             >(
-              future: vm.getStatusCountsBySegment(_segForTab(_tab)),
-              initialData: _statusCache[_tab],
-              builder: (_, snapshot) {
-                final s =
-                    snapshot.data ??
-                    (_statusCache[_tab] ??
-                        (paid: 0, waiting: 0, missing: 0, uninvoiced: 0));
-                _statusCache[_tab] = s;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  vm.clearCountChangesFor(seg);
-                });
-
-                final k = [
+              selector: (_, vm) => vm.totalsReady
+                  ? vm.statusNow(seg)
+                  : (paid: 0, waiting: 0, missing: 0, uninvoiced: 0),
+              builder: (_, status, __) {
+                final statusCountCard = [
                   (
                     Icons.check_circle_outlined,
                     AppColors.greenMain,
-                    '${s.paid}',
+                    '${status.paid}',
                     'Betalt',
                   ),
                   (
                     Icons.access_time,
                     AppColors.orangeMain,
-                    '${s.waiting}',
+                    '${status.waiting}',
                     'Afventer',
                   ),
                   (
                     Icons.error_outline,
                     AppColors.redMain,
-                    '${s.missing}',
+                    '${status.missing}',
                     'Forfalden',
                   ),
                   (
                     Icons.radio_button_unchecked,
                     AppColors.greyMain,
-                    '${s.uninvoiced}',
+                    '${status.uninvoiced}',
                     'Ufaktureret',
                   ),
                 ];
@@ -173,7 +160,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       ),
                       child: Row(
                         children: [
-                          for (final e in k)
+                          for (final e in statusCountCard)
                             Expanded(
                               child: _KpiCard(
                                 icon: e.$1,
@@ -300,10 +287,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                 );
                               },
                               onChangeStatus: (newStatus) {
+                                if (a.status == newStatus) return;
                                 context
                                     .read<AppointmentViewModel>()
                                     .updateStatus(
                                       a.id,
+                                      a.status,
+                                      a.price,
                                       newStatus.label,
                                       a.time,
                                     );

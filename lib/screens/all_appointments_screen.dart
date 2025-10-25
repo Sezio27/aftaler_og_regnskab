@@ -302,6 +302,8 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                   });
                   context.read<AppointmentViewModel>().updateStatus(
                     a.id,
+                    a.status,
+                    a.price,
                     newStatus.label,
                     a.time,
                   );
