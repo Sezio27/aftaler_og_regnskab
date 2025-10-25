@@ -276,7 +276,26 @@ class AppointmentViewModel extends ChangeNotifier {
         imageUrls: imageUrls,
         status: status,
       );
+
       await _repo.createAppointmentWithId(docRef.id, model);
+
+      if (!_initFinance) {
+        final s = PaymentStatusX.fromString(status);
+        final p = price ?? 0.0;
+
+        final segments = <Segment>[Segment.total];
+        if (isInCurrentYear(dateTime)) segments.add(Segment.year);
+        if (isInCurrentMonth(dateTime)) segments.add(Segment.month);
+
+        final isPaid = (s == PaymentStatus.paid);
+
+        for (final seg in segments) {
+          final t = _financeTotals[seg]!;
+          if (isPaid) t.paidSum += p;
+          t.totalCount++;
+          t.inc(s);
+        }
+      }
 
       return true;
     } catch (e) {
@@ -295,11 +314,16 @@ class AppointmentViewModel extends ChangeNotifier {
     String newStatus,
     DateTime date,
   ) async {
+    await _repo.updateStatus(id, newStatus.trim());
+    if (_initFinance) {
+      notifyListeners();
+      return;
+    }
+
     final old = PaymentStatusX.fromString(oldStatus);
     final now = PaymentStatusX.fromString(newStatus);
     final p = price ?? 0.0;
 
-    // Which segments does this appointment belong to?
     final segments = <Segment>[Segment.total];
     if (isInCurrentYear(date)) segments.add(Segment.year);
     if (isInCurrentMonth(date)) segments.add(Segment.month);
@@ -321,12 +345,11 @@ class AppointmentViewModel extends ChangeNotifier {
       t.inc(now);
     }
 
-    await _repo.updateStatus(id, newStatus.trim());
     notifyListeners();
   }
 
   Future<bool> updateAppointmentFields(
-    String id, {
+    AppointmentModel old, {
     String? clientId,
     String? serviceId,
     List<String>? checklistIds,
@@ -351,7 +374,7 @@ class AppointmentViewModel extends ChangeNotifier {
       List<String> uploadedUrls = const [];
       if (newImages.isNotEmpty) {
         uploadedUrls = await _imageStorage.uploadAppointmentImages(
-          appointmentId: id,
+          appointmentId: old.id!,
           images: newImages,
         );
       }
@@ -359,7 +382,7 @@ class AppointmentViewModel extends ChangeNotifier {
       // 2) Base image list (0 reads if currentImageUrls provided)
       final existingImages =
           currentImageUrls ??
-          (await _repo.getAppointmentOnce(id))?.imageUrls ??
+          (await _repo.getAppointmentOnce(old.id!))?.imageUrls ??
           const <String>[];
 
       // 3) Compute final list locally (remove + add + dedupe)
@@ -414,13 +437,82 @@ class AppointmentViewModel extends ChangeNotifier {
       }
 
       if (fields.isNotEmpty || deletes.isNotEmpty) {
-        await _repo.updateAppointment(id, fields: fields, deletes: deletes);
+        await _repo.updateAppointment(
+          old.id!,
+          fields: fields,
+          deletes: deletes,
+        );
       }
 
       if (removedImageUrls.isNotEmpty) {
         try {
           await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
         } catch (_) {}
+      }
+
+      if (!_initFinance) {
+        final oldStatus = PaymentStatusX.fromString(old.status);
+        final newStatus = status != null
+            ? PaymentStatusX.fromString(status)
+            : oldStatus;
+        final oldPrice = old.price ?? 0.0;
+        final newPrice = price ?? 0.0;
+        final oldDate = old.dateTime;
+        final newDate = dateTime ?? oldDate;
+
+        bool inSeg(Segment seg, DateTime? dt) {
+          if (seg == Segment.total) return true;
+          if (dt == null) return false;
+          return (seg == Segment.month)
+              ? isInCurrentMonth(dt)
+              : isInCurrentYear(dt);
+        }
+
+        final wasPaid = (oldStatus == PaymentStatus.paid);
+        final isPaid = (newStatus == PaymentStatus.paid);
+
+        //Sum updated
+        for (final seg in Segment.values) {
+          final t = _financeTotals[seg]!;
+          final wasIn = inSeg(seg, oldDate);
+          final isIn = inSeg(seg, newDate);
+
+          // Case A: moved OUT of this segment
+          if (wasIn && !isIn) {
+            t.totalCount--;
+            t.dec(oldStatus);
+            if (wasPaid) {
+              t.paidSum -= oldPrice;
+            }
+            continue;
+          }
+
+          // Case B: moved IN to this segment
+          if (!wasIn && isIn) {
+            t.totalCount++;
+            t.inc(newStatus);
+            if (isPaid) {
+              t.paidSum += newPrice;
+            }
+            continue;
+          }
+
+          // Case C: stayed within this segment
+          if (wasIn && isIn) {
+            if (newStatus != oldStatus) {
+              t.inc(newStatus);
+              t.dec(oldStatus);
+            }
+
+            if (wasPaid && isPaid) {
+              t.paidSum += (newPrice - oldPrice);
+            } else if (wasPaid && !isPaid) {
+              t.paidSum -= oldPrice;
+            } else if (!wasPaid && isPaid) {
+              t.paidSum += newPrice;
+            }
+          }
+        }
       }
 
       return true;
@@ -442,7 +534,7 @@ class AppointmentViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  bool get totalsReady => _totalsReady;
+  bool get initFinance => _initFinance;
 
   ({int count, double income}) summaryNow(Segment seg) {
     final t = _financeTotals[seg]!;
@@ -462,14 +554,12 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   Future<({int count, double income})> getSummaryBySegment(Segment seg) async {
-    if (!_totalsReady) await ensureFinanceTotalsSeeded();
     final t = _financeTotals[seg]!;
     return (count: t.totalCount, income: t.paidSum);
   }
 
   Future<({int paid, int waiting, int missing, int uninvoiced})>
   getStatusCountsBySegment(Segment seg) async {
-    if (!_totalsReady) await ensureFinanceTotalsSeeded();
     final t = _financeTotals[seg]!;
     return (
       paid: t.getCount(PaymentStatus.paid),
@@ -510,11 +600,39 @@ class AppointmentViewModel extends ChangeNotifier {
     return (paid: r[0], waiting: r[1], missing: r[2], uninvoiced: r[3]);
   }
 
-  Future<void> delete(String id, DateTime date) async {
+  Future<void> delete(
+    String id,
+    String status,
+    double? price,
+    DateTime date,
+  ) async {
     try {
       await _imageStorage.deleteAppointmentImages(id);
     } catch (_) {}
     await _repo.deleteAppointment(id);
+
+    if (_initFinance) {
+      notifyListeners();
+      return;
+    }
+
+    final s = PaymentStatusX.fromString(status);
+    final p = price ?? 0.0;
+
+    final segments = <Segment>[Segment.total];
+    if (isInCurrentYear(date)) segments.add(Segment.year);
+    if (isInCurrentMonth(date)) segments.add(Segment.month);
+
+    final isPaid = (s == PaymentStatus.paid);
+
+    for (final seg in segments) {
+      final t = _financeTotals[seg]!;
+      if (isPaid) t.paidSum -= p;
+      t.totalCount--;
+      t.dec(s);
+    }
+
+    notifyListeners();
   }
 
   // Detail helpers
@@ -924,7 +1042,7 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   Future<void> ensureFinanceTotalsSeeded() async {
-    if (_totalsReady) return;
+    if (!_initFinance) return;
 
     // Seed TOTAL, YEAR, MONTH in parallel
     for (final seg in Segment.values) {
@@ -976,7 +1094,7 @@ class AppointmentViewModel extends ChangeNotifier {
       totals.counts[PaymentStatus.uninvoiced] = buckets[3];
     }
 
-    _totalsReady = true;
+    _initFinance = false;
     notifyListeners();
   }
 }
@@ -1011,4 +1129,4 @@ final Map<Segment, FinanceTotals> _financeTotals = {
   Segment.year: FinanceTotals(),
   Segment.total: FinanceTotals(),
 };
-bool _totalsReady = false;
+bool _initFinance = true;

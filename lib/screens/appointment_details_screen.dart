@@ -117,6 +117,8 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                       onDelete: () =>
                           context.read<AppointmentViewModel>().delete(
                             widget.appointment.id!,
+                            widget.appointment.status!,
+                            widget.appointment.price,
                             widget.appointment.dateTime!,
                           ),
                     );
@@ -746,7 +748,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
       },
       onSave: () =>
           context.read<AppointmentViewModel>().updateAppointmentFields(
-            widget.appointment.id!,
+            widget.appointment,
             clientId: _selectedClientId,
             serviceId: _selectedServiceId ?? '',
             checklistIds: _selectedChecklistIds.toList(),

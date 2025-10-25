@@ -86,8 +86,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             // Summary cards (income + count) — only these rebuild when VM data changes.
             Selector<AppointmentViewModel, ({int count, double income})>(
-              selector: (_, vm) =>
-                  vm.totalsReady ? vm.summaryNow(seg) : (count: 0, income: 0.0),
+              selector: (_, vm) => vm.summaryNow(seg),
               builder: (_, summary, __) {
                 return Row(
                   key: ValueKey(
@@ -120,9 +119,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               AppointmentViewModel,
               ({int paid, int waiting, int missing, int uninvoiced})
             >(
-              selector: (_, vm) => vm.totalsReady
-                  ? vm.statusNow(seg)
-                  : (paid: 0, waiting: 0, missing: 0, uninvoiced: 0),
+              selector: (_, vm) => vm.statusNow(seg),
               builder: (_, status, __) {
                 final statusCountCard = [
                   (
