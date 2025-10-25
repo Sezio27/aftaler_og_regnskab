@@ -2,6 +2,7 @@
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
@@ -15,13 +16,27 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AppointmentViewModel>().ensureFinanceForHomeSeeded();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final vm = context.watch<AppointmentViewModel>();
+
     final now = DateTime.now();
 
     final twoWeek = twoWeekRange(now);
@@ -31,26 +46,15 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 6),
         child: Column(
           children: [
-            // KPIs via Selector (fast, minimal rebuilds)
-            // KPIs via FutureBuilder (uses new async aggregate methods)
-            FutureBuilder<({double income, int count})>(
-              future: vm.getSummaryBySegment(Segment.month),
-              builder: (_, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                final income = snap.data?.income ?? 0.0;
-                final count = snap.data?.count ?? 0;
-
+            Selector<AppointmentViewModel, ({double income, int count})>(
+              selector: (_, vm) => vm.summaryNow(Segment.month),
+              builder: (_, summary, __) {
                 return Row(
                   children: [
                     StatCard(
                       title: "Omsætning",
                       subtitle: "Denne måned",
-                      value: '${income.toStringAsFixed(0)} Kr.',
+                      value: formatDKK(summary.income),
                       icon: const Icon(
                         Icons.account_balance_outlined,
                         size: 20,
@@ -63,7 +67,7 @@ class HomeScreen extends StatelessWidget {
                     StatCard(
                       title: "Aftaler",
                       subtitle: "Denne måned",
-                      value: count.toString(),
+                      value: summary.count.toString(),
                       icon: const Icon(
                         Icons.calendar_today_outlined,
                         size: 20,

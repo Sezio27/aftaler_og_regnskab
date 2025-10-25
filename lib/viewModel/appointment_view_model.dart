@@ -223,6 +223,10 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   // CRUD
   // ────────────────────────────────────────────────────────────────────────────
+
+  bool _shouldUpdateSummary(Segment seg) =>
+      seg == Segment.month || _financeInitialised;
+
   Future<bool> addAppointment({
     required String? clientId,
     required String? serviceId,
@@ -279,22 +283,22 @@ class AppointmentViewModel extends ChangeNotifier {
 
       await _repo.createAppointmentWithId(docRef.id, model);
 
-      if (!_initFinance) {
-        final s = PaymentStatusX.fromString(status);
-        final p = price ?? 0.0;
+      final s = PaymentStatusX.fromString(status);
+      final p = price ?? 0.0;
 
-        final segments = <Segment>[Segment.total];
-        if (isInCurrentYear(dateTime)) segments.add(Segment.year);
-        if (isInCurrentMonth(dateTime)) segments.add(Segment.month);
+      final segments = <Segment>[Segment.total];
+      if (isInCurrentYear(dateTime)) segments.add(Segment.year);
+      if (isInCurrentMonth(dateTime)) segments.add(Segment.month);
 
-        final isPaid = (s == PaymentStatus.paid);
+      final isPaid = (s == PaymentStatus.paid);
 
-        for (final seg in segments) {
-          final t = _financeTotals[seg]!;
+      for (final seg in segments) {
+        final t = _financeTotals[seg]!;
+        if (_shouldUpdateSummary(seg)) {
           if (isPaid) t.paidSum += p;
           t.totalCount++;
-          t.inc(s);
         }
+        if (_financeInitialised) t.inc(s);
       }
 
       return true;
@@ -315,10 +319,6 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime date,
   ) async {
     await _repo.updateStatus(id, newStatus.trim());
-    if (_initFinance) {
-      notifyListeners();
-      return;
-    }
 
     final old = PaymentStatusX.fromString(oldStatus);
     final now = PaymentStatusX.fromString(newStatus);
@@ -334,15 +334,14 @@ class AppointmentViewModel extends ChangeNotifier {
     //Sum updated
     for (final seg in segments) {
       final t = _financeTotals[seg]!;
-      if (isPaid) t.paidSum += p;
-      if (wasPaid) t.paidSum -= p;
-    }
-
-    //Status count updates
-    for (final seg in segments) {
-      final t = _financeTotals[seg]!;
-      t.dec(old);
-      t.inc(now);
+      if (_shouldUpdateSummary(seg)) {
+        if (isPaid) t.paidSum += p;
+        if (wasPaid) t.paidSum -= p;
+      }
+      if (_financeInitialised) {
+        t.dec(old);
+        t.inc(now);
+      }
     }
 
     notifyListeners();
@@ -450,60 +449,55 @@ class AppointmentViewModel extends ChangeNotifier {
         } catch (_) {}
       }
 
-      if (!_initFinance) {
-        final oldStatus = PaymentStatusX.fromString(old.status);
-        final newStatus = status != null
-            ? PaymentStatusX.fromString(status)
-            : oldStatus;
-        final oldPrice = old.price ?? 0.0;
-        final newPrice = price ?? 0.0;
-        final oldDate = old.dateTime;
-        final newDate = dateTime ?? oldDate;
+      final oldStatus = PaymentStatusX.fromString(old.status);
+      final newStatus = status != null
+          ? PaymentStatusX.fromString(status)
+          : oldStatus;
+      final oldPrice = old.price ?? 0.0;
+      final newPrice = price ?? 0.0;
+      final oldDate = old.dateTime;
+      final newDate = dateTime ?? oldDate;
 
-        bool inSeg(Segment seg, DateTime? dt) {
-          if (seg == Segment.total) return true;
-          if (dt == null) return false;
-          return (seg == Segment.month)
-              ? isInCurrentMonth(dt)
-              : isInCurrentYear(dt);
+      bool inSeg(Segment seg, DateTime? dt) {
+        if (seg == Segment.total) return true;
+        if (dt == null) return false;
+        return (seg == Segment.month)
+            ? isInCurrentMonth(dt)
+            : isInCurrentYear(dt);
+      }
+
+      final wasPaid = (oldStatus == PaymentStatus.paid);
+      final isPaid = (newStatus == PaymentStatus.paid);
+
+      //Sum updated
+      for (final seg in Segment.values) {
+        final t = _financeTotals[seg]!;
+        final wasIn = inSeg(seg, oldDate);
+        final isIn = inSeg(seg, newDate);
+
+        // Case A: moved OUT of this segment
+        if (wasIn && !isIn) {
+          if (_shouldUpdateSummary(seg)) {
+            t.totalCount--;
+            if (wasPaid) t.paidSum -= oldPrice;
+          }
+          if (_financeInitialised) t.dec(oldStatus);
+          continue;
         }
 
-        final wasPaid = (oldStatus == PaymentStatus.paid);
-        final isPaid = (newStatus == PaymentStatus.paid);
-
-        //Sum updated
-        for (final seg in Segment.values) {
-          final t = _financeTotals[seg]!;
-          final wasIn = inSeg(seg, oldDate);
-          final isIn = inSeg(seg, newDate);
-
-          // Case A: moved OUT of this segment
-          if (wasIn && !isIn) {
-            t.totalCount--;
-            t.dec(oldStatus);
-            if (wasPaid) {
-              t.paidSum -= oldPrice;
-            }
-            continue;
-          }
-
-          // Case B: moved IN to this segment
-          if (!wasIn && isIn) {
+        // Case B: moved IN to this segment
+        if (!wasIn && isIn) {
+          if (_shouldUpdateSummary(seg)) {
             t.totalCount++;
-            t.inc(newStatus);
-            if (isPaid) {
-              t.paidSum += newPrice;
-            }
-            continue;
+            if (isPaid) t.paidSum += newPrice;
           }
+          if (_financeInitialised) t.inc(newStatus);
+          continue;
+        }
 
-          // Case C: stayed within this segment
-          if (wasIn && isIn) {
-            if (newStatus != oldStatus) {
-              t.inc(newStatus);
-              t.dec(oldStatus);
-            }
-
+        // Case C: stayed within this segment
+        if (wasIn && isIn) {
+          if (_shouldUpdateSummary(seg)) {
             if (wasPaid && isPaid) {
               t.paidSum += (newPrice - oldPrice);
             } else if (wasPaid && !isPaid) {
@@ -511,6 +505,10 @@ class AppointmentViewModel extends ChangeNotifier {
             } else if (!wasPaid && isPaid) {
               t.paidSum += newPrice;
             }
+          }
+          if (_financeInitialised && newStatus != oldStatus) {
+            t.inc(newStatus);
+            t.dec(oldStatus);
           }
         }
       }
@@ -533,8 +531,6 @@ class AppointmentViewModel extends ChangeNotifier {
           !dt.isAfter(endOfDayInclusive(dateOnly(end)));
     }).toList();
   }
-
-  bool get initFinance => _initFinance;
 
   ({int count, double income}) summaryNow(Segment seg) {
     final t = _financeTotals[seg]!;
@@ -611,11 +607,6 @@ class AppointmentViewModel extends ChangeNotifier {
     } catch (_) {}
     await _repo.deleteAppointment(id);
 
-    if (_initFinance) {
-      notifyListeners();
-      return;
-    }
-
     final s = PaymentStatusX.fromString(status);
     final p = price ?? 0.0;
 
@@ -627,9 +618,11 @@ class AppointmentViewModel extends ChangeNotifier {
 
     for (final seg in segments) {
       final t = _financeTotals[seg]!;
-      if (isPaid) t.paidSum -= p;
-      t.totalCount--;
-      t.dec(s);
+      if (_shouldUpdateSummary(seg)) {
+        if (isPaid) t.paidSum -= p;
+        t.totalCount--;
+      }
+      if (_financeInitialised) t.dec(s);
     }
 
     notifyListeners();
@@ -1041,61 +1034,109 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
+  // Home: month summary ONLY
+  Future<void> ensureFinanceForHomeSeeded() async {
+    if (_homeInitialised) return;
+    await seedFinanceSegment(
+      Segment.month,
+      withStatusCounts: false,
+      skipSummary: false,
+    );
+    _homeInitialised = true;
+    notifyListeners();
+  }
+
+  // Finance: all segments + status
   Future<void> ensureFinanceTotalsSeeded() async {
-    if (!_initFinance) return;
+    if (_financeInitialised) return;
 
-    // Seed TOTAL, YEAR, MONTH in parallel
-    for (final seg in Segment.values) {
-      final r = _rangeFor(seg);
-      final totals = _financeTotals[seg]!;
+    // Month: if Home already seeded summary, skip it here and only fetch status
+    await seedFinanceSegment(
+      Segment.month,
+      withStatusCounts: true,
+      skipSummary: _homeInitialised, // ← avoids re-reading month summary
+    );
 
-      // total count + paid sum
-      final totalCountF = _repo.countAppointments(
-        startInclusive: r.start,
-        endInclusive: r.end,
-      );
-      final paidSumF = _repo.sumPaidInRange(
-        startInclusive: r.start,
-        endInclusive: r.end,
-      );
+    await seedFinanceSegment(
+      Segment.year,
+      withStatusCounts: true,
+      skipSummary: false,
+    );
+    await seedFinanceSegment(
+      Segment.total,
+      withStatusCounts: true,
+      skipSummary: false,
+    );
 
-      // per-status counts
-      final perStatusF = Future.wait<int>([
-        _repo.countAppointments(
-          startInclusive: r.start,
-          endInclusive: r.end,
-          status: PaymentStatus.paid.label,
-        ),
-        _repo.countAppointments(
-          startInclusive: r.start,
-          endInclusive: r.end,
-          status: PaymentStatus.waiting.label,
-        ),
-        _repo.countAppointments(
-          startInclusive: r.start,
-          endInclusive: r.end,
-          status: PaymentStatus.missing.label,
-        ),
-        _repo.countAppointments(
-          startInclusive: r.start,
-          endInclusive: r.end,
-          status: PaymentStatus.uninvoiced.label,
-        ),
-      ]);
+    _financeInitialised = true;
+    notifyListeners();
+  }
 
-      final results = await Future.wait([totalCountF, paidSumF, perStatusF]);
-      totals.totalCount = results[0] as int;
-      totals.paidSum = results[1] as double;
+  Future<void> seedFinanceSegment(
+    Segment seg, {
+    required bool withStatusCounts,
+    bool skipSummary = false, // when Home already seeded month summary
+  }) async {
+    final r = _rangeFor(seg);
+    final totals = _financeTotals[seg]!;
 
-      final buckets = results[2] as List<int>;
+    // Build only the futures we actually need
+    final futures = <Future<dynamic>>[];
+
+    if (!skipSummary) {
+      futures.add(
+        _repo.countAppointments(startInclusive: r.start, endInclusive: r.end),
+      ); // index 0 (if present)
+
+      futures.add(
+        _repo.sumPaidInRange(startInclusive: r.start, endInclusive: r.end),
+      ); // index 1 (if present)
+    }
+
+    if (withStatusCounts) {
+      futures.add(
+        Future.wait<int>([
+          _repo.countAppointments(
+            startInclusive: r.start,
+            endInclusive: r.end,
+            status: PaymentStatus.paid.label,
+          ),
+          _repo.countAppointments(
+            startInclusive: r.start,
+            endInclusive: r.end,
+            status: PaymentStatus.waiting.label,
+          ),
+          _repo.countAppointments(
+            startInclusive: r.start,
+            endInclusive: r.end,
+            status: PaymentStatus.missing.label,
+          ),
+          _repo.countAppointments(
+            startInclusive: r.start,
+            endInclusive: r.end,
+            status: PaymentStatus.uninvoiced.label,
+          ),
+        ]),
+      ); // last index (if present)
+    }
+
+    if (futures.isEmpty) return;
+
+    final results = await Future.wait(futures);
+    var i = 0;
+
+    if (!skipSummary) {
+      totals.totalCount = results[i++] as int;
+      totals.paidSum = results[i++] as double;
+    }
+
+    if (withStatusCounts) {
+      final buckets = results[i++] as List<int>;
       totals.counts[PaymentStatus.paid] = buckets[0];
       totals.counts[PaymentStatus.waiting] = buckets[1];
       totals.counts[PaymentStatus.missing] = buckets[2];
       totals.counts[PaymentStatus.uninvoiced] = buckets[3];
     }
-
-    _initFinance = false;
-    notifyListeners();
   }
 }
 
@@ -1129,4 +1170,5 @@ final Map<Segment, FinanceTotals> _financeTotals = {
   Segment.year: FinanceTotals(),
   Segment.total: FinanceTotals(),
 };
-bool _initFinance = true;
+bool _financeInitialised = false;
+bool _homeInitialised = false;
