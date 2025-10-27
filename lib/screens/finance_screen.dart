@@ -51,12 +51,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final nf = NumberFormat.currency(
-      locale: 'da',
-      symbol: 'kr.',
-      decimalDigits: 0,
-    );
-
     final hPad = LayoutMetrics.horizontalPadding(context);
     final seg = _segForTab(_tab);
 
@@ -129,64 +123,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             const SizedBox(height: 16),
 
-            // KPI block (status buckets) — rebuilt independently via Selector.
-            // KPI block (status buckets)
             Selector<
               AppointmentViewModel,
               ({int paid, int waiting, int missing, int uninvoiced})
             >(
               selector: (_, vm) => vm.statusNow(seg),
               builder: (_, status, __) {
-                final statusCountCard = [
-                  (
-                    Icons.check_circle_outlined,
-                    AppColors.greenMain,
-                    '${status.paid}',
-                    'Betalt',
-                  ),
-                  (
-                    Icons.access_time,
-                    AppColors.orangeMain,
-                    '${status.waiting}',
-                    'Afventer',
-                  ),
-                  (
-                    Icons.error_outline,
-                    AppColors.redMain,
-                    '${status.missing}',
-                    'Forfalden',
-                  ),
-                  (
-                    Icons.radio_button_unchecked,
-                    AppColors.greyMain,
-                    '${status.uninvoiced}',
-                    'Ufaktureret',
-                  ),
-                ];
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: CustomCard(
-                    field: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 30,
-                        horizontal: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          for (final e in statusCountCard)
-                            Expanded(
-                              child: _KpiCard(
-                                icon: e.$1,
-                                color: e.$2,
-                                value: e.$3,
-                                label: e.$4,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
+                return StatusCountCard(status: status);
               },
             ),
 
@@ -300,7 +243,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                                 );
                               },
                               onChangeStatus: (newStatus) {
-                                if (a.status == newStatus) return;
+                                if (PaymentStatusX.fromString(a.status) ==
+                                    newStatus) {
+                                  return;
+                                }
                                 context
                                     .read<AppointmentViewModel>()
                                     .updateStatus(
@@ -327,38 +273,74 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 }
 
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
-    required this.icon,
-    required this.color,
-    required this.value,
-    required this.label,
-  });
+class StatusCountCard extends StatelessWidget {
+  const StatusCountCard({super.key, required this.status});
 
-  final IconData icon;
-  final Color color;
-  final String value;
-  final String label;
+  final ({int missing, int paid, int uninvoiced, int waiting}) status;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+
+    final items = [
+      (
+        Icons.check_circle_outlined,
+        AppColors.greenMain,
+        '${status.paid}',
+        'Betalt',
+      ),
+      (
+        Icons.access_time,
+        AppColors.orangeMain,
+        '${status.waiting}',
+        'Afventer',
+      ),
+      (
+        Icons.error_outline,
+        AppColors.redMain,
+        '${status.missing}',
+        'Forfalden',
+      ),
+      (
+        Icons.radio_button_unchecked,
+        AppColors.greyMain,
+        '${status.uninvoiced}',
+        'Ufaktureret',
+      ),
+    ];
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: CustomCard(
+        field: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 12),
+          child: Row(
+            children: items
+                .map(
+                  (e) => Expanded(
+                    child: Column(
+                      children: [
+                        Icon(e.$1, color: e.$2, size: 28),
+                        const SizedBox(height: 8),
+                        Text(
+                          e.$3,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          e.$4,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: cs.onSurface.withAlpha(180)),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: cs.onSurface.withAlpha(180)),
-        ),
-      ],
+      ),
     );
   }
 }

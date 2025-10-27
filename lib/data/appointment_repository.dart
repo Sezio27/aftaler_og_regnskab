@@ -1,14 +1,9 @@
+import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
-/// Repository for reading/writing appointments under:
-///   users/{uid}/appointments/{appointmentId}
-///
-/// Notes:
-/// - All calendar reads should be **range-driven** by `dateTime`.
-/// - Writes set `createdAt` (on create) and always touch `updatedAt` (server).
 class AppointmentRepository {
   AppointmentRepository({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -62,6 +57,8 @@ class AppointmentRepository {
     DateTime endInclusive,
   ) {
     final uid = _uidOrThrow;
+    var countedFirstServer = false;
+
     return _collection(uid)
         .where(
           'dateTime',
@@ -73,7 +70,22 @@ class AppointmentRepository {
         )
         .orderBy('dateTime')
         .snapshots()
-        .map((q) => q.docs.map(_fromDoc).toList());
+        .map((q) {
+          assert(() {
+            if (!q.metadata.isFromCache) {
+              if (!countedFirstServer) {
+                bench?.liveFirstReads += q.docs.length; // count full set once
+                countedFirstServer = true;
+              } else {
+                bench?.liveUpdateReads +=
+                    q.docChanges.length; // only changes after
+              }
+            }
+            return true;
+          }());
+
+          return q.docs.map(_fromDoc).toList();
+        });
   }
 
   /// One-time fetch of an appointment by id.
@@ -110,6 +122,13 @@ class AppointmentRepository {
         .orderBy('dateTime')
         .get();
 
+    assert(() {
+      if (!(q.metadata.isFromCache)) {
+        bench?.pagedReads += q.docs.length;
+      }
+      return true;
+    }());
+
     return q.docs.map(_fromDoc).toList();
   }
 
@@ -137,24 +156,19 @@ class AppointmentRepository {
     final uid = _uidOrThrow;
 
     final data = fields ?? _toFirestore(patch!, isCreate: false);
-    final withMeta = <String, Object?>{
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+    final payload = <String, Object?>{...data};
     for (final key in deletes) {
-      withMeta[key] = FieldValue.delete();
+      payload[key] = FieldValue.delete();
     }
-    withMeta.removeWhere((k, v) => v == null);
+    payload.removeWhere((k, v) => v == null);
 
-    await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
+    await _collection(uid).doc(id).set(payload, SetOptions(merge: true));
   }
 
+  // AppointmentRepository
   Future<void> updateStatus(String id, String newStatus) async {
     final uid = _uidOrThrow;
-    await _collection(uid).doc(id).set({
-      'status': newStatus.trim(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _collection(uid).doc(id).update({'status': newStatus.trim()});
   }
 
   Stream<Map<String, Set<int>>> watchChecklistProgress(String apptId) {
@@ -181,7 +195,6 @@ class AppointmentRepository {
       'progress': {
         for (final e in progress.entries) e.key: (e.value.toList()..sort()),
       },
-      'updatedAt': FieldValue.serverTimestamp(),
     };
     await _collection(uid).doc(apptId).set(payload, SetOptions(merge: true));
   }
@@ -198,7 +211,6 @@ class AppointmentRepository {
     // Build payload for update(): dotted paths for deletes are supported here.
     final Map<String, Object?> payload = {
       'checklistIds': newSelection.toList(),
-      'updatedAt': FieldValue.serverTimestamp(),
     };
 
     // Delete nested progress entries for removed or reset ids
@@ -311,6 +323,48 @@ class AppointmentRepository {
     await _collection(uid).doc(id).delete();
   }
 
+  // Debug / devmode
+
+  Future<int> deleteAllAppointments({int pageSize = 200}) async {
+    final uid = _uidOrThrow;
+    int total = 0;
+
+    // Keep pulling pages until empty
+    while (true) {
+      final page = await _collection(uid).limit(pageSize).get();
+      if (page.docs.isEmpty) break;
+
+      final batch = _db.batch();
+      for (final d in page.docs) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+      total += page.docs.length;
+
+      // Tiny yield to avoid hammering on slow networks
+      await Future.delayed(const Duration(milliseconds: 30));
+    }
+    return total;
+  }
+
+  Future<List<String>> createAppointmentsBatch(
+    List<AppointmentModel> models,
+  ) async {
+    final uid = _uidOrThrow;
+    final batch = _db.batch();
+    final ids = <String>[];
+
+    for (final m in models) {
+      final doc = _collection(uid).doc();
+      ids.add(doc.id);
+      final payload = _toFirestore(m.copyWith(id: doc.id), isCreate: true);
+      batch.set(doc, payload);
+    }
+
+    await batch.commit();
+    return ids;
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Mapping
   // ────────────────────────────────────────────────────────────────────────────
@@ -367,8 +421,6 @@ class AppointmentRepository {
       'imageUrls': m.imageUrls,
       'status': m.status,
       if (isCreate) 'progress': <String, dynamic>{},
-      if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
     };
 
     map.removeWhere((_, v) => v == null);

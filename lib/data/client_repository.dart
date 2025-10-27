@@ -89,20 +89,17 @@ class ClientRepository {
     final base = fields ?? _toFirestore(patch!, isCreate: false);
 
     // Build final payload, add server timestamp.
-    final withMeta = <String, Object?>{
-      ...base,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+    final payload = <String, Object?>{...base};
 
     // Translate deletes here (Firebase-specific).
     for (final key in deletes) {
-      withMeta[key] = FieldValue.delete();
+      payload[key] = FieldValue.delete();
     }
 
     // Optional: still drop nulls from 'fields' to avoid writing null values.
-    withMeta.removeWhere((k, v) => v == null);
+    payload.removeWhere((k, v) => v == null);
 
-    await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
+    await _collection(uid).doc(id).set(payload, SetOptions(merge: true));
   }
 
   // ---------- DELETE ----------
@@ -143,7 +140,6 @@ class ClientRepository {
       'image': m.image, // URL string if you upload images
       // Metadata
       if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
     };
     map.removeWhere((_, v) => v == null);
     return map;

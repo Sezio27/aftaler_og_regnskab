@@ -6,6 +6,7 @@ import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
+import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/firebase_options.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
@@ -31,6 +32,10 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('da');
   final appRouter = createRouter();
+  assert(() {
+    bench = Bench();
+    return true;
+  }());
   runApp(MyApp(router: appRouter));
 }
 

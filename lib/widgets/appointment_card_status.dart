@@ -35,11 +35,29 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
   bool _expanded = false;
 
   void _toggle() => setState(() => _expanded = !_expanded);
+  late PaymentStatus _status = PaymentStatusX.fromString(widget.status);
+
+  @override
+  void didUpdateWidget(covariant AppointmentStatusCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.status != widget.status) {
+      _status = PaymentStatusX.fromString(widget.status);
+    }
+  }
+
+  void _pick(PaymentStatus s) {
+    // Instant feedback (card repaint only)
+    setState(() {
+      _status = s;
+      _expanded = false;
+    });
+    // Trigger repo + VM; live snapshot will refresh the list later
+    widget.onChangeStatus(s);
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final sel = PaymentStatusX.fromString(widget.status);
 
     return CustomCard(
       constraints: const BoxConstraints(minHeight: 88),
@@ -54,7 +72,7 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
                 Expanded(
                   child: Row(
                     children: [
-                      StatusIconRound(status: widget.status),
+                      StatusIconRound(status: _status.label),
                       const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,13 +143,8 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
                   ? Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: StatusChoice(
-                        value: sel, // sel is a PaymentStatus
-                        onChanged: (s) {
-                          widget.onChangeStatus(
-                            s,
-                          ); // keep your existing callback
-                          setState(() => _expanded = false); // close after pick
-                        },
+                        value: _status, // sel is a PaymentStatus
+                        onChanged: _pick,
                       ),
                     )
                   : const SizedBox.shrink(),

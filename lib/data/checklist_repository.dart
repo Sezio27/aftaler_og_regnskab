@@ -67,12 +67,9 @@ class ChecklistRepository {
   }) async {
     final uid = _uidOrThrow;
     final data = fields ?? _toFirestore(patch!, isCreate: false);
-    final withMeta = {
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(), // Firestore-only metadata
-    }..removeWhere((k, v) => v == null);
+    final payload = {...data}..removeWhere((k, v) => v == null);
 
-    await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));
+    await _collection(uid).doc(id).set(payload, SetOptions(merge: true));
   }
 
   Future<void> deleteChecklist(String id) async {
@@ -122,7 +119,6 @@ class ChecklistRepository {
           .where((e) => e.isNotEmpty)
           .toList(),
       if (isCreate) 'createdAt': FieldValue.serverTimestamp(), // Firestore-only
-      'updatedAt': FieldValue.serverTimestamp(), // Firestore-only
     };
     map.removeWhere((_, v) => v == null);
     return map;

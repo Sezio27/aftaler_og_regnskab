@@ -115,7 +115,7 @@ class AppointmentViewModel extends ChangeNotifier {
       fetched,
     ) async {
       _initialAppointments = fetched;
-      _updateAppointments();
+      _updateAppointments(notify: false);
       notifyListeners();
       if (firstSnapshot) {
         debugPrint(
@@ -168,7 +168,7 @@ class AppointmentViewModel extends ChangeNotifier {
             .watchAppointmentsBetween(monthStart, monthEnd)
             .listen((fetched) async {
               _windowAppointments[monthStart] = fetched;
-              _updateAppointments();
+              _updateAppointments(notify: false);
               if (firstSnapshot) {
                 debugPrint(
                   '$label [$monthStart] first_snapshot=${DateTime.now().difference(startedAt).inMilliseconds}ms',
@@ -205,7 +205,7 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  void _updateAppointments() {
+  void _updateAppointments({bool notify = true}) {
     var allAppointments = [..._initialAppointments];
     for (var list in _windowAppointments.values) {
       allAppointments.addAll(list);
@@ -217,7 +217,8 @@ class AppointmentViewModel extends ChangeNotifier {
     _rangeAppointments = allAppointments;
     _buildDailyIndexes(allAppointments);
     if (!isReady) isReady = true;
-    notifyListeners();
+
+    if (notify) notifyListeners();
   }
 
   // ────────────────────────────────────────────────────────────────────────────

@@ -77,10 +77,7 @@ class ServiceRepository {
     // prefer explicit fields; otherwise map from patch
     final base = fields ?? _toFirestore(patch!, isCreate: false);
 
-    final withMeta = <String, Object?>{
-      ...base,
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
+    final withMeta = <String, Object?>{...base};
 
     // translate deletes here (Firebase-specific)
     for (final key in deletes) {
@@ -118,7 +115,6 @@ class ServiceRepository {
       'price': m.price,
       'image': m.image,
       if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
     };
     map.removeWhere((_, v) => v == null);
     return map;

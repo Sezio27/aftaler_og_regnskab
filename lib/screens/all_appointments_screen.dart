@@ -1,4 +1,7 @@
 import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
+import 'package:aftaler_og_regnskab/debug/bench.dart';
+import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -11,6 +14,7 @@ import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -28,7 +32,6 @@ class AllAppointmentsScreen extends StatefulWidget {
 class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
-  final Map<String, String> _statusOverride = {};
 
   String _query = '';
   ApptType _type = ApptType.all;
@@ -91,26 +94,37 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
     if (!_to.isBefore(_from)) {
       // optional: scroll to top so the user sees new results
       if (_scrollCtrl.hasClients) _scrollCtrl.jumpTo(0);
-      _statusOverride.clear();
       context.read<AppointmentViewModel>().beginListRange(_from, _to);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    assert(() {
+      bench?.allAppointmentsBuilds++;
+      return true;
+    }());
     final cs = Theme.of(context).colorScheme;
-    final vm = context.watch<AppointmentViewModel>();
+    final listCards = context
+        .select<AppointmentViewModel, List<AppointmentCardModel>>(
+          (v) => v.listCards,
+        );
+    final listLoading = context.select<AppointmentViewModel, bool>(
+      (v) => v.listLoading,
+    );
+    final listHasMore = context.select<AppointmentViewModel, bool>(
+      (v) => v.listHasMore,
+    );
     final hPad = LayoutMetrics.horizontalPadding(context);
 
     // Filter visible items for the list (status/type/query)
-    final items = vm.listCards.where((a) {
-      final effectiveStatus = _statusOverride[a.id] ?? a.status;
-      return _statusMatches(effectiveStatus) &&
+    final items = listCards.where((a) {
+      return _statusMatches(a.status) &&
           _typeMatches(_type, a) &&
           _queryMatches(_query, a.clientName, a.serviceName);
     }).toList();
 
-    return Padding(
+    final listbody = Padding(
       padding: EdgeInsets.fromLTRB(
         hPad / 2,
         6,
@@ -122,16 +136,14 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
 
         itemCount: (() {
           // 1 filter card + 1 results header +  (items or a single "state" row) + optional loader
-          final vm = context.read<AppointmentViewModel>();
           final itemsCount = items.isNotEmpty
               ? items.length
               : 1; // one row for empty/loading
-          final loaderCount = vm.listLoading ? 1 : 0;
+          final loaderCount = listLoading ? 1 : 0;
           return 1 + 1 + itemsCount + loaderCount;
         })(),
         itemBuilder: (context, index) {
           final cs = Theme.of(context).colorScheme;
-          final vm = context.read<AppointmentViewModel>();
 
           // 0) FILTER CARD (scrolls away)
           if (index == 0) {
@@ -236,9 +248,9 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
             return Padding(
               padding: const EdgeInsets.fromLTRB(8, 14, 8, 10),
               child: Text(
-                (vm.listCards.isEmpty && !vm.listLoading)
+                (listCards.isEmpty && !listLoading)
                     ? 'Ingen aftaler i perioden'
-                    : 'Resultater: ${items.length}${vm.listHasMore ? " +" : ""}',
+                    : 'Resultater: ${items.length}${listHasMore ? " +" : ""}',
                 style: AppTypography.b3.copyWith(
                   color: cs.onSurface.withOpacity(0.7),
                 ),
@@ -252,7 +264,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
           // 2) LIST CONTENT (empty/loading state or real items)
           if (items.isEmpty) {
             // Single row representing empty/loading state
-            if (vm.listLoading) {
+            if (listLoading) {
               return const Padding(
                 padding: EdgeInsets.all(24),
                 child: Center(child: CircularProgressIndicator()),
@@ -277,7 +289,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
             final a = items[itemIndex];
             final dateText = DateFormat('d/M/yy', 'da').format(a.time);
 
-            final effectiveStatus = _statusOverride[a.id] ?? a.status;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: AppointmentStatusCard(
@@ -285,32 +296,27 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                 service: a.serviceName,
                 price: a.price,
                 dateText: dateText,
-                status: effectiveStatus,
+                status: a.status,
                 onSeeDetails: () {
                   context.pushNamed(
                     AppRoute.appointmentDetails.name,
                     pathParameters: {'id': a.id},
                   );
                 },
-                onChangeStatus: (newStatus) {
-                  setState(() {
-                    _statusOverride[a.id] =
-                        newStatus.label; // instant UI change
-                  });
-                  context.read<AppointmentViewModel>().updateStatus(
-                    a.id,
-                    a.status,
-                    a.price,
-                    newStatus.label,
-                    a.time,
-                  );
-                },
+                onChangeStatus: (newStatus) =>
+                    context.read<AppointmentViewModel>().updateStatus(
+                      a.id,
+                      a.status,
+                      a.price,
+                      newStatus.label,
+                      a.time,
+                    ),
               ),
             );
           }
 
           // 3) FOOTER LOADER (optional, only when more to load)
-          final isLoaderRow = (itemIndex == items.length) && vm.listLoading;
+          final isLoaderRow = (itemIndex == items.length) && listLoading;
           if (isLoaderRow) {
             return const Padding(
               padding: EdgeInsets.all(16),
@@ -323,6 +329,177 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
         },
       ),
     );
+
+    return Stack(
+      children: [
+        listbody,
+        if (kDebugMode)
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // RESET
+                FloatingActionButton.small(
+                  heroTag: 'fab-reset',
+                  tooltip: 'Reset counters',
+                  onPressed: _resetBench,
+                  child: const Icon(Icons.restart_alt),
+                ),
+                const SizedBox(height: 8),
+                // SEED
+                FloatingActionButton.small(
+                  heroTag: 'fab-seed',
+                  tooltip: 'Seed demo data',
+                  onPressed: _seedDemoData,
+                  child: const Icon(Icons.dataset),
+                ),
+                const SizedBox(height: 8),
+                // LOG
+                FloatingActionButton.small(
+                  heroTag: 'fab-log',
+                  tooltip: 'Log BENCH',
+                  onPressed: () => bench?.log('AllAppointments snapshot'),
+                  child: const Icon(Icons.bug_report),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton.small(
+                  heroTag: 'fab-delete-all',
+                  tooltip: 'Slet alle aftaler (DEV)',
+                  onPressed: _deleteAllAppointments,
+                  child: const Icon(Icons.delete_forever),
+                ),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _resetBench() {
+    if (bench == null) return;
+    bench!
+      ..pagedReads = 0
+      ..liveFirstReads = 0
+      ..liveUpdateReads = 0
+      ..allAppointmentsBuilds = 0;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('BENCH counters reset')));
+  }
+
+  Future<void> _seedDemoData() async {
+    try {
+      final repo = context.read<AppointmentRepository>();
+      DateTime mStart(DateTime d) => DateTime(d.year, d.month, 1);
+      DateTime addMonths(DateTime d, int delta) =>
+          DateTime(d.year, d.month + delta, 1);
+
+      final now = DateTime.now();
+      final months = [
+        mStart(now), // M0 (LIVE)
+        mStart(addMonths(now, 1)), // M+1 (LIVE)
+        mStart(addMonths(now, 2)), // M+2 (NON-LIVE initially)
+        mStart(addMonths(now, 3)), // M+3 (NON-LIVE initially)
+      ];
+
+      List<AppointmentModel> monthDocs(DateTime start) {
+        // 5 docs per month, safe days inside month
+        const days = [3, 10, 17, 24, 27];
+        return List.generate(5, (i) {
+          final dt = DateTime(
+            start.year,
+            start.month,
+            days[i],
+            10 + i,
+          ); // 10:00..14:00
+          return AppointmentModel(
+            dateTime: dt,
+            // Only fields needed for our bench
+            status: 'uninvoiced',
+            checklistIds: const [],
+            imageUrls: const [],
+          );
+        });
+      }
+
+      // Commit per-month to minimize snapshot churn (4 commits total)
+      for (final m in months) {
+        await repo.createAppointmentsBatch(monthDocs(m));
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seeded 20 appointments (5 per month x 4)'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Seed error: $e')));
+    }
+  }
+
+  Future<void> _deleteAllAppointments() async {
+    final cs = Theme.of(context).colorScheme;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Slet alle aftaler?'),
+        content: const Text(
+          'Dette vil fjerne ALLE aftaler for denne bruger. '
+          'Denne handling kan ikke fortrydes.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuller'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: cs.error),
+            child: const Text('Slet alt'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final repo = context.read<AppointmentRepository>();
+      final vm = context.read<AppointmentViewModel>();
+
+      // Do the nuke
+      final deleted = await repo.deleteAllAppointments();
+
+      // Rebuild list state so stale paged data disappears
+      // (live months will also clear via listeners)
+      vm.beginListRange(_from, _to);
+
+      // Optional: reset your bench counters after a nuke
+      bench
+        ?..pagedReads = 0
+        ..liveFirstReads = 0
+        ..liveUpdateReads = 0
+        ..allAppointmentsBuilds = 0;
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Slettede $deleted aftaler')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Fejl ved sletning: $e')));
+    }
   }
 
   Future<void> _pickType() async {
