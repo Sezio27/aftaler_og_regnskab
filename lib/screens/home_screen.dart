@@ -62,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       valueColor: AppColors.greenMain,
                       iconBgColor: AppColors.greenBackground,
+                      minHeight: 160,
                     ),
                     const SizedBox(width: 16),
                     StatCard(
@@ -75,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       valueColor: cs.onSurface,
                       iconBgColor: AppColors.peachBackground,
+                      minHeight: 160,
                     ),
                   ],
                 );

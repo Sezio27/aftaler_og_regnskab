@@ -126,7 +126,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
           final itemsCount = items.isNotEmpty
               ? items.length
               : 1; // one row for empty/loading
-          final loaderCount = vm.listHasMore ? 1 : 0;
+          final loaderCount = vm.listLoading ? 1 : 0;
           return 1 + 1 + itemsCount + loaderCount;
         })(),
         itemBuilder: (context, index) {
@@ -275,11 +275,8 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
           // When we have items:
           if (itemIndex < items.length) {
             final a = items[itemIndex];
-            final dateText = DateFormat('d/M', 'da').format(a.time);
-            final timeText = MaterialLocalizations.of(context).formatTimeOfDay(
-              TimeOfDay.fromDateTime(a.time),
-              alwaysUse24HourFormat: true,
-            );
+            final dateText = DateFormat('d/M/yy', 'da').format(a.time);
+
             final effectiveStatus = _statusOverride[a.id] ?? a.status;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -313,7 +310,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
           }
 
           // 3) FOOTER LOADER (optional, only when more to load)
-          final isLoaderRow = (itemIndex == items.length) && vm.listHasMore;
+          final isLoaderRow = (itemIndex == items.length) && vm.listLoading;
           if (isLoaderRow) {
             return const Padding(
               padding: EdgeInsets.all(16),

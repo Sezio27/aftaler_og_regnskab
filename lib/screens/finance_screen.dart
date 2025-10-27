@@ -1,5 +1,7 @@
 // lib/screens/finance_screen.dart
+import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
+import 'package:aftaler_og_regnskab/widgets/stat_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -93,18 +95,32 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     'sum-${summary.count}-${summary.income.round()}',
                   ),
                   children: [
-                    _SummaryCard(
-                      title: 'Indtægt',
-                      value: nf.format(summary.income),
-                      change: '+12% siden sidste uge',
-                      changeColor: Colors.green,
+                    StatCard(
+                      title: "Omsætning",
+
+                      value: formatDKK(summary.income),
+                      icon: const Icon(
+                        Icons.account_balance_outlined,
+                        size: 18,
+                        color: AppColors.greenMain,
+                      ),
+                      valueColor: AppColors.greenMain,
+                      iconBgColor: AppColors.greenBackground,
                     ),
+
                     const SizedBox(width: 16),
-                    _SummaryCard(
-                      title: 'Aftaler',
-                      value: '${summary.count}',
-                      change: '+8% siden sidste uge',
-                      changeColor: Colors.green,
+
+                    StatCard(
+                      title: "Aftaler",
+
+                      value: summary.count.toString(),
+                      icon: const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 20,
+                        color: AppColors.peach,
+                      ),
+                      valueColor: cs.onSurface,
+                      iconBgColor: AppColors.peachBackground,
                     ),
                   ],
                 );
@@ -305,50 +321,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.title,
-    required this.value,
-    required this.change,
-    required this.changeColor,
-  });
-
-  final String title;
-  final String value;
-  final String change;
-  final Color changeColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: CustomCard(
-        constraints: const BoxConstraints(minHeight: 160),
-        field: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title, textAlign: TextAlign.center, style: AppTypography.b2),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                textAlign: TextAlign.center,
-                style: AppTypography.num4,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                change,
-                style: AppTypography.num5.copyWith(color: changeColor),
-              ),
-            ],
-          ),
         ),
       ),
     );

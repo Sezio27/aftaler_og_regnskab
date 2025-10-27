@@ -907,8 +907,11 @@ class AppointmentViewModel extends ChangeNotifier {
     _rebuildListUnion();
     notifyListeners();
 
-    // Kick off the first one or two non-live months
-    await loadNextListMonth(count: 2);
+    do {
+      await loadNextListMonth(
+        count: 3,
+      ); // Increased from 2 for faster initial load
+    } while (_listAll.isEmpty && _listHasMore);
   }
 
   Future<void> loadNextListMonth({int count = 1}) async {
@@ -946,6 +949,10 @@ class AppointmentViewModel extends ChangeNotifier {
       _listLoading = false;
 
       if (loadedAny) _rebuildListUnion();
+      if (_listAll.length < 5 && _listHasMore && !_listLoading) {
+        // Threshold: adjust as needed
+        loadNextListMonth(count: 3);
+      }
       notifyListeners();
     }
   }

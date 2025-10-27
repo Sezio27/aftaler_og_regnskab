@@ -6,29 +6,30 @@ class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.value,
     required this.valueColor,
     this.icon,
     required this.iconBgColor,
+    this.minHeight = 140,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final String value;
   final Color valueColor;
   final Widget? icon;
   final Color iconBgColor;
+  final double minHeight;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: CustomCard(
-        constraints: const BoxConstraints(minHeight: 180),
+        constraints: BoxConstraints(minHeight: minHeight),
         field: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          padding: const EdgeInsets.symmetric(vertical: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (icon != null) ...[
@@ -41,15 +42,20 @@ class StatCard extends StatelessWidget {
                   ),
                   child: icon,
                 ),
+                const SizedBox(height: 18),
               ],
-              const SizedBox(height: 8),
+
               Text(title, textAlign: TextAlign.center, style: AppTypography.h3),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: AppTypography.b2,
-              ),
+              const SizedBox(height: 10),
+
+              if (subtitle != null) ...[
+                Text(
+                  subtitle!,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.b2,
+                ),
+                const SizedBox(height: 6),
+              ],
               Text(
                 value,
                 textAlign: TextAlign.center,
