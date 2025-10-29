@@ -14,7 +14,7 @@ class WeekdayHeader extends StatelessWidget {
 
   List<String> _weekdayShortLabels(BuildContext c) {
     final loc = Localizations.localeOf(c).toLanguageTag();
-    final start = MaterialLocalizations.of(c).firstDayOfWeekIndex; // 0..6
+    final start = MaterialLocalizations.of(c).firstDayOfWeekIndex;
     final ds = DateFormat('EEE', loc).dateSymbols;
     final base = ds.STANDALONESHORTWEEKDAYS;
 

@@ -1,9 +1,6 @@
-// lib/navigation/nav_shell.dart
 import 'package:aftaler_og_regnskab/app_layout.dart';
 import 'package:aftaler_og_regnskab/utils/performance.dart';
-import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'tab_config.dart';
 
 class NavShell extends StatefulWidget {
@@ -28,7 +25,6 @@ class _NavShellState extends State<NavShell> {
     if (_lastLocation == widget.location) return;
     _lastLocation = widget.location;
 
-    // Stop on the first frame of the new tab
     WidgetsBinding.instance.addPostFrameCallback((_) {
       PerfTimer.stop('tab:${widget.location}');
     });
@@ -37,13 +33,13 @@ class _NavShellState extends State<NavShell> {
   @override
   void initState() {
     super.initState();
-    _stopIfLocationChanged(); // handles the initial mount too
+    _stopIfLocationChanged();
   }
 
   @override
   void didUpdateWidget(covariant NavShell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _stopIfLocationChanged(); // runs when location changes
+    _stopIfLocationChanged();
   }
 
   @override

@@ -1,4 +1,3 @@
-// lib/navigation/topbar_builder.dart
 import 'package:aftaler_og_regnskab/screens/calendar/calendar_tab_switcher.dart';
 import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
 import 'package:flutter/material.dart';

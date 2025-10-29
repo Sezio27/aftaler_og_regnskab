@@ -1,4 +1,3 @@
-// lib/screens/calendar/widgets/calendar_tab_switcher.dart
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/cupertino.dart';

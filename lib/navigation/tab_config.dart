@@ -29,7 +29,6 @@ int? tabIndexForRouteName(String? name) {
   }
 }
 
-// Derive a leaf route name from the URL if state.name is null
 String? routeNameFromLocation(String loc) {
   if (loc.startsWith('/appointments/new')) return 'newAppointment';
   if (loc.startsWith('/appointments/all')) return 'allAppointments';

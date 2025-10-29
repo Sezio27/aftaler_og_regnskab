@@ -1,16 +1,13 @@
 import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/debug/bench.dart';
-import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
+import 'package:aftaler_og_regnskab/model/appointment_model.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card_status.dart';
-import 'package:aftaler_og_regnskab/widgets/avatar.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
-import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:flutter/cupertino.dart';
@@ -104,7 +101,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
       bench?.allAppointmentsBuilds++;
       return true;
     }());
-    final cs = Theme.of(context).colorScheme;
     final listCards = context
         .select<AppointmentViewModel, List<AppointmentCardModel>>(
           (v) => v.listCards,
