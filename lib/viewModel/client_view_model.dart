@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
-import 'package:aftaler_og_regnskab/model/clientModel.dart';
+import 'package:aftaler_og_regnskab/model/client_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 class ClientViewModel extends ChangeNotifier {
   ClientViewModel(this._repo, this._imageStorage);

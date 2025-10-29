@@ -1,7 +1,7 @@
+import 'package:aftaler_og_regnskab/model/onboarding_model.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import '../model/onboardingModel.dart';
 import '../data/user_repository.dart';
 
 /// ViewModel (ChangeNotifier) that the UI listens to.

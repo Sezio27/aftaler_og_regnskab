@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
-import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
-import 'package:aftaler_og_regnskab/model/clientModel.dart';
-import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/model/appointment_model.dart';
+import 'package:aftaler_og_regnskab/model/client_model.dart';
+import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';

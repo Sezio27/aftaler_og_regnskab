@@ -1,5 +1,4 @@
-// lib/services/client_repository.dart
-import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 

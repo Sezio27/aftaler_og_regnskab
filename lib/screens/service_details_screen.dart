@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:aftaler_og_regnskab/model/serviceModel.dart';
-import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -13,7 +11,6 @@ import 'package:aftaler_og_regnskab/widgets/details/image_pickers.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class ServiceDetailsScreen extends StatelessWidget {

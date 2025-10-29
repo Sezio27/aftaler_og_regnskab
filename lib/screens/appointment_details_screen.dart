@@ -1,11 +1,8 @@
-import 'dart:io';
 import 'dart:typed_data';
-
-import 'package:aftaler_og_regnskab/model/appointmentModel.dart';
-import 'package:aftaler_og_regnskab/model/checklistModel.dart';
-import 'package:aftaler_og_regnskab/model/clientModel.dart';
-import 'package:aftaler_og_regnskab/model/serviceModel.dart';
-import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/model/appointment_model.dart';
+import 'package:aftaler_og_regnskab/model/checklist_model.dart';
+import 'package:aftaler_og_regnskab/model/client_model.dart';
+import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/date_time_format.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -17,7 +14,6 @@ import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_checklist_card.dart';
 import 'package:aftaler_og_regnskab/widgets/client_tile.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
 import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
@@ -28,11 +24,9 @@ import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/status.dart';
 import 'package:aftaler_og_regnskab/widgets/time_picker.dart';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {

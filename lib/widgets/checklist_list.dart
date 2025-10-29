@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/model/checklistModel.dart';
+import 'package:aftaler_og_regnskab/model/checklist_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/checklist_tile.dart';

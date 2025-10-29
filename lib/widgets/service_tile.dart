@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';

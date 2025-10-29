@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
-import 'package:aftaler_og_regnskab/model/checklistModel.dart';
+import 'package:aftaler_og_regnskab/model/checklist_model.dart';
 import 'package:flutter/material.dart';
 
 class ChecklistViewModel extends ChangeNotifier {

@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:typed_data';
-
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
-import 'package:aftaler_og_regnskab/model/serviceModel.dart';
+import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 class ServiceViewModel extends ChangeNotifier {
   ServiceViewModel(this._repo, this._imageStorage);

@@ -1,9 +1,8 @@
-import 'package:aftaler_og_regnskab/model/checklistModel.dart';
+import 'package:aftaler_og_regnskab/model/checklist_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
