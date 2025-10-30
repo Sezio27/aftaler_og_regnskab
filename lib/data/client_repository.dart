@@ -51,7 +51,6 @@ class ClientRepository {
   }
 
   Future<Map<String, ClientModel?>> getClients(Set<String> ids) async {
-    // Firestore 'whereIn' only accepts up to 10 values:contentReference[oaicite:1]{index=1}.
     if (ids.isEmpty) return {};
     final uid = _uidOrThrow;
     final idsList = ids.toList();
@@ -67,7 +66,6 @@ class ClientRepository {
       for (final doc in querySnapshot.docs) {
         result[doc.id] = _fromDoc(doc);
       }
-      // If a requested ID isn't returned (e.g. deleted), store null.
       for (final id in chunk) {
         result.putIfAbsent(id, () => null);
       }

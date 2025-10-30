@@ -643,7 +643,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
     _serviceVM = context.read<ServiceViewModel>();
     _checklistVM = context.read<ChecklistViewModel>();
 
-    _clientVM.prefetchClient(_selectedClientId);
+    _clientVM.prefetchClient(_selectedClientId!);
     if ((_selectedServiceId ?? '').isNotEmpty) {
       _serviceVM.prefetchService(_selectedServiceId!);
     }

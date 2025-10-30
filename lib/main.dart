@@ -1,10 +1,12 @@
 ﻿// main.dart
 import 'dart:async';
 import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/data/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
+import 'package:aftaler_og_regnskab/data/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
-import 'package:aftaler_og_regnskab/data/client_service_cache.dart';
+import 'package:aftaler_og_regnskab/data/service_cache.dart';
 import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
@@ -74,11 +76,14 @@ class MyApp extends StatelessWidget {
               AppointmentRepository(auth: auth, firestore: db),
         ),
         Provider(create: (_) => ImageStorage()),
-        Provider<ClientServiceCache>(
-          create: (ctx) => ClientServiceCache(
-            ctx.read<ClientRepository>(),
-            ctx.read<ServiceRepository>(),
-          ),
+        Provider<ClientCache>(
+          create: (ctx) => ClientCache(ctx.read<ClientRepository>()),
+        ),
+        Provider<ServiceCache>(
+          create: (ctx) => ServiceCache(ctx.read<ServiceRepository>()),
+        ),
+        Provider<AppointmentCache>(
+          create: (ctx) => AppointmentCache(ctx.read<AppointmentRepository>()),
         ),
         Provider<FinanceSummaryRepository>(
           create: (ctx) => FinanceSummaryRepository(
@@ -91,12 +96,14 @@ class MyApp extends StatelessWidget {
           create: (ctx) => ClientViewModel(
             ctx.read<ClientRepository>(),
             ctx.read<ImageStorage>(),
+            ctx.read<ClientCache>(),
           ),
         ),
         ChangeNotifierProvider(
           create: (ctx) => ServiceViewModel(
             ctx.read<ServiceRepository>(),
             ctx.read<ImageStorage>(),
+            ctx.read<ServiceCache>(),
           ),
         ),
         ChangeNotifierProvider(
@@ -111,7 +118,9 @@ class MyApp extends StatelessWidget {
             return AppointmentViewModel(
               ctx.read<AppointmentRepository>(),
               ctx.read<ImageStorage>(),
-              cache: ctx.read<ClientServiceCache>(),
+              clientCache: ctx.read<ClientCache>(),
+              serviceCache: ctx.read<ServiceCache>(),
+              apptCache: ctx.read<AppointmentCache>(),
               financeVM: ctx.read<FinanceViewModel>(),
             );
           },
@@ -162,6 +171,13 @@ class _AppBootstrapState extends State<_AppBootstrap> {
 
     // Also react to later sign-ins
     _authSub = auth.authStateChanges().listen((user) {
+      context.read<ClientCache>().clear();
+      context.read<ServiceCache>().clear();
+      context.read<AppointmentCache>().clear();
+      context.read<ClientViewModel>().reset();
+      context.read<ServiceViewModel>().reset();
+      context.read<AppointmentViewModel>().resetOnAuthChange();
+
       if (user != null) {
         if (!_didBootstrap) {
           _bootstrapTwoMonthRange();

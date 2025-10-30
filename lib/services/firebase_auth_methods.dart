@@ -1,11 +1,16 @@
 import 'dart:async';
 
+import 'package:aftaler_og_regnskab/data/client_cache.dart';
+import 'package:aftaler_og_regnskab/data/service_cache.dart';
 import 'package:aftaler_og_regnskab/utils/showOtpDialog.dart';
 import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class FirebaseAuthMethods {
   final FirebaseAuth _auth;
@@ -86,7 +91,8 @@ class FirebaseAuthMethods {
   Future<void> signOut(BuildContext context) async {
     try {
       await _auth.signOut();
-      if (context.mounted) context.go('/gate'); // ⬅️ reset to AuthGate
+      if (!context.mounted) return;
+      if (context.mounted) context.go('/gate');
     } on FirebaseAuthException catch (e) {
       showSnackBar(context, e.message ?? 'Kunne ikke logge ud');
     } catch (e) {

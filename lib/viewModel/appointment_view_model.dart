@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:aftaler_og_regnskab/data/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
-import 'package:aftaler_og_regnskab/data/client_service_cache.dart';
+import 'package:aftaler_og_regnskab/data/client_cache.dart';
+import 'package:aftaler_og_regnskab/data/service_cache.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
-import 'package:aftaler_og_regnskab/model/client_model.dart';
-import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
@@ -14,17 +14,15 @@ import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-typedef FetchClients =
-    Future<Map<String, ClientModel?>> Function(Set<String> ids);
-typedef FetchServices =
-    Future<Map<String, ServiceModel?>> Function(Set<String> ids);
 typedef MonthChip = ({String title, String status, DateTime time});
 
 class AppointmentViewModel extends ChangeNotifier {
   AppointmentViewModel(
     this._repo,
     this._imageStorage, {
-    required this.cache,
+    required this.clientCache,
+    required this.serviceCache,
+    required this.apptCache,
     required this.financeVM,
   });
 
@@ -32,18 +30,11 @@ class AppointmentViewModel extends ChangeNotifier {
   // Dependencies
   // ────────────────────────────────────────────────────────────────────────────
   final AppointmentRepository _repo;
-  final ClientServiceCache cache;
+  final ClientCache clientCache;
+  final ServiceCache serviceCache;
+  final AppointmentCache apptCache;
   final ImageStorage _imageStorage;
   final FinanceViewModel financeVM;
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // Appointments data
-  // ────────────────────────────────────────────────────────────────────────────
-  List<AppointmentModel> _rangeAppointments = const [];
-  List<AppointmentModel> get all => _rangeAppointments;
-
-  /// Quick lookup sets and maps for calendar queries
-  final Map<DateTime, List<AppointmentModel>> _appointmentsByDay = {};
 
   // ────────────────────────────────────────────────────────────────────────────
   // Simple UI state flags
@@ -51,23 +42,17 @@ class AppointmentViewModel extends ChangeNotifier {
   bool isReady = false;
   bool _isSaving = false;
   String? _lastErrorMessage;
-  AppointmentModel? _lastCreatedAppointment;
 
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
-  AppointmentModel? get lastAdded => _lastCreatedAppointment;
 
   // ────────────────────────────────────────────────────────────────────────────
   // Range subscription control
   // ────────────────────────────────────────────────────────────────────────────
-  /// Call this whenever month/week visible range changes.
-  /// Subscribes only to appointments within [start]..[end] (by `dateTime`).
-  ///
   StreamSubscription<List<AppointmentModel>>? _initialSubscription;
   final Map<DateTime, StreamSubscription<List<AppointmentModel>>>
   _windowSubscriptions = {};
-  List<AppointmentModel> _initialAppointments = [];
-  final Map<DateTime, List<AppointmentModel>> _windowAppointments = {};
+
   DateTime? _initialStart;
   DateTime? _initialEnd;
   DateTime? _activeMonthStart;
@@ -78,17 +63,51 @@ class AppointmentViewModel extends ChangeNotifier {
   DateTime? _listStart, _listEnd;
   bool _listLoading = false;
   bool _listHasMore = false;
-  final int _listPageSize = 20;
-  DocumentSnapshot<Map<String, dynamic>>? _listLastDoc;
-  final List<AppointmentModel> _pagedList = [];
-  List<AppointmentModel> _listAll = const [];
-
   bool get listLoading => _listLoading;
   bool get listHasMore => _listHasMore;
+  final int _listPageSize = 20;
+  DocumentSnapshot<Map<String, dynamic>>? _listLastDoc;
+  List<AppointmentModel> get _listModels =>
+      (_listStart != null && _listEnd != null)
+      ? apptCache.getAppointmentsBetween(_listStart!, _listEnd!)
+      : const [];
+
+  Future<void> _handleSnapshot(
+    List<AppointmentModel> fetched,
+    DateTime start,
+    DateTime end,
+  ) async {
+    apptCache.cacheAppointments(fetched);
+
+    final becameReady = !isReady;
+    if (becameReady) isReady = true;
+
+    final changed = await _prefetchClientsAndServices(
+      apptCache.getAppointmentsBetween(start, end),
+    );
+
+    if (becameReady || changed) notifyListeners();
+  }
+
+  StreamSubscription<List<AppointmentModel>> _subscribeMonth(
+    DateTime monthStart,
+  ) {
+    final monthEnd = endOfMonthInclusive(monthStart);
+
+    return _repo.watchAppointmentsBetween(monthStart, monthEnd).listen((
+      fetched,
+    ) async {
+      await _handleSnapshot(fetched, monthStart, monthEnd);
+    });
+  }
 
   @override
   void dispose() {
     _initialSubscription?.cancel();
+    for (final sub in _windowSubscriptions.values) {
+      sub.cancel();
+    }
+    _windowSubscriptions.clear();
     super.dispose();
   }
 
@@ -98,129 +117,46 @@ class AppointmentViewModel extends ChangeNotifier {
         !monthEnd.isAfter(_initialEnd!);
   }
 
-  Future<void> setInitialRange({String label = 'VM:setInitialRange'}) async {
+  Future<void> setInitialRange() async {
     if (_initialSubscription != null) return;
 
     final now = DateTime.now();
     final start = startOfMonth(now);
     final end = endOfMonthInclusive(DateTime(now.year, now.month + 1, 1));
-
     _initialStart = start;
     _initialEnd = end;
 
-    final startedAt = DateTime.now();
-    var firstSnapshot = true;
-    _initialSubscription = _repo.watchAppointmentsBetween(start, end).listen((
-      fetched,
-    ) async {
-      _initialAppointments = fetched;
-      _updateAppointments(notify: false);
-      notifyListeners();
-      if (firstSnapshot) {
-        debugPrint(
-          '$label first_snapshot=${DateTime.now().difference(startedAt).inMilliseconds}ms',
-        );
-        firstSnapshot = false;
-      }
-
-      final changed = await _prefetchClientsAndServices(
-        _initialStart!,
-        _initialEnd!,
-      );
-      if (changed) {
-        notifyListeners();
-      }
-    });
+    _initialSubscription = _subscribeMonth(start);
   }
 
-  void setActiveWindow(
-    DateTime visibleDate, {
-    String label = 'VM:setActiveWindow',
-  }) {
+  void setActiveWindow(DateTime visibleDate) {
+    if (_initialStart == null || _initialEnd == null) return;
+
     if (_isMonthCoveredByInitial(visibleDate)) return;
     final newMonthStart = startOfMonth(visibleDate);
 
-    if (_activeMonthStart == newMonthStart) return; // Same month, no change
+    if (_activeMonthStart == newMonthStart) return;
 
     _activeMonthStart = newMonthStart;
 
-    // Compute 3-month window starts: previous, current, next
     final windowMonthStarts = [
       addMonths(newMonthStart, -1),
       newMonthStart,
       addMonths(newMonthStart, 1),
     ];
 
-    // Determine required non-overlapping months
-    final requiredMonths = <DateTime>[];
-    for (final monthStart in windowMonthStarts) {
-      if (!_isMonthCoveredByInitial(monthStart)) {
-        requiredMonths.add(monthStart);
+    for (final m in windowMonthStarts) {
+      if (!_isMonthCoveredByInitial(m)) {
+        _windowSubscriptions.putIfAbsent(m, () => _subscribeMonth(m));
       }
     }
 
-    // Subscribe to new required months if not already
-    for (final monthStart in requiredMonths) {
-      if (!_windowSubscriptions.containsKey(monthStart)) {
-        debugPrint("Måned: $monthStart");
-        final monthEnd = endOfMonthInclusive(monthStart);
-        final startedAt = DateTime.now();
-        var firstSnapshot = true;
-        _windowSubscriptions[monthStart] = _repo
-            .watchAppointmentsBetween(monthStart, monthEnd)
-            .listen((fetched) async {
-              _windowAppointments[monthStart] = fetched;
-              _updateAppointments(notify: false);
-              if (firstSnapshot) {
-                debugPrint(
-                  '$label [$monthStart] first_snapshot=${DateTime.now().difference(startedAt).inMilliseconds}ms',
-                );
-                firstSnapshot = false;
-              }
-
-              final changed = await _prefetchClientsAndServices(
-                monthStart,
-                monthEnd,
-              );
-              if (changed) {
-                notifyListeners();
-              }
-            });
-      }
+    final keep = windowMonthStarts.toSet();
+    for (final m
+        in _windowSubscriptions.keys.where((k) => !keep.contains(k)).toList()) {
+      _windowSubscriptions[m]?.cancel();
+      _windowSubscriptions.remove(m);
     }
-
-    // Cleanup old window months not required anymore
-    final currentRequiredSet = requiredMonths.toSet();
-    final oldKeys = List.from(_windowSubscriptions.keys);
-    var removedAny = false;
-    for (final key in oldKeys) {
-      if (!currentRequiredSet.contains(key)) {
-        _windowSubscriptions[key]?.cancel();
-        _windowSubscriptions.remove(key);
-        _windowAppointments.remove(key);
-        removedAny = true;
-      }
-    }
-
-    if (removedAny) {
-      _updateAppointments();
-    }
-  }
-
-  void _updateAppointments({bool notify = true}) {
-    var allAppointments = [..._initialAppointments];
-    for (var list in _windowAppointments.values) {
-      allAppointments.addAll(list);
-    }
-    allAppointments.sort(
-      (a, b) =>
-          (a.dateTime ?? DateTime(0)).compareTo(b.dateTime ?? DateTime(0)),
-    );
-    _rangeAppointments = allAppointments;
-    _buildDailyIndexes(allAppointments);
-    if (!isReady) isReady = true;
-
-    if (notify) notifyListeners();
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -281,13 +217,14 @@ class AppointmentViewModel extends ChangeNotifier {
       );
 
       await _repo.createAppointmentWithId(docRef.id, model);
+      apptCache.cacheAppointment(model.copyWith(id: docRef.id));
 
       await financeVM.onAddAppointment(
         status: PaymentStatusX.fromString(status),
         price: price ?? 0.0,
         dateTime: dateTime,
       );
-
+      notifyListeners();
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke oprette aftale: $e';
@@ -306,13 +243,18 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime date,
   ) async {
     await _repo.updateStatus(id, newStatus.trim());
-
+    final a = apptCache.getAppointment(id);
+    if (a != null) {
+      apptCache.cacheAppointment(a.copyWith(status: newStatus.trim()));
+    }
     await financeVM.onUpdateStatus(
       oldStatus: PaymentStatusX.fromString(oldStatus),
       newStatus: PaymentStatusX.fromString(newStatus),
       price: price ?? 0.0,
       date: date,
     );
+
+    notifyListeners();
   }
 
   Future<bool> updateAppointmentFields(
@@ -402,6 +344,28 @@ class AppointmentViewModel extends ChangeNotifier {
           fields: fields,
           deletes: deletes,
         );
+
+        final updated = old.copyWith(
+          clientId: clientId ?? old.clientId,
+          serviceId: serviceId ?? old.serviceId,
+          checklistIds: checklistIds ?? old.checklistIds,
+          dateTime: dateTime ?? old.dateTime,
+          payDate: payDate ?? old.payDate,
+          location: fields.containsKey('location')
+              ? fields['location'] as String?
+              : (deletes.contains('location') ? null : old.location),
+          note: fields.containsKey('note')
+              ? fields['note'] as String?
+              : (deletes.contains('note') ? null : old.note),
+          status: fields.containsKey('status')
+              ? fields['status'] as String?
+              : (deletes.contains('status') ? null : old.status),
+          price: fields.containsKey('price')
+              ? (fields['price'] as num?)?.toDouble()
+              : (deletes.contains('price') ? null : old.price),
+          imageUrls: finalImageUrls,
+        );
+        apptCache.cacheAppointment(updated);
       }
 
       if (removedImageUrls.isNotEmpty) {
@@ -448,12 +412,13 @@ class AppointmentViewModel extends ChangeNotifier {
       await _imageStorage.deleteAppointmentImages(id);
     } catch (_) {}
     await _repo.deleteAppointment(id);
-
+    apptCache.remove(id);
     financeVM.onDeleteAppointment(
       status: PaymentStatusX.fromString(status),
       price: price ?? 0.0,
       date: date,
     );
+    notifyListeners();
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -463,32 +428,32 @@ class AppointmentViewModel extends ChangeNotifier {
       _repo.watchAppointment(id);
 
   List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
-    return _rangeAppointments.where((a) {
-      final dt = a.dateTime;
-      return dt != null &&
-          !dt.isBefore(dateOnly(start)) &&
-          !dt.isAfter(endOfDayInclusive(dateOnly(end)));
-    }).toList();
+    return apptCache.getAppointmentsBetween(
+      dateOnly(start),
+      endOfDayInclusive(dateOnly(end)),
+    );
   }
 
   List<AppointmentCardModel> cardsForRange(DateTime start, DateTime end) {
     final appts = getAppointmentsInRange(start, end);
+    return [
+      for (final appt in appts)
+        if (appt.id != null && appt.dateTime != null) _toCard(appt),
+    ];
+  }
 
-    final out = <AppointmentCardModel>[];
-    for (final appt in appts) {
-      if (appt.id == null || appt.dateTime == null) continue;
-      out.add(_toCard(appt));
-    }
-    return out;
+  List<AppointmentModel> _dayAppts(DateTime d) {
+    final s = dateOnly(d);
+    final e = endOfDayInclusive(s);
+    return apptCache.getAppointmentsBetween(s, e);
   }
 
   List<MonthChip> monthChipsOn(DateTime day) {
-    final date = dateOnly(day);
-    final items = _appointmentsByDay[date] ?? const <AppointmentModel>[];
+    final appointmentsOnDay = _dayAppts(day);
 
     final chips = <MonthChip>[];
-    for (final appt in items) {
-      final clientName = cache.getClient(appt.clientId ?? '')?.name ?? '';
+    for (final appt in appointmentsOnDay) {
+      final clientName = clientCache.getClient(appt.clientId ?? '')?.name ?? '';
       final time = appt.dateTime!;
       final status = appt.status ?? 'ufaktureret';
       chips.add((title: clientName, status: status, time: time));
@@ -496,114 +461,63 @@ class AppointmentViewModel extends ChangeNotifier {
     return chips;
   }
 
-  bool hasEventsOn(DateTime day) {
-    final d = dateOnly(day);
-    final list = _appointmentsByDay[d];
-    return list != null && list.isNotEmpty;
-  }
+  bool hasEventsOn(DateTime day) => _dayAppts(day).isNotEmpty;
 
-  /// Build UI-ready cards for a specific date (prefetches client/service first).
   Future<List<AppointmentCardModel>> cardsForDate(DateTime day) async {
-    final date = dateOnly(day);
-    final appointmentsOnDay =
-        _appointmentsByDay[date] ?? const <AppointmentModel>[];
-    // No sort needed: repo orders by dateTime and _rebuildDailyIndexes preserves it.
+    final appointmentsOnDay = _dayAppts(day);
 
-    // Fetch only what’s missing from caches
     final clientsToFetch = <String>{
       for (final a in appointmentsOnDay)
         if ((a.clientId ?? '').isNotEmpty &&
-            cache.getClient(a.clientId!) == null)
+            clientCache.getClient(a.clientId!) == null)
           a.clientId!,
     };
     final servicesToFetch = <String>{
       for (final a in appointmentsOnDay)
         if ((a.serviceId ?? '').isNotEmpty &&
-            cache.getService(a.serviceId!) == null)
+            serviceCache.getService(a.serviceId!) == null)
           a.serviceId!,
     };
 
     if (clientsToFetch.isNotEmpty || servicesToFetch.isNotEmpty) {
       await Future.wait([
-        if (clientsToFetch.isNotEmpty) _fetchClientsBatched(clientsToFetch),
-        if (servicesToFetch.isNotEmpty) _fetchServicesBatched(servicesToFetch),
+        if (clientsToFetch.isNotEmpty) clientCache.fetchClients(clientsToFetch),
+        if (servicesToFetch.isNotEmpty)
+          serviceCache.fetchServices(servicesToFetch),
       ]);
     }
 
-    final out = <AppointmentCardModel>[];
-    for (final appt in appointmentsOnDay) {
-      if (appt.id == null || appt.dateTime == null) continue;
-      out.add(_toCard(appt));
-    }
-    return out;
+    return [
+      for (final appt in appointmentsOnDay)
+        if (appt.id != null && appt.dateTime != null) _toCard(appt),
+    ];
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Internal: indexing and prefetch
-  // ────────────────────────────────────────────────────────────────────────────
-  void _buildDailyIndexes(List<AppointmentModel> appointments) {
-    _appointmentsByDay.clear();
-
-    for (final appointment in appointments) {
-      final appointmentDateTime = appointment.dateTime;
-      if (appointmentDateTime == null) {
-        continue;
-      }
-
-      final date = dateOnly(appointmentDateTime);
-
-      if (_appointmentsByDay[date] == null) {
-        _appointmentsByDay[date] = <AppointmentModel>[];
-      }
-
-      _appointmentsByDay[date]!.add(appointment);
-    }
-  }
-
-  Future<bool> _prefetchClientsAndServices(DateTime start, DateTime end) async {
+  Future<bool> _prefetchClientsAndServices(
+    Iterable<AppointmentModel> appts,
+  ) async {
     final clientIdsToFetch = <String>{};
     final serviceIdsToFetch = <String>{};
 
-    final s = dateOnly(start);
-    final e = dateOnly(end);
-
-    for (final entry in _appointmentsByDay.entries) {
-      final day = entry.key;
-      if (day.isBefore(s) || day.isAfter(e)) {
-        continue;
-      }
-      for (final appt in entry.value) {
-        final c = (appt.clientId ?? '').trim();
-        if (c.isNotEmpty && cache.getClient(c) == null) {
-          clientIdsToFetch.add(c);
-        }
-        final s = (appt.serviceId ?? '').trim();
-        if (s.isNotEmpty && cache.getService(s) == null) {
-          serviceIdsToFetch.add(s);
-        }
-      }
+    for (final appt in appts) {
+      final c = (appt.clientId ?? '').trim();
+      if (c.isNotEmpty && clientCache.getClient(c) == null)
+        clientIdsToFetch.add(c);
+      final s = (appt.serviceId ?? '').trim();
+      if (s.isNotEmpty && serviceCache.getService(s) == null)
+        serviceIdsToFetch.add(s);
     }
 
     if (clientIdsToFetch.isEmpty && serviceIdsToFetch.isEmpty) return false;
 
     await Future.wait([
-      if (clientIdsToFetch.isNotEmpty) cache.fetchClients(clientIdsToFetch),
-      if (serviceIdsToFetch.isNotEmpty) cache.fetchServices(serviceIdsToFetch),
+      if (clientIdsToFetch.isNotEmpty)
+        clientCache.fetchClients(clientIdsToFetch),
+      if (serviceIdsToFetch.isNotEmpty)
+        serviceCache.fetchServices(serviceIdsToFetch),
     ]);
 
     return true;
-  }
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // Internal: caching helpers
-  // ────────────────────────────────────────────────────────────────────────────
-
-  Future<void> _fetchClientsBatched(Set<String> ids) async {
-    await cache.fetchClients(ids);
-  }
-
-  Future<void> _fetchServicesBatched(Set<String> ids) async {
-    await cache.fetchServices(ids);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -638,18 +552,15 @@ class AppointmentViewModel extends ChangeNotifier {
   Future<void> beginListRange(DateTime start, DateTime end) async {
     _listStart = dateOnly(start);
     _listEnd = endOfDayInclusive(dateOnly(end));
-    _pagedList.clear();
+
     _listLastDoc = null;
     _listHasMore = true;
 
-    // Rebuild the list union without any paged data yet.
-    _rebuildListUnion();
     notifyListeners();
 
-    // Load initial pages (three at a time) until some items appear or no more.
     do {
       await loadNextListPage(count: 3);
-    } while (_listAll.isEmpty && _listHasMore);
+    } while (_listModels.isEmpty && _listHasMore);
   }
 
   Future<void> loadNextListPage({int count = 1}) async {
@@ -662,7 +573,6 @@ class AppointmentViewModel extends ChangeNotifier {
     try {
       var remaining = count;
       while (remaining > 0 && _listHasMore) {
-        // Fetch one page from the repository
         final result = await _repo.getAppointmentsPaged(
           startInclusive: _listStart,
           endInclusive: _listEnd,
@@ -674,31 +584,17 @@ class AppointmentViewModel extends ChangeNotifier {
         final items = result.items;
         final lastDoc = result.lastDoc;
 
-        // If no items returned, we've reached the end
         if (items.isEmpty) {
           _listHasMore = false;
           break;
         }
 
         _listLastDoc = lastDoc;
-        _pagedList.addAll(items);
+        apptCache.cacheAppointments(items);
 
-        // Prefetch any missing client/service data
-        final clientIds = <String>{};
-        final serviceIds = <String>{};
-        for (final appt in items) {
-          final c = (appt.clientId ?? '').trim();
-          if (c.isNotEmpty && cache.getClient(c) == null) clientIds.add(c);
-          final s = (appt.serviceId ?? '').trim();
-          if (s.isNotEmpty && cache.getService(s) == null) serviceIds.add(s);
-        }
-        await Future.wait([
-          if (clientIds.isNotEmpty) cache.fetchClients(clientIds),
-          if (serviceIds.isNotEmpty) cache.fetchServices(serviceIds),
-        ]);
+        _prefetchClientsAndServices(items);
 
         loadedAny = true;
-        // If fewer items than pageSize, no more pages remain
         if (items.length < _listPageSize) {
           _listHasMore = false;
           break;
@@ -707,58 +603,17 @@ class AppointmentViewModel extends ChangeNotifier {
       }
     } finally {
       _listLoading = false;
-      // Rebuild UI data when new items were loaded
-      if (loadedAny) _rebuildListUnion();
-      // Auto-fetch more pages if we still have very few items
-      if (_listAll.length < 5 && _listHasMore && !_listLoading) {
+
+      if (_listModels.length < 5 && _listHasMore && !_listLoading) {
         loadNextListPage(count: 3);
       }
       notifyListeners();
     }
   }
 
-  void _rebuildListUnion() {
-    if (_listStart == null || _listEnd == null) {
-      return;
-    }
-    // Live data from initial and active windows
-    final live = <AppointmentModel>[
-      ..._initialAppointments,
-      for (final v in _windowAppointments.values) ...v,
-    ];
-    // Data loaded via paged queries
-    final paged = List<AppointmentModel>.from(_pagedList);
-
-    // Merge, letting live data override paged data on ID conflicts
-    final byId = <String, AppointmentModel>{};
-    for (final a in paged) {
-      final id = a.id;
-      if (id != null) byId[id] = a;
-    }
-    for (final a in live) {
-      final id = a.id;
-      if (id != null) byId[id] = a;
-    }
-
-    // Filter to current list range and sort ascending by dateTime
-    final listRangeAll = byId.values.where((a) {
-      final dt = a.dateTime;
-      if (dt == null) return false;
-      if (_listStart != null && dt.isBefore(_listStart!)) return false;
-      if (_listEnd != null && dt.isAfter(_listEnd!)) return false;
-      return true;
-    }).toList();
-    listRangeAll.sort(
-      (a, b) =>
-          (a.dateTime ?? DateTime(0)).compareTo(b.dateTime ?? DateTime(0)),
-    );
-    _listAll = listRangeAll;
-  }
-
   AppointmentCardModel _toCard(AppointmentModel appt) {
-    final client = cache.getClient(appt.clientId ?? '');
-    final service = cache.getService(appt.serviceId ?? '');
-    final chosenPrice = appt.price;
+    final client = clientCache.getClient(appt.clientId ?? '');
+    final service = serviceCache.getService(appt.serviceId ?? '');
 
     final hasCvr = ((client?.cvr ?? '').trim().isNotEmpty);
 
@@ -769,7 +624,7 @@ class AppointmentViewModel extends ChangeNotifier {
       phone: client?.phone,
       email: client?.email,
       time: appt.dateTime!,
-      price: chosenPrice,
+      price: appt.price,
       duration: service?.duration,
       status: appt.status ?? 'ufaktureret',
       imageUrl: client?.image,
@@ -777,8 +632,32 @@ class AppointmentViewModel extends ChangeNotifier {
     );
   }
 
-  List<AppointmentCardModel> get listCards => _listAll
+  List<AppointmentCardModel> get listCards => _listModels
       .where((a) => a.id != null && a.dateTime != null)
       .map(_toCard)
       .toList();
+
+  void resetOnAuthChange() {
+    _initialSubscription?.cancel();
+    _initialSubscription = null;
+
+    for (final sub in _windowSubscriptions.values) {
+      sub.cancel();
+    }
+    _windowSubscriptions.clear();
+    _initialStart = null;
+    _initialEnd = null;
+    _activeMonthStart = null;
+
+    _listStart = null;
+    _listEnd = null;
+    _listLoading = false;
+    _listHasMore = false;
+    _listLastDoc = null;
+    isReady = false;
+    _isSaving = false;
+    _lastErrorMessage = null;
+    apptCache.clear();
+    notifyListeners();
+  }
 }

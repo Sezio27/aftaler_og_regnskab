@@ -33,7 +33,7 @@ class _ClientListOverlayState extends State<ClientListOverlay> {
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController(text: widget.initialQuery);
-    _vm = context.read<ClientViewModel>(); // <- read once here
+    _vm = context.read<ClientViewModel>();
     _vm.initClientFilters(initialQuery: widget.initialQuery);
     if (widget.initialQuery.isNotEmpty) {
       _vm.setClientSearch(widget.initialQuery);

@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:aftaler_og_regnskab/data/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/model/client_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:flutter/material.dart';
 
 class ClientViewModel extends ChangeNotifier {
-  ClientViewModel(this._repo, this._imageStorage);
+  ClientViewModel(this._repo, this._imageStorage, this._cache);
   final ClientRepository _repo;
   final ImageStorage _imageStorage;
+  final ClientCache _cache;
 
   StreamSubscription<List<ClientModel>>? _sub;
 
@@ -28,26 +30,21 @@ class ClientViewModel extends ChangeNotifier {
   int get privateCount => _private.length;
   int get businessCount => _business.length;
 
-  final Map<String, ClientModel> _clientCache = {};
-
   @override
   void dispose() {
     _sub?.cancel();
     super.dispose();
   }
 
-  Future<void> prefetchClient(String? id) async {
-    final key = (id ?? '').trim();
-    if (key.isEmpty) return;
+  Future<void> prefetchClient(String id) async {
+    if (_cache.getClient(id) != null) return;
 
-    if (_clientCache.containsKey(key)) return; // already cached
-
-    final fetched = await _repo.getClientOnce(key);
+    final result = await _cache.fetchClients({id});
+    final fetched = result[id];
     if (fetched != null) {
-      _clientCache[key] = fetched;
-      // also keep _client if you still use it anywhere
+      _cache.cacheClient(fetched);
       _client = fetched;
-      notifyListeners(); // triggers UI rebuilds using select()
+      notifyListeners();
     }
   }
 
@@ -57,19 +54,18 @@ class ClientViewModel extends ChangeNotifier {
 
     _sub = _repo.watchClients().listen((items) {
       _all = items;
+      _cache.cacheClients(items);
       _recompute();
     });
   }
 
   ClientModel? getClient(String id) {
-    final cached = _clientCache[id];
-    if (cached != null) return cached;
+    final fromCache = _cache.getClient(id);
+    if (fromCache != null) return fromCache;
 
+    // manual search to allow returning null safely
     for (final c in _all) {
-      if (c.id == id) {
-        _clientCache[id] = c;
-        return c;
-      }
+      if (c.id == id) return c;
     }
     return null;
   }
@@ -104,10 +100,7 @@ class ClientViewModel extends ChangeNotifier {
 
     for (final c in searched) {
       (hasCvr(c) ? business : priv).add(c);
-      final id = (c.id ?? '').trim();
-      if (id.isNotEmpty) {
-        _clientCache[id] = c;
-      }
+      _cache.cacheClient(c);
     }
 
     _business = business;
@@ -175,6 +168,11 @@ class ClientViewModel extends ChangeNotifier {
         image: imageUrl,
       );
       await _repo.createClientWithId(docRef.id, model);
+
+      try {
+        final cache = model.copyWith(id: docRef.id);
+        _cache.cacheClient(cache);
+      } catch (_) {}
 
       _lastAdded = model;
       return true;
@@ -245,9 +243,9 @@ class ClientViewModel extends ChangeNotifier {
       }
 
       // Optional: best-effort cache touch
-      final cached = _clientCache[id];
+      final cached = _cache.getClient(id);
       if (cached != null) {
-        _clientCache[id] = cached.copyWith(
+        final updated = cached.copyWith(
           name: fields.containsKey('name')
               ? fields['name'] as String?
               : (deletes.contains('name') ? null : cached.name),
@@ -273,6 +271,16 @@ class ClientViewModel extends ChangeNotifier {
               ? fields['image'] as String?
               : (deletes.contains('image') ? null : cached.image),
         );
+
+        _cache.cacheClient(updated);
+        _all = [
+          for (final c in _all)
+            if (c.id == id) updated else c,
+        ];
+        _allFiltered = [
+          for (final c in _allFiltered)
+            if (c.id == id) updated else c,
+        ];
       }
 
       return true;
@@ -291,5 +299,21 @@ class ClientViewModel extends ChangeNotifier {
     } catch (_) {}
 
     await _repo.deleteClient(id);
+    _all = _all.where((c) => c.id != id).toList();
+    _allFiltered = _allFiltered.where((c) => c.id != id).toList();
+    _cache.remove(id);
+    notifyListeners();
+  }
+
+  void reset() {
+    _sub?.cancel();
+    _sub = null;
+    _query = '';
+    _client = null;
+    _all = const [];
+    _allFiltered = const [];
+    _private = const [];
+    _business = const [];
+    notifyListeners();
   }
 }

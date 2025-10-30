@@ -1,23 +1,25 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:aftaler_og_regnskab/data/service_cache.dart';
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:flutter/material.dart';
 
 class ServiceViewModel extends ChangeNotifier {
-  ServiceViewModel(this._repo, this._imageStorage);
+  ServiceViewModel(this._repo, this._imageStorage, this._cache);
   final ServiceRepository _repo;
   final ImageStorage _imageStorage;
+  final ServiceCache _cache;
 
   StreamSubscription<List<ServiceModel>>? _sub;
 
   String _query = '';
-
+  ServiceModel? _service;
+  ServiceModel? get service => _service;
   List<ServiceModel> _all = const [];
   List<ServiceModel> _allFiltered = const [];
   List<ServiceModel> get allServices => _allFiltered;
-  final Map<String, ServiceModel> _serviceCache = {};
 
   @override
   void dispose() {
@@ -25,33 +27,40 @@ class ServiceViewModel extends ChangeNotifier {
     super.dispose();
   }
 
+  ServiceModel? getService(String id) {
+    final cached = _cache.getService(id);
+    if (cached != null) return cached;
+    for (final s in _all) {
+      if (s.id == id) {
+        _cache.cacheService(s);
+        return s;
+      }
+    }
+    return null;
+  }
+
   void initServiceFilters({String initialQuery = ''}) {
     if (_sub != null) return;
     _query = initialQuery.trim();
-
     _sub = _repo.watchServices().listen((items) {
       _all = items;
-      _serviceCache
-        ..clear()
-        ..addEntries(
-          items
-              .where((s) => (s.id ?? '').isNotEmpty)
-              .map((s) => MapEntry(s.id!, s)),
-        );
+      _cache.cacheServices(items);
       _recompute();
     });
   }
 
   ServiceModel? getById(String? id) {
     if (id == null || id.isEmpty) return null;
-    return _serviceCache[id];
+    return _cache.getService(id);
   }
 
   Future<void> prefetchService(String id) async {
-    if (_serviceCache.containsKey(id)) return;
-    final one = await _repo.getServiceOnce(id);
-    if (one != null && (one.id ?? '').isNotEmpty) {
-      _serviceCache[one.id!] = one;
+    if (_cache.getService(id) != null) return;
+    final result = await _cache.fetchServices({id});
+    final fetched = result[id];
+    if (fetched != null) {
+      _cache.cacheService(fetched);
+      _service = fetched;
       notifyListeners();
     }
   }
@@ -70,7 +79,6 @@ class ServiceViewModel extends ChangeNotifier {
   }
 
   void _recompute() {
-    // 1) search
     final q = _query.toLowerCase();
     bool m(String? v) => (v ?? '').toLowerCase().contains(q);
 
@@ -90,19 +98,6 @@ class ServiceViewModel extends ChangeNotifier {
   bool get saving => _saving;
   String? get error => _error;
   ServiceModel? get lastAdded => _lastAdded;
-
-  ServiceModel? getService(String id) {
-    final cached = _serviceCache[id];
-    if (cached != null) return cached;
-
-    for (final s in _all) {
-      if (s.id == id) {
-        _serviceCache[id] = s;
-        return s;
-      }
-    }
-    return null;
-  }
 
   Future<bool> addService({
     required String? name,
@@ -145,6 +140,11 @@ class ServiceViewModel extends ChangeNotifier {
         image: imageUrl,
       );
       await _repo.createServiceWithId(docRef.id, model);
+
+      try {
+        final cache = model.copyWith(id: docRef.id);
+        _cache.cacheService(cache);
+      } catch (_) {}
 
       _lastAdded = model;
       return true;
@@ -216,6 +216,35 @@ class ServiceViewModel extends ChangeNotifier {
 
       if (fields.isNotEmpty || deletes.isNotEmpty) {
         await _repo.updateService(id, fields: fields, deletes: deletes);
+        final cached = _cache.getService(id);
+        if (cached != null) {
+          final updated = cached.copyWith(
+            name: fields.containsKey('name')
+                ? fields['name'] as String?
+                : (deletes.contains('name') ? null : cached.name),
+            description: fields.containsKey('description')
+                ? fields['description'] as String?
+                : (deletes.contains('description') ? null : cached.description),
+            duration: fields.containsKey('duration')
+                ? fields['duration'] as String?
+                : (deletes.contains('duration') ? null : cached.duration),
+            price: fields.containsKey('price')
+                ? (fields['price'] as num?)?.toDouble()
+                : (deletes.contains('price') ? null : cached.price),
+            image: fields.containsKey('image')
+                ? fields['image'] as String?
+                : (deletes.contains('image') ? null : cached.image),
+          );
+          _cache.cacheService(updated);
+          _all = [
+            for (final s in _all)
+              if (s.id == id) updated else s,
+          ];
+          _allFiltered = [
+            for (final s in _allFiltered)
+              if (s.id == id) updated else s,
+          ];
+        }
       }
 
       return true;
@@ -228,22 +257,32 @@ class ServiceViewModel extends ChangeNotifier {
     }
   }
 
-  // in ServiceViewModel
   double? priceFor(String? id) {
-    if (id == null) return null;
-    for (final s in _all) {
-      if (s.id == id) {
-        return s.price;
-      }
-    }
-    return null;
+    if (id == null || id.isEmpty) return null;
+    final s = getService(id);
+    return s?.price;
   }
 
   Future<void> delete(String id) async {
-    // Try deleting the image first; ignore if it doesn’t exist.
     try {
       await _imageStorage.deleteServiceImage(id);
     } catch (_) {}
     await _repo.deleteService(id);
+
+    _all = _all.where((s) => s.id != id).toList();
+    _allFiltered = _allFiltered.where((s) => s.id != id).toList();
+    // Purge from cache
+    _cache.remove(id);
+    notifyListeners();
+  }
+
+  void reset() {
+    _sub?.cancel();
+    _sub = null;
+    _query = '';
+    _service = null;
+    _all = const [];
+    _allFiltered = const [];
+    notifyListeners();
   }
 }
