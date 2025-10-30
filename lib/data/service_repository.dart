@@ -45,7 +45,7 @@ class ServiceRepository {
     return _fromDoc(snap);
   }
 
-  Future<Map<String, ServiceModel?>> getClients(Set<String> ids) async {
+  Future<Map<String, ServiceModel?>> getServices(Set<String> ids) async {
     if (ids.isEmpty) return {};
     final uid = _uidOrThrow;
     final idsList = ids.toList();
