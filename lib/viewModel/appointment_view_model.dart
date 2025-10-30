@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:aftaler_og_regnskab/cache/client_service_cache';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
+import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
 import 'package:aftaler_og_regnskab/model/client_model.dart';
@@ -22,8 +24,7 @@ class AppointmentViewModel extends ChangeNotifier {
   AppointmentViewModel(
     this._repo,
     this._imageStorage, {
-    required this.fetchClients,
-    required this.fetchServices,
+    required this.cache,
     required this.financeVM,
   });
 
@@ -31,10 +32,9 @@ class AppointmentViewModel extends ChangeNotifier {
   // Dependencies
   // ────────────────────────────────────────────────────────────────────────────
   final AppointmentRepository _repo;
-  final FetchClients fetchClients; // NEW
-  final FetchServices fetchServices; // NEW
+  final ClientServiceCache cache;
   final ImageStorage _imageStorage;
-  final FinanceViewModel financeVM; // NEW
+  final FinanceViewModel financeVM;
 
   // ────────────────────────────────────────────────────────────────────────────
   // Appointments data
@@ -56,14 +56,6 @@ class AppointmentViewModel extends ChangeNotifier {
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
   AppointmentModel? get lastAdded => _lastCreatedAppointment;
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // Caches for related documents (client/service) to avoid refetching
-  // ────────────────────────────────────────────────────────────────────────────
-  final Map<String, ClientModel?> _clientCache = {};
-  final Map<String, Future<ClientModel?>> _clientInFlight = {};
-  final Map<String, ServiceModel?> _serviceCache = {};
-  final Map<String, Future<ServiceModel?>> _serviceInFlight = {};
 
   // ────────────────────────────────────────────────────────────────────────────
   // Range subscription control
@@ -345,7 +337,7 @@ class AppointmentViewModel extends ChangeNotifier {
     double? price,
     double? servicePrice,
     String? status,
-    List<String>? currentImageUrls,
+    required List<String> currentImageUrls,
     List<String> removedImageUrls = const [],
     List<({Uint8List bytes, String name, String? mimeType})> newImages =
         const [],
@@ -364,15 +356,9 @@ class AppointmentViewModel extends ChangeNotifier {
         );
       }
 
-      // 2) Base image list (0 reads if currentImageUrls provided)
-      final existingImages =
-          currentImageUrls ??
-          (await _repo.getAppointmentOnce(old.id!))?.imageUrls ??
-          const <String>[];
-
       // 3) Compute final list locally (remove + add + dedupe)
       final removedSet = removedImageUrls.toSet();
-      final kept = existingImages.where((u) => !removedSet.contains(u));
+      final kept = currentImageUrls.where((u) => !removedSet.contains(u));
       final finalImageUrls = <String>{...kept, ...uploadedUrls}.toList();
 
       // 4) Build fields (empty string => delete), like Client updater
@@ -501,23 +487,7 @@ class AppointmentViewModel extends ChangeNotifier {
     final out = <AppointmentCardModel>[];
     for (final appt in appts) {
       if (appt.id == null || appt.dateTime == null) continue;
-      final client = _clientCache[appt.clientId ?? ''];
-      final service = _serviceCache[appt.serviceId ?? ''];
-      final chosenPrice = appt.price;
-      out.add(
-        AppointmentCardModel(
-          id: appt.id!,
-          clientName: client?.name ?? '',
-          serviceName: service?.name ?? '',
-          phone: client?.phone,
-          email: client?.email,
-          time: appt.dateTime!,
-          price: chosenPrice,
-          duration: service?.duration,
-          status: appt.status ?? 'ufaktureret',
-          imageUrl: client?.image,
-        ),
-      );
+      out.add(_toCard(appt));
     }
     return out;
   }
@@ -528,9 +498,9 @@ class AppointmentViewModel extends ChangeNotifier {
 
     final chips = <MonthChip>[];
     for (final appt in items) {
-      final clientName = _clientCache[appt.clientId ?? '']?.name ?? '';
+      final clientName = cache.getClient(appt.clientId ?? '')?.name ?? '';
       final time = appt.dateTime!;
-      final status = appt.status ?? 'not_invoiced';
+      final status = appt.status ?? 'ufaktureret';
       chips.add((title: clientName, status: status, time: time));
     }
     return chips;
@@ -553,13 +523,13 @@ class AppointmentViewModel extends ChangeNotifier {
     final clientsToFetch = <String>{
       for (final a in appointmentsOnDay)
         if ((a.clientId ?? '').isNotEmpty &&
-            !_clientCache.containsKey(a.clientId))
+            cache.getClient(a.clientId!) == null)
           a.clientId!,
     };
     final servicesToFetch = <String>{
       for (final a in appointmentsOnDay)
         if ((a.serviceId ?? '').isNotEmpty &&
-            !_serviceCache.containsKey(a.serviceId))
+            cache.getService(a.serviceId!) == null)
           a.serviceId!,
     };
 
@@ -570,25 +540,12 @@ class AppointmentViewModel extends ChangeNotifier {
       ]);
     }
 
-    return [
-      for (final appt in appointmentsOnDay)
-        if (appt.id != null && appt.dateTime != null)
-          AppointmentCardModel(
-            id: appt.id!,
-            clientName: _clientCache[appt.clientId ?? '']?.name ?? '',
-            serviceName: _serviceCache[appt.serviceId ?? '']?.name ?? '',
-            phone: _clientCache[appt.clientId ?? '']?.phone,
-            email: _clientCache[appt.clientId ?? '']?.email,
-            time: appt.dateTime!,
-            price: appt.price,
-            duration: _serviceCache[appt.serviceId ?? '']?.duration,
-            status: appt.status ?? 'ufaktureret',
-            imageUrl: _clientCache[appt.clientId ?? '']?.image,
-            isBusiness: ((_clientCache[appt.clientId ?? '']?.cvr ?? '')
-                .trim()
-                .isNotEmpty),
-          ),
-    ];
+    final out = <AppointmentCardModel>[];
+    for (final appt in appointmentsOnDay) {
+      if (appt.id == null || appt.dateTime == null) continue;
+      out.add(_toCard(appt));
+    }
+    return out;
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -627,11 +584,11 @@ class AppointmentViewModel extends ChangeNotifier {
       }
       for (final appt in entry.value) {
         final c = (appt.clientId ?? '').trim();
-        if (c.isNotEmpty && !_clientCache.containsKey(c)) {
+        if (c.isNotEmpty && cache.getClient(c) == null) {
           clientIdsToFetch.add(c);
         }
         final s = (appt.serviceId ?? '').trim();
-        if (s.isNotEmpty && !_serviceCache.containsKey(s)) {
+        if (s.isNotEmpty && cache.getService(s) == null) {
           serviceIdsToFetch.add(s);
         }
       }
@@ -639,19 +596,12 @@ class AppointmentViewModel extends ChangeNotifier {
 
     if (clientIdsToFetch.isEmpty && serviceIdsToFetch.isEmpty) return false;
 
-    final beforeClients = _clientCache.length;
-    final beforeServices = _serviceCache.length;
-
     await Future.wait([
-      if (clientIdsToFetch.isNotEmpty) _fetchClientsBatched(clientIdsToFetch),
-      if (serviceIdsToFetch.isNotEmpty)
-        _fetchServicesBatched(serviceIdsToFetch),
+      if (clientIdsToFetch.isNotEmpty) cache.fetchClients(clientIdsToFetch),
+      if (serviceIdsToFetch.isNotEmpty) cache.fetchServices(serviceIdsToFetch),
     ]);
 
-    final changed =
-        _clientCache.length != beforeClients ||
-        _serviceCache.length != beforeServices;
-    return changed;
+    return true;
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -659,13 +609,11 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
 
   Future<void> _fetchClientsBatched(Set<String> ids) async {
-    final batch = await fetchClients(ids);
-    _clientCache.addAll(batch);
+    await cache.fetchClients(ids);
   }
 
   Future<void> _fetchServicesBatched(Set<String> ids) async {
-    final batch = await fetchServices(ids);
-    _serviceCache.addAll(batch);
+    await cache.fetchServices(ids);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -832,8 +780,8 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   AppointmentCardModel _toCard(AppointmentModel appt) {
-    final client = _clientCache[appt.clientId ?? ''];
-    final service = _serviceCache[appt.serviceId ?? ''];
+    final client = cache.getClient(appt.clientId ?? '');
+    final service = cache.getService(appt.serviceId ?? '');
     final chosenPrice = appt.price;
 
     final hasCvr = ((client?.cvr ?? '').trim().isNotEmpty);

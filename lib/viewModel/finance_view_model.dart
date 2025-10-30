@@ -1,5 +1,6 @@
-// New file: lib/viewModel/finance_view_model.dart
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
+import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
+import 'package:aftaler_og_regnskab/model/finance_model.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:flutter/material.dart';
@@ -7,14 +8,16 @@ import 'package:flutter/material.dart';
 enum Segment { month, year, total }
 
 class FinanceViewModel extends ChangeNotifier {
-  FinanceViewModel(this._repo);
+  FinanceViewModel(this._repo, this._summaryRepo);
 
   final AppointmentRepository _repo;
+  final FinanceSummaryRepository _summaryRepo;
 
-  final Map<Segment, FinanceTotals> _financeTotals = {
-    Segment.month: FinanceTotals(),
-    Segment.year: FinanceTotals(),
-    Segment.total: FinanceTotals(),
+  // Use FinanceModel instead of FinanceTotals
+  final Map<Segment, FinanceModel> _financeModels = {
+    Segment.month: FinanceModel(),
+    Segment.year: FinanceModel(),
+    Segment.total: FinanceModel(),
   };
 
   bool _financeInitialised = false;
@@ -33,27 +36,28 @@ class FinanceViewModel extends ChangeNotifier {
   }
 
   ({int count, double income}) summaryNow(Segment seg) {
-    final t = _financeTotals[seg]!;
-    return (count: t.totalCount, income: t.paidSum);
+    final m = _financeModels[seg]!;
+    return (count: m.totalCount, income: m.paidSum);
   }
 
   ({int paid, int waiting, int missing, int uninvoiced}) statusNow(
     Segment seg,
   ) {
-    final t = _financeTotals[seg]!;
+    final m = _financeModels[seg]!;
     return (
-      paid: t.getCount(PaymentStatus.paid),
-      waiting: t.getCount(PaymentStatus.waiting),
-      missing: t.getCount(PaymentStatus.missing),
-      uninvoiced: t.getCount(PaymentStatus.uninvoiced),
+      paid: m.counts[PaymentStatus.paid] ?? 0,
+      waiting: m.counts[PaymentStatus.waiting] ?? 0,
+      missing: m.counts[PaymentStatus.missing] ?? 0,
+      uninvoiced: m.counts[PaymentStatus.uninvoiced] ?? 0,
     );
   }
 
   Future<({int count, double income})> getSummaryBySegment(Segment seg) async {
-    final t = _financeTotals[seg]!;
-    return (count: t.totalCount, income: t.paidSum);
+    final m = _financeModels[seg]!;
+    return (count: m.totalCount, income: m.paidSum);
   }
 
+  // Existing statusCount method can remain unchanged
   Future<({int paid, int waiting, int missing, int uninvoiced})> statusCount(
     DateTime? start,
     DateTime? end,
@@ -80,7 +84,6 @@ class FinanceViewModel extends ChangeNotifier {
         status: 'Ufaktureret',
       ),
     ];
-
     final r = await Future.wait<int>(futures);
     return (paid: r[0], waiting: r[1], missing: r[2], uninvoiced: r[3]);
   }
@@ -105,7 +108,7 @@ class FinanceViewModel extends ChangeNotifier {
     await seedFinanceSegment(
       Segment.month,
       withStatusCounts: true,
-      skipSummary: _homeInitialised, // ← avoids re-reading month summary
+      skipSummary: _homeInitialised,
     );
 
     await seedFinanceSegment(
@@ -126,22 +129,27 @@ class FinanceViewModel extends ChangeNotifier {
   Future<void> seedFinanceSegment(
     Segment seg, {
     required bool withStatusCounts,
-    bool skipSummary = false, // when Home already seeded month summary
+    bool skipSummary = false,
   }) async {
-    final r = _rangeFor(seg);
-    final totals = _financeTotals[seg]!;
+    // Load precomputed summary from Firestore
+    final docTotals = await _summaryRepo.fetchSummary(
+      seg,
+    ); // returns FinanceModel
+    var newCounts = Map<PaymentStatus, int>.from(docTotals.counts);
+    var newTotalCount = docTotals.totalCount;
+    var newPaidSum = docTotals.paidSum;
 
-    // Build only the futures we actually need
+    final r = _rangeFor(seg);
     final futures = <Future<dynamic>>[];
 
+    // Build fallback queries if summary is missing or needs refreshing
     if (!skipSummary) {
       futures.add(
         _repo.countAppointments(startInclusive: r.start, endInclusive: r.end),
-      ); // index 0 (if present)
-
+      );
       futures.add(
         _repo.sumPaidInRange(startInclusive: r.start, endInclusive: r.end),
-      ); // index 1 (if present)
+      );
     }
 
     if (withStatusCounts) {
@@ -168,141 +176,184 @@ class FinanceViewModel extends ChangeNotifier {
             status: PaymentStatus.uninvoiced.label,
           ),
         ]),
-      ); // last index (if present)
+      );
     }
 
-    if (futures.isEmpty) return;
-
-    final results = await Future.wait(futures);
-    var i = 0;
-
-    if (!skipSummary) {
-      totals.totalCount = results[i++] as int;
-      totals.paidSum = results[i++] as double;
+    if (futures.isNotEmpty) {
+      final results = await Future.wait(futures);
+      var i = 0;
+      if (!skipSummary) {
+        newTotalCount = results[i++] as int;
+        newPaidSum = results[i++] as double;
+      }
+      if (withStatusCounts) {
+        final buckets = results[i++] as List<int>;
+        newCounts[PaymentStatus.paid] = buckets[0];
+        newCounts[PaymentStatus.waiting] = buckets[1];
+        newCounts[PaymentStatus.missing] = buckets[2];
+        newCounts[PaymentStatus.uninvoiced] = buckets[3];
+      }
     }
 
-    if (withStatusCounts) {
-      final buckets = results[i++] as List<int>;
-      totals.counts[PaymentStatus.paid] = buckets[0];
-      totals.counts[PaymentStatus.waiting] = buckets[1];
-      totals.counts[PaymentStatus.missing] = buckets[2];
-      totals.counts[PaymentStatus.uninvoiced] = buckets[3];
-    }
+    // Save into map
+    _financeModels[seg] = FinanceModel(
+      totalCount: newTotalCount,
+      paidSum: newPaidSum,
+      counts: newCounts,
+    );
   }
 
   // Update methods for CRUD operations (called from AppointmentViewModel)
-  void onAddAppointment({
+
+  Future<void> onAddAppointment({
     required PaymentStatus status,
     required double price,
     required DateTime dateTime,
-  }) {
-    final p = price;
+  }) async {
     final segments = <Segment>[Segment.total];
     if (isInCurrentYear(dateTime)) segments.add(Segment.year);
     if (isInCurrentMonth(dateTime)) segments.add(Segment.month);
 
-    final isPaid = (status == PaymentStatus.paid);
-
     for (final seg in segments) {
-      final t = _financeTotals[seg]!;
+      final current = _financeModels[seg]!;
+      var counts = Map<PaymentStatus, int>.from(current.counts);
+      var totalCount = current.totalCount;
+      var paidSum = current.paidSum;
+
       if (_shouldUpdateSummary(seg)) {
-        if (isPaid) t.paidSum += p;
-        t.totalCount++;
+        if (status == PaymentStatus.paid) {
+          paidSum += price;
+        }
+        totalCount++;
       }
-      if (_financeInitialised) t.inc(status);
+      if (_financeInitialised) {
+        counts[status] = (counts[status] ?? 0) + 1;
+      }
+
+      _financeModels[seg] = FinanceModel(
+        totalCount: totalCount,
+        paidSum: paidSum,
+        counts: counts,
+      );
     }
+    await _summaryRepo.updateOnAdd(status, price, dateTime);
     notifyListeners();
   }
 
-  void onUpdateStatus({
+  Future<void> onUpdateStatus({
     required PaymentStatus oldStatus,
     required PaymentStatus newStatus,
     required double price,
     required DateTime date,
-  }) {
-    final p = price;
+  }) async {
     final segments = <Segment>[Segment.total];
     if (isInCurrentYear(date)) segments.add(Segment.year);
     if (isInCurrentMonth(date)) segments.add(Segment.month);
 
-    final wasPaid = (oldStatus == PaymentStatus.paid);
-    final isPaid = (newStatus == PaymentStatus.paid);
-
     for (final seg in segments) {
-      final t = _financeTotals[seg]!;
+      final current = _financeModels[seg]!;
+      var counts = Map<PaymentStatus, int>.from(current.counts);
+      var paidSum = current.paidSum;
+
       if (_shouldUpdateSummary(seg)) {
-        if (isPaid) t.paidSum += p;
-        if (wasPaid) t.paidSum -= p;
+        if (newStatus == PaymentStatus.paid) {
+          paidSum += price;
+        }
+        if (oldStatus == PaymentStatus.paid) {
+          paidSum -= price;
+        }
       }
       if (_financeInitialised) {
-        t.dec(oldStatus);
-        t.inc(newStatus);
+        counts[oldStatus] = (counts[oldStatus] ?? 0) - 1;
+        counts[newStatus] = (counts[newStatus] ?? 0) + 1;
       }
+
+      _financeModels[seg] = FinanceModel(
+        totalCount: current.totalCount,
+        paidSum: paidSum,
+        counts: counts,
+      );
     }
+    await _summaryRepo.updateOnStatusChange(oldStatus, newStatus, price, date);
     notifyListeners();
   }
 
-  void onUpdateAppointmentFields({
+  Future<void> onUpdateAppointmentFields({
     required PaymentStatus oldStatus,
     required PaymentStatus newStatus,
     required double oldPrice,
     required double newPrice,
     required DateTime? oldDate,
     required DateTime? newDate,
-  }) {
+  }) async {
     bool inSeg(Segment seg, DateTime? dt) {
       if (seg == Segment.total) return true;
       if (dt == null) return false;
-      return (seg == Segment.month)
-          ? isInCurrentMonth(dt)
-          : isInCurrentYear(dt);
+      return seg == Segment.month ? isInCurrentMonth(dt) : isInCurrentYear(dt);
     }
 
-    final wasPaid = (oldStatus == PaymentStatus.paid);
-    final isPaid = (newStatus == PaymentStatus.paid);
+    final wasPaid = oldStatus == PaymentStatus.paid;
+    final isPaid = newStatus == PaymentStatus.paid;
 
     for (final seg in Segment.values) {
-      final t = _financeTotals[seg]!;
+      final current = _financeModels[seg]!;
+      var counts = Map<PaymentStatus, int>.from(current.counts);
+      var totalCount = current.totalCount;
+      var paidSum = current.paidSum;
+
       final wasIn = inSeg(seg, oldDate);
       final isIn = inSeg(seg, newDate);
 
-      // Case A: moved OUT of this segment
       if (wasIn && !isIn) {
+        // moved OUT of this segment
         if (_shouldUpdateSummary(seg)) {
-          t.totalCount--;
-          if (wasPaid) t.paidSum -= oldPrice;
+          totalCount--;
+          if (wasPaid) paidSum -= oldPrice;
         }
-        if (_financeInitialised) t.dec(oldStatus);
-        continue;
-      }
-
-      // Case B: moved IN to this segment
-      if (!wasIn && isIn) {
+        if (_financeInitialised) {
+          counts[oldStatus] = (counts[oldStatus] ?? 0) - 1;
+        }
+      } else if (!wasIn && isIn) {
+        // moved IN to this segment
         if (_shouldUpdateSummary(seg)) {
-          t.totalCount++;
-          if (isPaid) t.paidSum += newPrice;
+          totalCount++;
+          if (isPaid) paidSum += newPrice;
         }
-        if (_financeInitialised) t.inc(newStatus);
-        continue;
-      }
-
-      // Case C: stayed within this segment
-      if (wasIn && isIn) {
+        if (_financeInitialised) {
+          counts[newStatus] = (counts[newStatus] ?? 0) + 1;
+        }
+      } else if (wasIn && isIn) {
+        // stayed within this segment
         if (_shouldUpdateSummary(seg)) {
           if (wasPaid && isPaid) {
-            t.paidSum += (newPrice - oldPrice);
+            paidSum += (newPrice - oldPrice);
           } else if (wasPaid && !isPaid) {
-            t.paidSum -= oldPrice;
+            paidSum -= oldPrice;
           } else if (!wasPaid && isPaid) {
-            t.paidSum += newPrice;
+            paidSum += newPrice;
           }
         }
         if (_financeInitialised && newStatus != oldStatus) {
-          t.inc(newStatus);
-          t.dec(oldStatus);
+          counts[newStatus] = (counts[newStatus] ?? 0) + 1;
+          counts[oldStatus] = (counts[oldStatus] ?? 0) - 1;
         }
       }
+
+      _financeModels[seg] = FinanceModel(
+        totalCount: totalCount,
+        paidSum: paidSum,
+        counts: counts,
+      );
     }
+
+    await _summaryRepo.updateOnFields(
+      oldStatus,
+      newStatus,
+      oldPrice,
+      newPrice,
+      oldDate,
+      newDate,
+    );
     notifyListeners();
   }
 
@@ -311,58 +362,35 @@ class FinanceViewModel extends ChangeNotifier {
     required double price,
     required DateTime date,
   }) {
-    final p = price;
     final segments = <Segment>[Segment.total];
     if (isInCurrentYear(date)) segments.add(Segment.year);
     if (isInCurrentMonth(date)) segments.add(Segment.month);
 
-    final isPaid = (status == PaymentStatus.paid);
-
     for (final seg in segments) {
-      final t = _financeTotals[seg]!;
+      final current = _financeModels[seg]!;
+      var counts = Map<PaymentStatus, int>.from(current.counts);
+      var totalCount = current.totalCount;
+      var paidSum = current.paidSum;
+
       if (_shouldUpdateSummary(seg)) {
-        if (isPaid) t.paidSum -= p;
-        t.totalCount--;
+        if (status == PaymentStatus.paid) {
+          paidSum -= price;
+        }
+        totalCount--;
       }
-      if (_financeInitialised) t.dec(status);
+      if (_financeInitialised) {
+        counts[status] = (counts[status] ?? 0) - 1;
+      }
+
+      _financeModels[seg] = FinanceModel(
+        totalCount: totalCount,
+        paidSum: paidSum,
+        counts: counts,
+      );
     }
     notifyListeners();
   }
 
   bool _shouldUpdateSummary(Segment seg) =>
       seg == Segment.month || _financeInitialised;
-}
-
-class FinanceTotals {
-  int totalCount; // all appointments in segment (any status)
-  double paidSum; // sum(price) where status == 'Betalt'
-  final Map<PaymentStatus, int> counts; // per-status counts (no 'all')
-
-  FinanceTotals({
-    this.totalCount = 0,
-    this.paidSum = 0.0,
-    Map<PaymentStatus, int>? counts,
-  }) : counts = {
-         for (final s in PaymentStatus.values)
-           if (s != PaymentStatus.all) s: counts?[s] ?? 0,
-       };
-
-  int getCount(PaymentStatus s) =>
-      s == PaymentStatus.all ? totalCount : (counts[s] ?? 0);
-  void inc(PaymentStatus s) {
-    if (s != PaymentStatus.all) counts[s] = (counts[s] ?? 0) + 1;
-  }
-
-  void dec(PaymentStatus s) {
-    if (s != PaymentStatus.all) counts[s] = (counts[s] ?? 0) - 1;
-  }
-}
-
-@visibleForTesting
-void vmTestResetFinance(FinanceViewModel vm) {
-  vm._financeTotals[Segment.month] = FinanceTotals();
-  vm._financeTotals[Segment.year] = FinanceTotals();
-  vm._financeTotals[Segment.total] = FinanceTotals();
-  vm._financeInitialised = false;
-  vm._homeInitialised = false;
 }

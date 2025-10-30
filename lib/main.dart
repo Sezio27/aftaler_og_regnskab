@@ -5,6 +5,7 @@ import 'package:aftaler_og_regnskab/cache/client_service_cache';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
+import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';
 import 'package:aftaler_og_regnskab/debug/bench.dart';
@@ -79,6 +80,12 @@ class MyApp extends StatelessWidget {
             ctx.read<ServiceRepository>(),
           ),
         ),
+        Provider<FinanceSummaryRepository>(
+          create: (ctx) => FinanceSummaryRepository(
+            auth: ctx.read<FirebaseAuth>(),
+            firestore: ctx.read<FirebaseFirestore>(),
+          ),
+        ),
 
         ChangeNotifierProvider(
           create: (ctx) => ClientViewModel(
@@ -96,17 +103,17 @@ class MyApp extends StatelessWidget {
           create: (ctx) => ChecklistViewModel(ctx.read<ChecklistRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (ctx) => FinanceViewModel(ctx.read<AppointmentRepository>()),
+          create: (ctx) => FinanceViewModel(
+            ctx.read<AppointmentRepository>(),
+            ctx.read<FinanceSummaryRepository>(),
+          ),
         ),
         ChangeNotifierProvider(
           create: (ctx) {
             return AppointmentViewModel(
               ctx.read<AppointmentRepository>(),
               ctx.read<ImageStorage>(),
-              fetchClients: (ids) =>
-                  ctx.read<ClientServiceCache>().fetchClients(ids),
-              fetchServices: (ids) =>
-                  ctx.read<ClientServiceCache>().fetchServices(ids),
+              cache: ctx.read<ClientServiceCache>(),
               financeVM: ctx.read<FinanceViewModel>(),
             );
           },
