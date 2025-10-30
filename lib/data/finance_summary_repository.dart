@@ -32,15 +32,12 @@ class FinanceSummaryRepository {
     final snap = await _doc(segment).get();
     if (!snap.exists) return FinanceModel();
     final data = snap.data()!;
-    final totalCount = (data['totalCount'] as num?)?.toInt() ?? 0;
-    final paidSum = (data['paidSum'] as num?)?.toDouble() ?? 0.0;
+    final totalCount = (data['Aftaler'] as num?)?.toInt() ?? 0;
+    final paidSum = (data['Total'] as num?)?.toDouble() ?? 0.0;
 
-    // Rebuild counts keyed by PaymentStatus rather than strings.
-    final rawCounts = (data['counts'] as Map<String, dynamic>? ?? {});
     final counts = <PaymentStatus, int>{
       for (final s in PaymentStatus.values)
-        if (s != PaymentStatus.all)
-          s: (rawCounts[s.label] as num?)?.toInt() ?? 0,
+        if (s != PaymentStatus.all) s: (data[s.label] as num?)?.toInt() ?? 0,
     };
 
     return FinanceModel(
@@ -53,10 +50,10 @@ class FinanceSummaryRepository {
   /// Helper to increment a summary based on an appointment being added.
   Future<void> updateOnAdd(PaymentStatus status, double price, DateTime date) {
     return _updateSummaries((totals) {
-      totals['totalCount'] = FieldValue.increment(1);
-      totals['counts.${status.label}'] = FieldValue.increment(1);
+      totals['Aftaler'] = FieldValue.increment(1);
+      totals[status.label] = FieldValue.increment(1);
       if (status == PaymentStatus.paid) {
-        totals['paidSum'] = FieldValue.increment(price);
+        totals['Total'] = FieldValue.increment(price);
       }
       return totals;
     }, date);
@@ -70,13 +67,13 @@ class FinanceSummaryRepository {
     DateTime date,
   ) {
     return _updateSummaries((totals) {
-      totals['counts.${oldStatus.label}'] = FieldValue.increment(-1);
-      totals['counts.${newStatus.label}'] = FieldValue.increment(1);
+      totals[oldStatus.label] = FieldValue.increment(-1);
+      totals[newStatus.label] = FieldValue.increment(1);
       if (oldStatus == PaymentStatus.paid) {
-        totals['paidSum'] = FieldValue.increment(-price);
+        totals['Total'] = FieldValue.increment(-price);
       }
       if (newStatus == PaymentStatus.paid) {
-        totals['paidSum'] = FieldValue.increment(price);
+        totals['Total'] = FieldValue.increment(price);
       }
       return totals;
     }, date);
@@ -99,31 +96,31 @@ class FinanceSummaryRepository {
         final updates = <String, Object?>{};
         if (wasIn && !isIn) {
           // moved OUT of segment
-          updates['totalCount'] = FieldValue.increment(-1);
-          updates['counts.${oldStatus.label}'] = FieldValue.increment(-1);
+          updates['Aftaler'] = FieldValue.increment(-1);
+          updates[oldStatus.label] = FieldValue.increment(-1);
           if (oldStatus == PaymentStatus.paid) {
-            updates['paidSum'] = FieldValue.increment(-oldPrice);
+            updates['Total'] = FieldValue.increment(-oldPrice);
           }
         } else if (!wasIn && isIn) {
           // moved INTO segment
-          updates['totalCount'] = FieldValue.increment(1);
-          updates['counts.${newStatus.label}'] = FieldValue.increment(1);
+          updates['Aftaler'] = FieldValue.increment(1);
+          updates[newStatus.label] = FieldValue.increment(1);
           if (newStatus == PaymentStatus.paid) {
-            updates['paidSum'] = FieldValue.increment(newPrice);
+            updates['Total'] = FieldValue.increment(newPrice);
           }
         } else if (wasIn && isIn) {
           // stayed within segment: adjust counts/sums
           if (oldStatus != newStatus) {
-            updates['counts.${oldStatus.label}'] = FieldValue.increment(-1);
-            updates['counts.${newStatus.label}'] = FieldValue.increment(1);
+            updates[oldStatus.label] = FieldValue.increment(-1);
+            updates[newStatus.label] = FieldValue.increment(1);
           }
           if (oldStatus == PaymentStatus.paid &&
               newStatus == PaymentStatus.paid) {
-            updates['paidSum'] = FieldValue.increment(newPrice - oldPrice);
+            updates['Total'] = FieldValue.increment(newPrice - oldPrice);
           } else if (oldStatus == PaymentStatus.paid) {
-            updates['paidSum'] = FieldValue.increment(-oldPrice);
+            updates['Total'] = FieldValue.increment(-oldPrice);
           } else if (newStatus == PaymentStatus.paid) {
-            updates['paidSum'] = FieldValue.increment(newPrice);
+            updates['Total'] = FieldValue.increment(newPrice);
           }
         }
         if (updates.isNotEmpty) {
@@ -140,10 +137,10 @@ class FinanceSummaryRepository {
     DateTime date,
   ) {
     return _updateSummaries((totals) {
-      totals['totalCount'] = FieldValue.increment(-1);
-      totals['counts.${status.label}'] = FieldValue.increment(-1);
+      totals['Aftaler'] = FieldValue.increment(-1);
+      totals[status.label] = FieldValue.increment(-1);
       if (status == PaymentStatus.paid) {
-        totals['paidSum'] = FieldValue.increment(-price);
+        totals['Total'] = FieldValue.increment(-price);
       }
       return totals;
     }, date);
@@ -157,8 +154,9 @@ class FinanceSummaryRepository {
     final segments = <Segment>[Segment.total];
     final now = DateTime.now();
     if (date.year == now.year) segments.add(Segment.year);
-    if (date.year == now.year && date.month == now.month)
+    if (date.year == now.year && date.month == now.month) {
       segments.add(Segment.month);
+    }
     return _db.runTransaction((tx) async {
       for (final seg in segments) {
         final doc = _doc(seg);

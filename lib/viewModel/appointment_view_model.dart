@@ -282,7 +282,7 @@ class AppointmentViewModel extends ChangeNotifier {
 
       await _repo.createAppointmentWithId(docRef.id, model);
 
-      financeVM.onAddAppointment(
+      await financeVM.onAddAppointment(
         status: PaymentStatusX.fromString(status),
         price: price ?? 0.0,
         dateTime: dateTime,
@@ -307,7 +307,7 @@ class AppointmentViewModel extends ChangeNotifier {
   ) async {
     await _repo.updateStatus(id, newStatus.trim());
 
-    financeVM.onUpdateStatus(
+    await financeVM.onUpdateStatus(
       oldStatus: PaymentStatusX.fromString(oldStatus),
       newStatus: PaymentStatusX.fromString(newStatus),
       price: price ?? 0.0,
@@ -419,7 +419,7 @@ class AppointmentViewModel extends ChangeNotifier {
       final oldDate = old.dateTime;
       final newDate = dateTime ?? oldDate;
 
-      financeVM.onUpdateAppointmentFields(
+      await financeVM.onUpdateAppointmentFields(
         oldStatus: oldStatus,
         newStatus: newStatus,
         oldPrice: oldPrice,

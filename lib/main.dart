@@ -103,10 +103,8 @@ class MyApp extends StatelessWidget {
           create: (ctx) => ChecklistViewModel(ctx.read<ChecklistRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (ctx) => FinanceViewModel(
-            ctx.read<AppointmentRepository>(),
-            ctx.read<FinanceSummaryRepository>(),
-          ),
+          create: (ctx) =>
+              FinanceViewModel(ctx.read<FinanceSummaryRepository>()),
         ),
         ChangeNotifierProvider(
           create: (ctx) {
