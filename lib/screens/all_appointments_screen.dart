@@ -45,7 +45,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
       if (_scrollCtrl.position.maxScrollExtent <= 0) return;
       final pos =
           _scrollCtrl.position.pixels / _scrollCtrl.position.maxScrollExtent;
-      if (pos > 0.8) vm.loadNextListMonth();
+      if (pos > 0.8) vm.loadNextListPage();
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _reloadRangeIfValid());

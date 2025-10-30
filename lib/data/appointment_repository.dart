@@ -365,6 +365,69 @@ class AppointmentRepository {
     return ids;
   }
 
+  Future<
+    ({
+      List<AppointmentModel> items,
+      DocumentSnapshot<Map<String, dynamic>>? lastDoc,
+    })
+  >
+  getAppointmentsPaged({
+    DateTime? startInclusive,
+    DateTime? endInclusive,
+    int pageSize = 20,
+    DocumentSnapshot<Map<String, dynamic>>? startAfterDoc,
+    bool descending = false,
+  }) async {
+    final uid = _uidOrThrow;
+    Query<Map<String, dynamic>> q = _collection(uid);
+
+    // Optionally constrain by date range
+    if (startInclusive != null) {
+      q = q.where(
+        'dateTime',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
+      );
+    }
+    if (endInclusive != null) {
+      final endOfDay = DateTime(
+        endInclusive.year,
+        endInclusive.month,
+        endInclusive.day,
+        23,
+        59,
+        59,
+        999,
+      );
+      q = q.where(
+        'dateTime',
+        isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+      );
+    }
+
+    // Order and limit the results
+    q = q.orderBy('dateTime', descending: descending).limit(pageSize);
+
+    // If a cursor was provided, start after it
+    if (startAfterDoc != null) {
+      q = q.startAfterDocument(startAfterDoc);
+    }
+
+    final snap = await q.get();
+    // Map documents to models
+    final items = snap.docs.map(_fromDoc).toList();
+    final lastDoc = snap.docs.isNotEmpty ? snap.docs.last : null;
+
+    // Optionally count reads for bench (like getAppointmentsBetween)
+    assert(() {
+      if (!snap.metadata.isFromCache) {
+        bench?.pagedReads += snap.docs.length;
+      }
+      return true;
+    }());
+
+    return (items: items, lastDoc: lastDoc);
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Mapping
   // ────────────────────────────────────────────────────────────────────────────

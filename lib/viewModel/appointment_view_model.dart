@@ -76,15 +76,13 @@ class AppointmentViewModel extends ChangeNotifier {
   // List mode (paged months)
   // ────────────────────────────────────────────────────────────────────────────
   DateTime? _listStart, _listEnd;
-  List<DateTime> _listMonths = const [];
-  int _listNext = 0; // next month index to load
   bool _listLoading = false;
   bool _listHasMore = false;
-
-  final Map<DateTime, List<AppointmentModel>> _pagedByMonth =
-      {}; // monthStart -> items
-
+  int _listPageSize = 20;
+  DocumentSnapshot<Map<String, dynamic>>? _listLastDoc;
+  final List<AppointmentModel> _pagedList = [];
   List<AppointmentModel> _listAll = const [];
+
   bool get listLoading => _listLoading;
   bool get listHasMore => _listHasMore;
 
@@ -676,61 +674,80 @@ class AppointmentViewModel extends ChangeNotifier {
   Future<void> beginListRange(DateTime start, DateTime end) async {
     _listStart = dateOnly(start);
     _listEnd = endOfDayInclusive(dateOnly(end));
-    _pagedByMonth.clear();
+    _pagedList.clear();
+    _listLastDoc = null;
+    _listHasMore = true;
 
-    _listMonths = _monthsInRange(_listStart!, _listEnd!);
-    _listNext = 0;
-    _listHasMore = _listMonths.isNotEmpty;
-
-    // Build initial union (will include live months already fetched)
+    // Rebuild the list union without any paged data yet.
     _rebuildListUnion();
     notifyListeners();
 
+    // Load initial pages (three at a time) until some items appear or no more.
     do {
-      await loadNextListMonth(
-        count: 3,
-      ); // Increased from 2 for faster initial load
+      await loadNextListPage(count: 3);
     } while (_listAll.isEmpty && _listHasMore);
   }
 
-  Future<void> loadNextListMonth({int count = 1}) async {
+  Future<void> loadNextListPage({int count = 1}) async {
     if (!_listHasMore || _listLoading) return;
     if (_listStart == null || _listEnd == null) return;
-
     _listLoading = true;
     notifyListeners();
 
     var loadedAny = false;
-
     try {
       var remaining = count;
-      while (_listNext < _listMonths.length && remaining > 0) {
-        final mStart = _listMonths[_listNext];
-        _listNext++;
+      while (remaining > 0 && _listHasMore) {
+        // Fetch one page from the repository
+        final result = await _repo.getAppointmentsPaged(
+          startInclusive: _listStart,
+          endInclusive: _listEnd,
+          pageSize: _listPageSize,
+          startAfterDoc: _listLastDoc,
+          descending: false,
+        );
 
-        if (_isMonthLive(mStart)) {
-          // Already covered by initial/active listeners → skip read
-          continue;
+        final items = result.items;
+        final lastDoc = result.lastDoc;
+
+        // If no items returned, we've reached the end
+        if (items.isEmpty) {
+          _listHasMore = false;
+          break;
         }
 
-        final mEnd = endOfMonthInclusive(mStart);
-        final items = await _repo.getAppointmentsBetween(mStart, mEnd);
-        _pagedByMonth[mStart] = items;
+        _listLastDoc = lastDoc;
+        _pagedList.addAll(items);
 
-        // warm names for this month (optional)
-        await _prefetchClientsAndServices(mStart, mEnd);
+        // Prefetch any missing client/service data
+        final clientIds = <String>{};
+        final serviceIds = <String>{};
+        for (final appt in items) {
+          final c = (appt.clientId ?? '').trim();
+          if (c.isNotEmpty && cache.getClient(c) == null) clientIds.add(c);
+          final s = (appt.serviceId ?? '').trim();
+          if (s.isNotEmpty && cache.getService(s) == null) serviceIds.add(s);
+        }
+        await Future.wait([
+          if (clientIds.isNotEmpty) cache.fetchClients(clientIds),
+          if (serviceIds.isNotEmpty) cache.fetchServices(serviceIds),
+        ]);
 
-        remaining--;
         loadedAny = true;
+        // If fewer items than pageSize, no more pages remain
+        if (items.length < _listPageSize) {
+          _listHasMore = false;
+          break;
+        }
+        remaining--;
       }
     } finally {
-      _listHasMore = _listNext < _listMonths.length;
       _listLoading = false;
-
+      // Rebuild UI data when new items were loaded
       if (loadedAny) _rebuildListUnion();
+      // Auto-fetch more pages if we still have very few items
       if (_listAll.length < 5 && _listHasMore && !_listLoading) {
-        // Threshold: adjust as needed
-        loadNextListMonth(count: 3);
+        loadNextListPage(count: 3);
       }
       notifyListeners();
     }
@@ -738,22 +755,17 @@ class AppointmentViewModel extends ChangeNotifier {
 
   void _rebuildListUnion() {
     if (_listStart == null || _listEnd == null) {
-      // list not active – nothing to build
       return;
     }
-
-    // Live data already in memory from calendar:
+    // Live data from initial and active windows
     final live = <AppointmentModel>[
       ..._initialAppointments,
       for (final v in _windowAppointments.values) ...v,
     ];
+    // Data loaded via paged queries
+    final paged = List<AppointmentModel>.from(_pagedList);
 
-    // Paged data:
-    final paged = <AppointmentModel>[
-      for (final v in _pagedByMonth.values) ...v,
-    ];
-
-    // Merge & de-dupe by id; let LIVE win on conflicts
+    // Merge, letting live data override paged data on ID conflicts
     final byId = <String, AppointmentModel>{};
     for (final a in paged) {
       final id = a.id;
@@ -761,22 +773,22 @@ class AppointmentViewModel extends ChangeNotifier {
     }
     for (final a in live) {
       final id = a.id;
-      if (id != null) byId[id] = a; // live overrides
+      if (id != null) byId[id] = a;
     }
 
-    // Filter to list range, sort newest first (or flip if you prefer)
-    final all =
-        byId.values.where((a) {
-          final dt = a.dateTime;
-          return dt != null &&
-              !dt.isBefore(_listStart!) &&
-              !dt.isAfter(_listEnd!);
-        }).toList()..sort(
-          (a, b) =>
-              (a.dateTime ?? DateTime(0)).compareTo(b.dateTime ?? DateTime(0)),
-        );
-
-    _listAll = all;
+    // Filter to current list range and sort ascending by dateTime
+    final listRangeAll = byId.values.where((a) {
+      final dt = a.dateTime;
+      if (dt == null) return false;
+      if (_listStart != null && dt.isBefore(_listStart!)) return false;
+      if (_listEnd != null && dt.isAfter(_listEnd!)) return false;
+      return true;
+    }).toList();
+    listRangeAll.sort(
+      (a, b) =>
+          (a.dateTime ?? DateTime(0)).compareTo(b.dateTime ?? DateTime(0)),
+    );
+    _listAll = listRangeAll;
   }
 
   AppointmentCardModel _toCard(AppointmentModel appt) {
