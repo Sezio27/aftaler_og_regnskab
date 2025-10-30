@@ -23,6 +23,16 @@ class FinanceViewModel extends ChangeNotifier {
   bool _financeInitialised = false;
   bool _homeInitialised = false;
 
+  Future<void> refreshFinanceSegment(Segment seg) async {
+    final summary = await _summaryRepo.fetchSummary(seg);
+    _financeModels[seg] = FinanceModel(
+      totalCount: summary.totalCount,
+      paidSum: summary.paidSum,
+      counts: Map<PaymentStatus, int>.from(summary.counts),
+    );
+    notifyListeners();
+  }
+
   ({DateTime? start, DateTime? end}) _rangeFor(Segment s) {
     final now = DateTime.now();
     switch (s) {
@@ -57,73 +67,41 @@ class FinanceViewModel extends ChangeNotifier {
     return (count: m.totalCount, income: m.paidSum);
   }
 
-  // Existing statusCount method can remain unchanged
   Future<({int paid, int waiting, int missing, int uninvoiced})> statusCount(
     DateTime? start,
     DateTime? end,
   ) async {
-    final futures = <Future<int>>[
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Betalt',
-      ),
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Afventer',
-      ),
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Forfalden',
-      ),
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Ufaktureret',
-      ),
-    ];
-    final r = await Future.wait<int>(futures);
-    return (paid: r[0], waiting: r[1], missing: r[2], uninvoiced: r[3]);
+    // Decide which summary to read based on the range.
+    // For simplicity, assume null range => total, month range => month, etc.
+    final Segment seg = (start == null && end == null)
+        ? Segment.total
+        : (start?.year == end?.year && start?.month == end?.month)
+        ? Segment.month
+        : Segment.year;
+
+    final summary = await _summaryRepo.fetchSummary(seg);
+    return (
+      paid: summary.counts[PaymentStatus.paid] ?? 0,
+      waiting: summary.counts[PaymentStatus.waiting] ?? 0,
+      missing: summary.counts[PaymentStatus.missing] ?? 0,
+      uninvoiced: summary.counts[PaymentStatus.uninvoiced] ?? 0,
+    );
   }
 
-  // Home: month summary ONLY
   Future<void> ensureFinanceForHomeSeeded() async {
     if (_homeInitialised) return;
-    await seedFinanceSegment(
-      Segment.month,
-      withStatusCounts: false,
-      skipSummary: false,
-    );
+    // Only load the precomputed summary for the month segment
+    await refreshFinanceSegment(Segment.month);
     _homeInitialised = true;
-    notifyListeners();
   }
 
-  // Finance: all segments + status
   Future<void> ensureFinanceTotalsSeeded() async {
     if (_financeInitialised) return;
-
-    // Month: if Home already seeded summary, skip it here and only fetch status
-    await seedFinanceSegment(
-      Segment.month,
-      withStatusCounts: true,
-      skipSummary: _homeInitialised,
-    );
-
-    await seedFinanceSegment(
-      Segment.year,
-      withStatusCounts: true,
-      skipSummary: false,
-    );
-    await seedFinanceSegment(
-      Segment.total,
-      withStatusCounts: true,
-      skipSummary: false,
-    );
-
+    // Refresh all segments once; no fallback counting
+    await refreshFinanceSegment(Segment.month);
+    await refreshFinanceSegment(Segment.year);
+    await refreshFinanceSegment(Segment.total);
     _financeInitialised = true;
-    notifyListeners();
   }
 
   Future<void> seedFinanceSegment(

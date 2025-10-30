@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/cache/client_service_cache';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
-import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
 import 'package:aftaler_og_regnskab/model/client_model.dart';
@@ -78,7 +77,7 @@ class AppointmentViewModel extends ChangeNotifier {
   DateTime? _listStart, _listEnd;
   bool _listLoading = false;
   bool _listHasMore = false;
-  int _listPageSize = 20;
+  final int _listPageSize = 20;
   DocumentSnapshot<Map<String, dynamic>>? _listLastDoc;
   final List<AppointmentModel> _pagedList = [];
   List<AppointmentModel> _listAll = const [];
@@ -92,17 +91,6 @@ class AppointmentViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Range subscription methods
-  // ────────────────────────────────────────────────────────────────────────────
-  Future<bool> _prefetchForInitialRange() async {
-    return await _prefetchClientsAndServices(_initialStart!, _initialEnd!);
-  }
-
-  Future<bool> _prefetchForWindowRange(DateTime start, DateTime end) async {
-    return await _prefetchClientsAndServices(start, end);
-  }
-
   bool _isMonthCoveredByInitial(DateTime monthStart) {
     final monthEnd = endOfMonthInclusive(monthStart);
     return !monthStart.isBefore(_initialStart!) &&
@@ -110,7 +98,7 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   Future<void> setInitialRange({String label = 'VM:setInitialRange'}) async {
-    if (_initialSubscription != null) return; // already set
+    if (_initialSubscription != null) return;
 
     final now = DateTime.now();
     final start = startOfMonth(now);
@@ -134,7 +122,10 @@ class AppointmentViewModel extends ChangeNotifier {
         firstSnapshot = false;
       }
 
-      final changed = await _prefetchForInitialRange();
+      final changed = await _prefetchClientsAndServices(
+        _initialStart!,
+        _initialEnd!,
+      );
       if (changed) {
         notifyListeners();
       }
@@ -186,7 +177,7 @@ class AppointmentViewModel extends ChangeNotifier {
                 firstSnapshot = false;
               }
 
-              final changed = await _prefetchForWindowRange(
+              final changed = await _prefetchClientsAndServices(
                 monthStart,
                 monthEnd,
               );
@@ -282,8 +273,8 @@ class AppointmentViewModel extends ChangeNotifier {
         dateTime: dateTime,
         payDate: payDate,
         price: price,
-        location: _trimOrNull(location),
-        note: _trimOrNull(note),
+        location: location,
+        note: note,
         imageUrls: imageUrls,
         status: status,
       );
@@ -640,36 +631,8 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   // ────────────────────────────────────────────────────────────────────────────
-  // Helper methods
-  // ────────────────────────────────────────────────────────────────────────────
-  String? _trimOrNull(String? s) {
-    final t = (s ?? '').trim();
-    return t.isEmpty ? null : t;
-  }
-
-  // ────────────────────────────────────────────────────────────────────────────
   // List mode methods
   // ────────────────────────────────────────────────────────────────────────────
-  bool _isMonthLive(DateTime mStart) {
-    // live if covered by the initial pin OR already has a window subscription
-    if (_initialStart != null && _initialEnd != null) {
-      final mEnd = endOfMonthInclusive(mStart);
-      final coveredByInitial =
-          !mStart.isBefore(_initialStart!) && !mEnd.isAfter(_initialEnd!);
-      if (coveredByInitial) return true;
-    }
-    return _windowSubscriptions.containsKey(mStart);
-  }
-
-  List<DateTime> _monthsInRange(DateTime start, DateTime end) {
-    final first = startOfMonth(start);
-    final lastStart = startOfMonth(end);
-    final out = <DateTime>[];
-    for (var m = first; !m.isAfter(lastStart); m = addMonths(m, 1)) {
-      out.add(m);
-    }
-    return out;
-  }
 
   Future<void> beginListRange(DateTime start, DateTime end) async {
     _listStart = dateOnly(start);
