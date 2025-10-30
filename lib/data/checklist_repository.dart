@@ -19,14 +19,12 @@ class ChecklistRepository {
   CollectionReference<Map<String, dynamic>> _collection(String uid) =>
       _db.collection('users').doc(uid).collection('checklists');
 
-  // Latest one (ordered by Firestore-only createdAt)
-  Stream<ChecklistModel?> watchChecklist() {
+  Stream<ChecklistModel?> watchChecklist(String id) {
     final uid = _uidOrThrow;
-    return _collection(uid)
-        .orderBy('createdAt', descending: true)
-        .limit(1)
-        .snapshots()
-        .map((q) => q.docs.isEmpty ? null : _fromDoc(q.docs.first));
+    return _collection(uid).doc(id).snapshots().map((d) {
+      if (!d.exists) return null;
+      return _fromDoc(d);
+    });
   }
 
   // All checklists, latest first
@@ -38,11 +36,34 @@ class ChecklistRepository {
         .map((q) => q.docs.map(_fromDoc).toList());
   }
 
-  Future<ChecklistModel?> getChecklistOnce(String id) async {
+  Future<ChecklistModel?> getChecklist(String id) async {
     final uid = _uidOrThrow;
     final snap = await _collection(uid).doc(id).get();
     if (!snap.exists) return null;
     return _fromDoc(snap);
+  }
+
+  Future<Map<String, ChecklistModel?>> getChecklists(Set<String> ids) async {
+    if (ids.isEmpty) return {};
+    final uid = _uidOrThrow;
+    final idsList = ids.toList();
+    final result = <String, ChecklistModel?>{};
+    for (var i = 0; i < idsList.length; i += 10) {
+      final chunk = idsList.sublist(
+        i,
+        i + 10 > idsList.length ? idsList.length : i + 10,
+      );
+      final querySnapshot = await _collection(
+        uid,
+      ).where(FieldPath.documentId, whereIn: chunk).get();
+      for (final doc in querySnapshot.docs) {
+        result[doc.id] = _fromDoc(doc);
+      }
+      for (final id in chunk) {
+        result.putIfAbsent(id, () => null);
+      }
+    }
+    return result;
   }
 
   Future<ChecklistModel> addChecklist(ChecklistModel model) async {

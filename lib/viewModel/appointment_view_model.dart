@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/data/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
+import 'package:aftaler_og_regnskab/data/checklist_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/service_cache.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
@@ -22,6 +23,7 @@ class AppointmentViewModel extends ChangeNotifier {
     this._imageStorage, {
     required this.clientCache,
     required this.serviceCache,
+    required this.checklistCache,
     required this.apptCache,
     required this.financeVM,
   });
@@ -32,6 +34,7 @@ class AppointmentViewModel extends ChangeNotifier {
   final AppointmentRepository _repo;
   final ClientCache clientCache;
   final ServiceCache serviceCache;
+  final ChecklistCache checklistCache;
   final AppointmentCache apptCache;
   final ImageStorage _imageStorage;
   final FinanceViewModel financeVM;
@@ -339,7 +342,6 @@ class AppointmentViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1) Upload new images first
       List<String> uploadedUrls = const [];
       if (newImages.isNotEmpty) {
         uploadedUrls = await _imageStorage.uploadAppointmentImages(
@@ -348,12 +350,10 @@ class AppointmentViewModel extends ChangeNotifier {
         );
       }
 
-      // 3) Compute final list locally (remove + add + dedupe)
       final removedSet = removedImageUrls.toSet();
       final kept = currentImageUrls.where((u) => !removedSet.contains(u));
       final finalImageUrls = <String>{...kept, ...uploadedUrls}.toList();
 
-      // 4) Build fields (empty string => delete), like Client updater
       final fields = <String, Object?>{'imageUrls': finalImageUrls};
       final deletes = <String>{};
 
@@ -390,12 +390,24 @@ class AppointmentViewModel extends ChangeNotifier {
         }
       }
 
-      // Lists
+      Set<String>? newChecklistSelection;
       if (checklistIds != null) {
-        fields['checklistIds'] = checklistIds
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
+        newChecklistSelection = {
+          for (final id in checklistIds)
+            if (id.trim().isNotEmpty) id.trim(),
+        };
+      }
+
+      final removedChecklists = (newChecklistSelection != null)
+          ? old.checklistIds.toSet().difference(newChecklistSelection)
+          : <String>{};
+      // Lists
+      if (newChecklistSelection != null) {
+        fields['checklistIds'] = newChecklistSelection.toList();
+      }
+
+      for (final id in removedChecklists) {
+        deletes.add('progress.$id');
       }
 
       if (fields.isNotEmpty || deletes.isNotEmpty) {
@@ -408,7 +420,7 @@ class AppointmentViewModel extends ChangeNotifier {
         final updated = old.copyWith(
           clientId: clientId ?? old.clientId,
           serviceId: serviceId ?? old.serviceId,
-          checklistIds: checklistIds ?? old.checklistIds,
+          checklistIds: newChecklistSelection?.toList() ?? old.checklistIds,
           dateTime: dateTime ?? old.dateTime,
           payDate: payDate ?? old.payDate,
           location: fields.containsKey('location')
@@ -588,20 +600,6 @@ class AppointmentViewModel extends ChangeNotifier {
     required String appointmentId,
     required Map<String, Set<int>> progress,
   }) => _repo.setAllChecklistProgress(appointmentId, progress);
-
-  Future<void> setChecklistSelection({
-    required String appointmentId,
-    required Set<String> newSelection,
-    Set<String> removedIds = const {},
-    Set<String> resetProgressIds = const {},
-  }) {
-    return _repo.updateChecklistSelectionAndResets(
-      apptId: appointmentId,
-      newSelection: newSelection,
-      removedIds: removedIds,
-      resetProgressIds: resetProgressIds,
-    );
-  }
 
   // ────────────────────────────────────────────────────────────────────────────
   // List mode methods

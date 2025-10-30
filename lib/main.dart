@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/data/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
+import 'package:aftaler_og_regnskab/data/checklist_cache.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
 import 'package:aftaler_og_regnskab/data/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
@@ -82,6 +83,9 @@ class MyApp extends StatelessWidget {
         Provider<ServiceCache>(
           create: (ctx) => ServiceCache(ctx.read<ServiceRepository>()),
         ),
+        Provider<ChecklistCache>(
+          create: (ctx) => ChecklistCache(ctx.read<ChecklistRepository>()),
+        ),
         Provider<AppointmentCache>(
           create: (ctx) => AppointmentCache(ctx.read<AppointmentRepository>()),
         ),
@@ -107,7 +111,10 @@ class MyApp extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider(
-          create: (ctx) => ChecklistViewModel(ctx.read<ChecklistRepository>()),
+          create: (ctx) => ChecklistViewModel(
+            ctx.read<ChecklistRepository>(),
+            ctx.read<ChecklistCache>(),
+          ),
         ),
         ChangeNotifierProvider(
           create: (ctx) =>
@@ -120,6 +127,7 @@ class MyApp extends StatelessWidget {
               ctx.read<ImageStorage>(),
               clientCache: ctx.read<ClientCache>(),
               serviceCache: ctx.read<ServiceCache>(),
+              checklistCache: ctx.read<ChecklistCache>(),
               apptCache: ctx.read<AppointmentCache>(),
               financeVM: ctx.read<FinanceViewModel>(),
             );

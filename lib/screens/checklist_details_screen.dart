@@ -11,24 +11,40 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class ChecklistDetailsScreen extends StatelessWidget {
+class ChecklistDetailsScreen extends StatefulWidget {
   const ChecklistDetailsScreen({super.key, required this.checklistId});
   final String checklistId;
 
   @override
+  State<ChecklistDetailsScreen> createState() => _ChecklistDetailsScreenState();
+}
+
+class _ChecklistDetailsScreenState extends State<ChecklistDetailsScreen> {
+  late final ChecklistViewModel _vm;
+  bool _subscribed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vm = context.read<ChecklistViewModel>();
+    _vm.subscribeToChecklist(widget.checklistId);
+    _subscribed = true;
+  }
+
+  @override
+  void dispose() {
+    if (_subscribed) {
+      _vm.unsubscribeFromChecklist(widget.checklistId);
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final vm = context.read<ChecklistViewModel>();
-    return StreamBuilder<ChecklistModel?>(
-      stream: vm.watchChecklistById(checklistId),
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Center(child: Text('Fejl: ${snap.error}'));
-        }
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final checklist = snap.data;
+    return Selector<ChecklistViewModel, ChecklistModel?>(
+      selector: (_, vm) => vm.getChecklist(widget.checklistId),
+      builder: (context, checklist, _) {
         if (checklist == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pop();

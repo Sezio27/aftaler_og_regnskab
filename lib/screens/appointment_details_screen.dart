@@ -178,7 +178,7 @@ class __AppointmentReadPaneState extends State<_AppointmentReadPane> {
 
     final checklistIds = widget.appointment.checklistIds;
     if (checklistIds.isNotEmpty) {
-      context.read<ChecklistViewModel>().prefetchByIds(checklistIds);
+      context.read<ChecklistViewModel>().prefetchChecklists(checklistIds);
     }
 
     final dt = widget.appointment.dateTime?.toLocal();
@@ -642,7 +642,9 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
   @override
   void initState() {
     super.initState();
-    _priceCtrl = TextEditingController(text: '${widget.appointment.price}');
+    _priceCtrl = TextEditingController(
+      text: widget.appointment.price?.toString() ?? '',
+    );
     _locationCtrl = TextEditingController(
       text: widget.appointment.location ?? '',
     );
@@ -658,12 +660,13 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
     _serviceVM = context.read<ServiceViewModel>();
     _checklistVM = context.read<ChecklistViewModel>();
 
-    _clientVM.prefetchClient(_selectedClientId!);
+    if (_selectedClientId != null && _selectedClientId!.isNotEmpty) {
+      _clientVM.prefetchClient(_selectedClientId!);
+    }
     if ((_selectedServiceId ?? '').isNotEmpty) {
       _serviceVM.prefetchService(_selectedServiceId!);
     }
-    _checklistVM.ensureSubscribedToAll();
-    _checklistVM.prefetchByIds(widget.appointment.checklistIds);
+    _checklistVM.prefetchChecklists(widget.appointment.checklistIds);
 
     final dt = widget.appointment.dateTime?.toLocal();
     if (dt != null) {
@@ -1107,7 +1110,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  if (widget.appointment.checklistIds.isEmpty) ...[
+                  if (_selectedChecklistIds.isEmpty) ...[
                     Text(
                       'Ingen checklister tilknyttet',
                       style: AppTypography.b5.copyWith(
@@ -1156,15 +1159,12 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                               horizontal: 25,
                             ),
                             child: ChecklistListOverlay(
-                              initialSelectedIds:
-                                  _selectedChecklistIds, // <- local
-                              onDone: (newSelection, resetIds) async {
+                              initialSelectedIds: _selectedChecklistIds,
+                              onDone: (newSelection) async {
                                 if (!mounted) return;
-                                setState(() {
-                                  _selectedChecklistIds = {...newSelection};
-                                });
-                                _checklistVM.prefetchByIds(
-                                  _selectedChecklistIds.toList(),
+                                setState(
+                                  () =>
+                                      _selectedChecklistIds = {...newSelection},
                                 );
                               },
                             ),

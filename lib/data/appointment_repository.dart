@@ -187,7 +187,12 @@ class AppointmentRepository {
     }
     payload.removeWhere((k, v) => v == null);
 
-    await _collection(uid).doc(id).set(payload, SetOptions(merge: true));
+    if (deletes.any((key) => key.startsWith('progress.'))) {
+      // use update() so nested deletes work
+      await _collection(uid).doc(id).update(payload);
+    } else {
+      await _collection(uid).doc(id).set(payload, SetOptions(merge: true));
+    }
   }
 
   // AppointmentRepository
@@ -222,30 +227,6 @@ class AppointmentRepository {
       },
     };
     await _collection(uid).doc(apptId).set(payload, SetOptions(merge: true));
-  }
-
-  Future<void> updateChecklistSelectionAndResets({
-    required String apptId,
-    required Set<String> newSelection,
-    Set<String> removedIds = const {},
-    Set<String> resetProgressIds = const {},
-  }) async {
-    final uid = _uidOrThrow;
-    final doc = _collection(uid).doc(apptId);
-
-    // Build payload for update(): dotted paths for deletes are supported here.
-    final Map<String, Object?> payload = {
-      'checklistIds': newSelection.toList(),
-    };
-
-    // Delete nested progress entries for removed or reset ids
-    final toDelete = {...removedIds, ...resetProgressIds};
-    for (final id in toDelete) {
-      // ⚠ If your checklist IDs could contain a dot ".", use IDs without dots.
-      payload['progress.$id'] = FieldValue.delete();
-    }
-
-    await doc.update(payload);
   }
 
   Future<int> countAppointments({

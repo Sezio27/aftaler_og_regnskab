@@ -16,7 +16,7 @@ class ChecklistListOverlay extends StatefulWidget {
   });
 
   final Set<String> initialSelectedIds;
-  final void Function(Set<String> newSelection, Set<String> resetIds) onDone;
+  final void Function(Set<String> newSelection) onDone;
   final String initialQuery;
 
   @override
@@ -114,8 +114,7 @@ class _ChecklistListOverlayState extends State<ChecklistListOverlay> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    final resetIds = _removedOnce.intersection(_selected);
-                    widget.onDone({..._selected}, resetIds);
+                    widget.onDone({..._selected});
                     context.pop();
                   },
                   icon: const Icon(Icons.check),
