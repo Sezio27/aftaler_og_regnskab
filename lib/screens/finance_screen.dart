@@ -1,6 +1,7 @@
 // lib/screens/finance_screen.dart
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/stat_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +44,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<AppointmentViewModel>().ensureFinanceTotalsSeeded();
+        context.read<FinanceViewModel>().ensureFinanceTotalsSeeded();
       }
     });
   }
@@ -81,7 +82,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: 16),
 
             // Summary cards (income + count) — only these rebuild when VM data changes.
-            Selector<AppointmentViewModel, ({int count, double income})>(
+            Selector<FinanceViewModel, ({int count, double income})>(
               selector: (_, vm) => vm.summaryNow(seg),
               builder: (_, summary, __) {
                 return Row(
@@ -124,7 +125,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: 16),
 
             Selector<
-              AppointmentViewModel,
+              FinanceViewModel,
               ({int paid, int waiting, int missing, int uninvoiced})
             >(
               selector: (_, vm) => vm.statusNow(seg),

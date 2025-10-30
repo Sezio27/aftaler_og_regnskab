@@ -5,6 +5,7 @@ import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
@@ -29,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<AppointmentViewModel>().ensureFinanceForHomeSeeded();
+      context.read<FinanceViewModel>().ensureFinanceForHomeSeeded();
     });
   }
 
@@ -46,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 6),
         child: Column(
           children: [
-            Selector<AppointmentViewModel, ({double income, int count})>(
+            Selector<FinanceViewModel, ({double income, int count})>(
               selector: (_, vm) => vm.summaryNow(Segment.month),
               builder: (_, summary, __) {
                 return Row(

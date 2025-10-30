@@ -45,6 +45,23 @@ class ServiceRepository {
     return _fromDoc(snap);
   }
 
+  Future<Map<String, ServiceModel?>> getServices(Set<String> ids) async {
+    if (ids.isEmpty) return {};
+
+    final uid = _uidOrThrow;
+
+    final snaps = await Future.wait([
+      for (final id in ids) _collection(uid).doc(id).get(),
+    ]);
+
+    final out = <String, ServiceModel?>{};
+    for (final snap in snaps) {
+      out[snap.id] = snap.exists ? _fromDoc(snap) : null;
+    }
+
+    return out;
+  }
+
   Future<ServiceModel> addService(ServiceModel model) async {
     final uid = _uidOrThrow;
     final doc = _collection(uid).doc();

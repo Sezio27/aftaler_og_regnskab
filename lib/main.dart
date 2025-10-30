@@ -14,6 +14,7 @@ import 'package:aftaler_og_regnskab/theme/app_theme.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,7 +25,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
-// ... your other imports
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,16 +89,19 @@ class MyApp extends StatelessWidget {
           create: (ctx) => ChecklistViewModel(ctx.read<ChecklistRepository>()),
         ),
         ChangeNotifierProvider(
+          create: (ctx) => FinanceViewModel(ctx.read<AppointmentRepository>()),
+        ),
+        ChangeNotifierProvider(
           create: (ctx) {
-            final apptRepo = ctx.read<AppointmentRepository>();
             final serviceRepo = ctx.read<ServiceRepository>();
             final clientRepo = ctx.read<ClientRepository>();
-            final storage = ctx.read<ImageStorage>();
+
             return AppointmentViewModel(
-              apptRepo,
-              storage,
-              fetchClient: (id) => clientRepo.getClientOnce(id),
-              fetchService: (id) => serviceRepo.getServiceOnce(id),
+              ctx.read<AppointmentRepository>(),
+              ctx.read<ImageStorage>(),
+              fetchClients: (ids) => clientRepo.getClients(ids),
+              fetchServices: (ids) => serviceRepo.getServices(ids),
+              financeVM: ctx.read<FinanceViewModel>(),
             );
           },
         ),

@@ -8,34 +8,37 @@ import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-typedef FetchClient = Future<ClientModel?> Function(String clientId);
-typedef FetchService = Future<ServiceModel?> Function(String serviceId);
-
+typedef FetchClients =
+    Future<Map<String, ClientModel?>> Function(Set<String> ids);
+typedef FetchServices =
+    Future<Map<String, ServiceModel?>> Function(Set<String> ids);
 typedef MonthChip = ({String title, String status, DateTime time});
-
-enum Segment { month, year, total }
 
 class AppointmentViewModel extends ChangeNotifier {
   AppointmentViewModel(
     this._repo,
     this._imageStorage, {
-    required this.fetchClient,
-    required this.fetchService,
+    required this.fetchClients,
+    required this.fetchServices,
+    required this.financeVM,
   });
 
   // ────────────────────────────────────────────────────────────────────────────
   // Dependencies
   // ────────────────────────────────────────────────────────────────────────────
   final AppointmentRepository _repo;
-  final FetchClient fetchClient;
-  final FetchService fetchService;
+  final FetchClients fetchClients; // NEW
+  final FetchServices fetchServices; // NEW
   final ImageStorage _imageStorage;
+  final FinanceViewModel financeVM; // NEW
 
-  /// Appointments inside the current active range
-
+  // ────────────────────────────────────────────────────────────────────────────
+  // Appointments data
+  // ────────────────────────────────────────────────────────────────────────────
   List<AppointmentModel> _rangeAppointments = const [];
   List<AppointmentModel> get all => _rangeAppointments;
 
@@ -50,8 +53,6 @@ class AppointmentViewModel extends ChangeNotifier {
   String? _lastErrorMessage;
   AppointmentModel? _lastCreatedAppointment;
 
-  // ---- change flag ----
-
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
   AppointmentModel? get lastAdded => _lastCreatedAppointment;
@@ -63,12 +64,6 @@ class AppointmentViewModel extends ChangeNotifier {
   final Map<String, Future<ClientModel?>> _clientInFlight = {};
   final Map<String, ServiceModel?> _serviceCache = {};
   final Map<String, Future<ServiceModel?>> _serviceInFlight = {};
-
-  @override
-  void dispose() {
-    _initialSubscription?.cancel();
-    super.dispose();
-  }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Range subscription control
@@ -85,6 +80,31 @@ class AppointmentViewModel extends ChangeNotifier {
   DateTime? _initialEnd;
   DateTime? _activeMonthStart;
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // List mode (paged months)
+  // ────────────────────────────────────────────────────────────────────────────
+  DateTime? _listStart, _listEnd;
+  List<DateTime> _listMonths = const [];
+  int _listNext = 0; // next month index to load
+  bool _listLoading = false;
+  bool _listHasMore = false;
+
+  final Map<DateTime, List<AppointmentModel>> _pagedByMonth =
+      {}; // monthStart -> items
+
+  List<AppointmentModel> _listAll = const [];
+  bool get listLoading => _listLoading;
+  bool get listHasMore => _listHasMore;
+
+  @override
+  void dispose() {
+    _initialSubscription?.cancel();
+    super.dispose();
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Range subscription methods
+  // ────────────────────────────────────────────────────────────────────────────
   Future<bool> _prefetchForInitialRange() async {
     return await _prefetchClientsAndServices(_initialStart!, _initialEnd!);
   }
@@ -222,12 +242,8 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   // ────────────────────────────────────────────────────────────────────────────
-  // CRUD
+  // CRUD methods
   // ────────────────────────────────────────────────────────────────────────────
-
-  bool _shouldUpdateSummary(Segment seg) =>
-      seg == Segment.month || _financeInitialised;
-
   Future<bool> addAppointment({
     required String? clientId,
     required String? serviceId,
@@ -284,23 +300,11 @@ class AppointmentViewModel extends ChangeNotifier {
 
       await _repo.createAppointmentWithId(docRef.id, model);
 
-      final s = PaymentStatusX.fromString(status);
-      final p = price ?? 0.0;
-
-      final segments = <Segment>[Segment.total];
-      if (isInCurrentYear(dateTime)) segments.add(Segment.year);
-      if (isInCurrentMonth(dateTime)) segments.add(Segment.month);
-
-      final isPaid = (s == PaymentStatus.paid);
-
-      for (final seg in segments) {
-        final t = _financeTotals[seg]!;
-        if (_shouldUpdateSummary(seg)) {
-          if (isPaid) t.paidSum += p;
-          t.totalCount++;
-        }
-        if (_financeInitialised) t.inc(s);
-      }
+      financeVM.onAddAppointment(
+        status: PaymentStatusX.fromString(status),
+        price: price ?? 0.0,
+        dateTime: dateTime,
+      );
 
       return true;
     } catch (e) {
@@ -321,31 +325,12 @@ class AppointmentViewModel extends ChangeNotifier {
   ) async {
     await _repo.updateStatus(id, newStatus.trim());
 
-    final old = PaymentStatusX.fromString(oldStatus);
-    final now = PaymentStatusX.fromString(newStatus);
-    final p = price ?? 0.0;
-
-    final segments = <Segment>[Segment.total];
-    if (isInCurrentYear(date)) segments.add(Segment.year);
-    if (isInCurrentMonth(date)) segments.add(Segment.month);
-
-    final wasPaid = (old == PaymentStatus.paid);
-    final isPaid = (now == PaymentStatus.paid);
-
-    //Sum updated
-    for (final seg in segments) {
-      final t = _financeTotals[seg]!;
-      if (_shouldUpdateSummary(seg)) {
-        if (isPaid) t.paidSum += p;
-        if (wasPaid) t.paidSum -= p;
-      }
-      if (_financeInitialised) {
-        t.dec(old);
-        t.inc(now);
-      }
-    }
-
-    notifyListeners();
+    financeVM.onUpdateStatus(
+      oldStatus: PaymentStatusX.fromString(oldStatus),
+      newStatus: PaymentStatusX.fromString(newStatus),
+      price: price ?? 0.0,
+      date: date,
+    );
   }
 
   Future<bool> updateAppointmentFields(
@@ -418,7 +403,6 @@ class AppointmentViewModel extends ChangeNotifier {
       putTs('payDate', payDate);
 
       // Price: prefer custom, else service, and allow clearing
-      // Price: prefer custom, else service, and allow clearing
       if (price != null || servicePrice != null) {
         final chosen = price ?? servicePrice;
         if (chosen == null) {
@@ -459,60 +443,14 @@ class AppointmentViewModel extends ChangeNotifier {
       final oldDate = old.dateTime;
       final newDate = dateTime ?? oldDate;
 
-      bool inSeg(Segment seg, DateTime? dt) {
-        if (seg == Segment.total) return true;
-        if (dt == null) return false;
-        return (seg == Segment.month)
-            ? isInCurrentMonth(dt)
-            : isInCurrentYear(dt);
-      }
-
-      final wasPaid = (oldStatus == PaymentStatus.paid);
-      final isPaid = (newStatus == PaymentStatus.paid);
-
-      //Sum updated
-      for (final seg in Segment.values) {
-        final t = _financeTotals[seg]!;
-        final wasIn = inSeg(seg, oldDate);
-        final isIn = inSeg(seg, newDate);
-
-        // Case A: moved OUT of this segment
-        if (wasIn && !isIn) {
-          if (_shouldUpdateSummary(seg)) {
-            t.totalCount--;
-            if (wasPaid) t.paidSum -= oldPrice;
-          }
-          if (_financeInitialised) t.dec(oldStatus);
-          continue;
-        }
-
-        // Case B: moved IN to this segment
-        if (!wasIn && isIn) {
-          if (_shouldUpdateSummary(seg)) {
-            t.totalCount++;
-            if (isPaid) t.paidSum += newPrice;
-          }
-          if (_financeInitialised) t.inc(newStatus);
-          continue;
-        }
-
-        // Case C: stayed within this segment
-        if (wasIn && isIn) {
-          if (_shouldUpdateSummary(seg)) {
-            if (wasPaid && isPaid) {
-              t.paidSum += (newPrice - oldPrice);
-            } else if (wasPaid && !isPaid) {
-              t.paidSum -= oldPrice;
-            } else if (!wasPaid && isPaid) {
-              t.paidSum += newPrice;
-            }
-          }
-          if (_financeInitialised && newStatus != oldStatus) {
-            t.inc(newStatus);
-            t.dec(oldStatus);
-          }
-        }
-      }
+      financeVM.onUpdateAppointmentFields(
+        oldStatus: oldStatus,
+        newStatus: newStatus,
+        oldPrice: oldPrice,
+        newPrice: newPrice,
+        oldDate: oldDate,
+        newDate: newDate,
+      );
 
       return true;
     } catch (e) {
@@ -522,79 +460,6 @@ class AppointmentViewModel extends ChangeNotifier {
       _isSaving = false;
       notifyListeners();
     }
-  }
-
-  List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
-    return _rangeAppointments.where((a) {
-      final dt = a.dateTime;
-      return dt != null &&
-          !dt.isBefore(dateOnly(start)) &&
-          !dt.isAfter(endOfDayInclusive(dateOnly(end)));
-    }).toList();
-  }
-
-  ({int count, double income}) summaryNow(Segment seg) {
-    final t = _financeTotals[seg]!;
-    return (count: t.totalCount, income: t.paidSum);
-  }
-
-  ({int paid, int waiting, int missing, int uninvoiced}) statusNow(
-    Segment seg,
-  ) {
-    final t = _financeTotals[seg]!;
-    return (
-      paid: t.getCount(PaymentStatus.paid),
-      waiting: t.getCount(PaymentStatus.waiting),
-      missing: t.getCount(PaymentStatus.missing),
-      uninvoiced: t.getCount(PaymentStatus.uninvoiced),
-    );
-  }
-
-  Future<({int count, double income})> getSummaryBySegment(Segment seg) async {
-    final t = _financeTotals[seg]!;
-    return (count: t.totalCount, income: t.paidSum);
-  }
-
-  Future<({int paid, int waiting, int missing, int uninvoiced})>
-  getStatusCountsBySegment(Segment seg) async {
-    final t = _financeTotals[seg]!;
-    return (
-      paid: t.getCount(PaymentStatus.paid),
-      waiting: t.getCount(PaymentStatus.waiting),
-      missing: t.getCount(PaymentStatus.missing),
-      uninvoiced: t.getCount(PaymentStatus.uninvoiced),
-    );
-  }
-
-  Future<({int paid, int waiting, int missing, int uninvoiced})> statusCount(
-    DateTime? start,
-    DateTime? end,
-  ) async {
-    final futures = <Future<int>>[
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Betalt',
-      ),
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Afventer',
-      ),
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Forfalden',
-      ),
-      _repo.countAppointments(
-        startInclusive: start,
-        endInclusive: end,
-        status: 'Ufaktureret',
-      ),
-    ];
-
-    final r = await Future.wait<int>(futures);
-    return (paid: r[0], waiting: r[1], missing: r[2], uninvoiced: r[3]);
   }
 
   Future<void> delete(
@@ -608,30 +473,27 @@ class AppointmentViewModel extends ChangeNotifier {
     } catch (_) {}
     await _repo.deleteAppointment(id);
 
-    final s = PaymentStatusX.fromString(status);
-    final p = price ?? 0.0;
-
-    final segments = <Segment>[Segment.total];
-    if (isInCurrentYear(date)) segments.add(Segment.year);
-    if (isInCurrentMonth(date)) segments.add(Segment.month);
-
-    final isPaid = (s == PaymentStatus.paid);
-
-    for (final seg in segments) {
-      final t = _financeTotals[seg]!;
-      if (_shouldUpdateSummary(seg)) {
-        if (isPaid) t.paidSum -= p;
-        t.totalCount--;
-      }
-      if (_financeInitialised) t.dec(s);
-    }
-
-    notifyListeners();
+    financeVM.onDeleteAppointment(
+      status: PaymentStatusX.fromString(status),
+      price: price ?? 0.0,
+      date: date,
+    );
   }
 
-  // Detail helpers
+  // ────────────────────────────────────────────────────────────────────────────
+  // Query methods
+  // ────────────────────────────────────────────────────────────────────────────
   Stream<AppointmentModel?> watchAppointmentById(String id) =>
       _repo.watchAppointment(id);
+
+  List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
+    return _rangeAppointments.where((a) {
+      final dt = a.dateTime;
+      return dt != null &&
+          !dt.isBefore(dateOnly(start)) &&
+          !dt.isAfter(endOfDayInclusive(dateOnly(end)));
+    }).toList();
+  }
 
   List<AppointmentCardModel> cardsForRange(DateTime start, DateTime end) {
     final appts = getAppointmentsInRange(start, end);
@@ -658,7 +520,6 @@ class AppointmentViewModel extends ChangeNotifier {
       );
     }
     return out;
-    ;
   }
 
   List<MonthChip> monthChipsOn(DateTime day) {
@@ -704,8 +565,8 @@ class AppointmentViewModel extends ChangeNotifier {
 
     if (clientsToFetch.isNotEmpty || servicesToFetch.isNotEmpty) {
       await Future.wait([
-        for (final id in clientsToFetch) _fetchClientCached(id),
-        for (final id in servicesToFetch) _fetchServiceCached(id),
+        if (clientsToFetch.isNotEmpty) _fetchClientsBatched(clientsToFetch),
+        if (servicesToFetch.isNotEmpty) _fetchServicesBatched(servicesToFetch),
       ]);
     }
 
@@ -731,9 +592,8 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   // ────────────────────────────────────────────────────────────────────────────
-  // Internal: indexing
+  // Internal: indexing and prefetch
   // ────────────────────────────────────────────────────────────────────────────
-
   void _buildDailyIndexes(List<AppointmentModel> appointments) {
     _appointmentsByDay.clear();
 
@@ -783,8 +643,9 @@ class AppointmentViewModel extends ChangeNotifier {
     final beforeServices = _serviceCache.length;
 
     await Future.wait([
-      for (final id in clientIdsToFetch) _fetchClientCached(id),
-      for (final id in serviceIdsToFetch) _fetchServiceCached(id),
+      if (clientIdsToFetch.isNotEmpty) _fetchClientsBatched(clientIdsToFetch),
+      if (serviceIdsToFetch.isNotEmpty)
+        _fetchServicesBatched(serviceIdsToFetch),
     ]);
 
     final changed =
@@ -796,34 +657,19 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   // Internal: caching helpers
   // ────────────────────────────────────────────────────────────────────────────
-  Future<ClientModel?> _fetchClientCached(String id) async {
-    if (_clientCache.containsKey(id)) return _clientCache[id];
-    final inFlight = _clientInFlight[id];
-    if (inFlight != null) return inFlight;
 
-    final future = fetchClient(id).then((value) {
-      _clientCache[id] = value;
-      _clientInFlight.remove(id);
-      return value;
-    });
-    _clientInFlight[id] = future;
-    return future;
+  Future<void> _fetchClientsBatched(Set<String> ids) async {
+    final batch = await fetchClients(ids);
+    _clientCache.addAll(batch);
   }
 
-  Future<ServiceModel?> _fetchServiceCached(String id) async {
-    if (_serviceCache.containsKey(id)) return _serviceCache[id];
-    final inFlight = _serviceInFlight[id];
-    if (inFlight != null) return inFlight;
-
-    final future = fetchService(id).then((value) {
-      _serviceCache[id] = value;
-      _serviceInFlight.remove(id);
-      return value;
-    });
-    _serviceInFlight[id] = future;
-    return future;
+  Future<void> _fetchServicesBatched(Set<String> ids) async {
+    final batch = await fetchServices(ids);
+    _serviceCache.addAll(batch);
   }
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Checklist methods
   // ────────────────────────────────────────────────────────────────────────────
   Stream<Map<String, Set<int>>> checklistProgressStream(String appointmentId) =>
       _repo.watchChecklistProgress(appointmentId);
@@ -847,33 +693,17 @@ class AppointmentViewModel extends ChangeNotifier {
     );
   }
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // Helper methods
+  // ────────────────────────────────────────────────────────────────────────────
   String? _trimOrNull(String? s) {
     final t = (s ?? '').trim();
     return t.isEmpty ? null : t;
   }
 
-  String? _firstNonEmpty(List<String?> values) {
-    for (final v in values) {
-      final t = (v ?? '').trim();
-      if (t.isNotEmpty) return t;
-    }
-    return null;
-  }
-
-  // ===== List mode (paged months) =====
-  DateTime? _listStart, _listEnd;
-  List<DateTime> _listMonths = const [];
-  int _listNext = 0; // next month index to load
-  bool _listLoading = false;
-  bool _listHasMore = false;
-
-  final Map<DateTime, List<AppointmentModel>> _pagedByMonth =
-      {}; // monthStart -> items
-
-  List<AppointmentModel> _listAll = const [];
-  bool get listLoading => _listLoading;
-  bool get listHasMore => _listHasMore;
-
+  // ────────────────────────────────────────────────────────────────────────────
+  // List mode methods
+  // ────────────────────────────────────────────────────────────────────────────
   bool _isMonthLive(DateTime mStart) {
     // live if covered by the initial pin OR already has a window subscription
     if (_initialStart != null && _initialEnd != null) {
@@ -1001,7 +831,6 @@ class AppointmentViewModel extends ChangeNotifier {
     _listAll = all;
   }
 
-  // Add this helper anywhere in the class (near your other mappers)
   AppointmentCardModel _toCard(AppointmentModel appt) {
     final client = _clientCache[appt.clientId ?? ''];
     final service = _serviceCache[appt.serviceId ?? ''];
@@ -1024,159 +853,8 @@ class AppointmentViewModel extends ChangeNotifier {
     );
   }
 
-  // Expose listCards (used by AllAppointmentsScreen)
   List<AppointmentCardModel> get listCards => _listAll
       .where((a) => a.id != null && a.dateTime != null)
       .map(_toCard)
       .toList();
-
-  ({DateTime? start, DateTime? end}) _rangeFor(Segment s) {
-    final now = DateTime.now();
-    switch (s) {
-      case Segment.month:
-        return (start: startOfMonth(now), end: endOfMonthInclusive(now));
-      case Segment.year:
-        return (start: startOfYear(now), end: endOfYearInclusive(now));
-      case Segment.total:
-        return (start: null, end: null);
-    }
-  }
-
-  // Home: month summary ONLY
-  Future<void> ensureFinanceForHomeSeeded() async {
-    if (_homeInitialised) return;
-    await seedFinanceSegment(
-      Segment.month,
-      withStatusCounts: false,
-      skipSummary: false,
-    );
-    _homeInitialised = true;
-    notifyListeners();
-  }
-
-  // Finance: all segments + status
-  Future<void> ensureFinanceTotalsSeeded() async {
-    if (_financeInitialised) return;
-
-    // Month: if Home already seeded summary, skip it here and only fetch status
-    await seedFinanceSegment(
-      Segment.month,
-      withStatusCounts: true,
-      skipSummary: _homeInitialised, // ← avoids re-reading month summary
-    );
-
-    await seedFinanceSegment(
-      Segment.year,
-      withStatusCounts: true,
-      skipSummary: false,
-    );
-    await seedFinanceSegment(
-      Segment.total,
-      withStatusCounts: true,
-      skipSummary: false,
-    );
-
-    _financeInitialised = true;
-    notifyListeners();
-  }
-
-  Future<void> seedFinanceSegment(
-    Segment seg, {
-    required bool withStatusCounts,
-    bool skipSummary = false, // when Home already seeded month summary
-  }) async {
-    final r = _rangeFor(seg);
-    final totals = _financeTotals[seg]!;
-
-    // Build only the futures we actually need
-    final futures = <Future<dynamic>>[];
-
-    if (!skipSummary) {
-      futures.add(
-        _repo.countAppointments(startInclusive: r.start, endInclusive: r.end),
-      ); // index 0 (if present)
-
-      futures.add(
-        _repo.sumPaidInRange(startInclusive: r.start, endInclusive: r.end),
-      ); // index 1 (if present)
-    }
-
-    if (withStatusCounts) {
-      futures.add(
-        Future.wait<int>([
-          _repo.countAppointments(
-            startInclusive: r.start,
-            endInclusive: r.end,
-            status: PaymentStatus.paid.label,
-          ),
-          _repo.countAppointments(
-            startInclusive: r.start,
-            endInclusive: r.end,
-            status: PaymentStatus.waiting.label,
-          ),
-          _repo.countAppointments(
-            startInclusive: r.start,
-            endInclusive: r.end,
-            status: PaymentStatus.missing.label,
-          ),
-          _repo.countAppointments(
-            startInclusive: r.start,
-            endInclusive: r.end,
-            status: PaymentStatus.uninvoiced.label,
-          ),
-        ]),
-      ); // last index (if present)
-    }
-
-    if (futures.isEmpty) return;
-
-    final results = await Future.wait(futures);
-    var i = 0;
-
-    if (!skipSummary) {
-      totals.totalCount = results[i++] as int;
-      totals.paidSum = results[i++] as double;
-    }
-
-    if (withStatusCounts) {
-      final buckets = results[i++] as List<int>;
-      totals.counts[PaymentStatus.paid] = buckets[0];
-      totals.counts[PaymentStatus.waiting] = buckets[1];
-      totals.counts[PaymentStatus.missing] = buckets[2];
-      totals.counts[PaymentStatus.uninvoiced] = buckets[3];
-    }
-  }
 }
-
-class FinanceTotals {
-  int totalCount; // all appointments in segment (any status)
-  double paidSum; // sum(price) where status == 'Betalt'
-  final Map<PaymentStatus, int> counts; // per-status counts (no 'all')
-
-  FinanceTotals({
-    this.totalCount = 0,
-    this.paidSum = 0.0,
-    Map<PaymentStatus, int>? counts,
-  }) : counts = {
-         for (final s in PaymentStatus.values)
-           if (s != PaymentStatus.all) s: counts?[s] ?? 0,
-       };
-
-  int getCount(PaymentStatus s) =>
-      s == PaymentStatus.all ? totalCount : (counts[s] ?? 0);
-  void inc(PaymentStatus s) {
-    if (s != PaymentStatus.all) counts[s] = (counts[s] ?? 0) + 1;
-  }
-
-  void dec(PaymentStatus s) {
-    if (s != PaymentStatus.all) counts[s] = (counts[s] ?? 0) - 1;
-  }
-}
-
-final Map<Segment, FinanceTotals> _financeTotals = {
-  Segment.month: FinanceTotals(),
-  Segment.year: FinanceTotals(),
-  Segment.total: FinanceTotals(),
-};
-bool _financeInitialised = false;
-bool _homeInitialised = false;

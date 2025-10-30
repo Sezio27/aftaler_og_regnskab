@@ -50,6 +50,23 @@ class ClientRepository {
     return _fromDoc(snap);
   }
 
+  Future<Map<String, ClientModel?>> getClients(Set<String> ids) async {
+    if (ids.isEmpty) return {};
+
+    final uid = _uidOrThrow;
+
+    final snaps = await Future.wait([
+      for (final id in ids) _collection(uid).doc(id).get(),
+    ]);
+
+    final out = <String, ClientModel?>{};
+    for (final snap in snaps) {
+      out[snap.id] = snap.exists ? _fromDoc(snap) : null;
+    }
+
+    return out;
+  }
+
   // ---------- CREATE ----------
 
   /// Create a new client. Returns the created domain object (with id).
