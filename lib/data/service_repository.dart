@@ -45,21 +45,28 @@ class ServiceRepository {
     return _fromDoc(snap);
   }
 
-  Future<Map<String, ServiceModel?>> getServices(Set<String> ids) async {
+  Future<Map<String, ServiceModel?>> getClients(Set<String> ids) async {
     if (ids.isEmpty) return {};
-
     final uid = _uidOrThrow;
+    final idsList = ids.toList();
+    final result = <String, ServiceModel?>{};
+    for (var i = 0; i < idsList.length; i += 10) {
+      final chunk = idsList.sublist(
+        i,
+        i + 10 > idsList.length ? idsList.length : i + 10,
+      );
+      final querySnapshot = await _collection(
+        uid,
+      ).where(FieldPath.documentId, whereIn: chunk).get();
+      for (final doc in querySnapshot.docs) {
+        result[doc.id] = _fromDoc(doc);
+      }
 
-    final snaps = await Future.wait([
-      for (final id in ids) _collection(uid).doc(id).get(),
-    ]);
-
-    final out = <String, ServiceModel?>{};
-    for (final snap in snaps) {
-      out[snap.id] = snap.exists ? _fromDoc(snap) : null;
+      for (final id in chunk) {
+        result.putIfAbsent(id, () => null);
+      }
     }
-
-    return out;
+    return result;
   }
 
   Future<ServiceModel> addService(ServiceModel model) async {

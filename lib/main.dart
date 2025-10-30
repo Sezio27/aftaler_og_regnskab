@@ -1,6 +1,7 @@
 ﻿// main.dart
 import 'dart:async';
 import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/cache/client_service_cache';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
@@ -72,6 +73,12 @@ class MyApp extends StatelessWidget {
               AppointmentRepository(auth: auth, firestore: db),
         ),
         Provider(create: (_) => ImageStorage()),
+        Provider<ClientServiceCache>(
+          create: (ctx) => ClientServiceCache(
+            ctx.read<ClientRepository>(),
+            ctx.read<ServiceRepository>(),
+          ),
+        ),
 
         ChangeNotifierProvider(
           create: (ctx) => ClientViewModel(
@@ -93,14 +100,13 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (ctx) {
-            final serviceRepo = ctx.read<ServiceRepository>();
-            final clientRepo = ctx.read<ClientRepository>();
-
             return AppointmentViewModel(
               ctx.read<AppointmentRepository>(),
               ctx.read<ImageStorage>(),
-              fetchClients: (ids) => clientRepo.getClients(ids),
-              fetchServices: (ids) => serviceRepo.getServices(ids),
+              fetchClients: (ids) =>
+                  ctx.read<ClientServiceCache>().fetchClients(ids),
+              fetchServices: (ids) =>
+                  ctx.read<ClientServiceCache>().fetchServices(ids),
               financeVM: ctx.read<FinanceViewModel>(),
             );
           },

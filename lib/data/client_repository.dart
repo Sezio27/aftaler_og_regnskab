@@ -51,22 +51,29 @@ class ClientRepository {
   }
 
   Future<Map<String, ClientModel?>> getClients(Set<String> ids) async {
+    // Firestore 'whereIn' only accepts up to 10 values:contentReference[oaicite:1]{index=1}.
     if (ids.isEmpty) return {};
-
     final uid = _uidOrThrow;
-
-    final snaps = await Future.wait([
-      for (final id in ids) _collection(uid).doc(id).get(),
-    ]);
-
-    final out = <String, ClientModel?>{};
-    for (final snap in snaps) {
-      out[snap.id] = snap.exists ? _fromDoc(snap) : null;
+    final idsList = ids.toList();
+    final result = <String, ClientModel?>{};
+    for (var i = 0; i < idsList.length; i += 10) {
+      final chunk = idsList.sublist(
+        i,
+        i + 10 > idsList.length ? idsList.length : i + 10,
+      );
+      final querySnapshot = await _collection(
+        uid,
+      ).where(FieldPath.documentId, whereIn: chunk).get();
+      for (final doc in querySnapshot.docs) {
+        result[doc.id] = _fromDoc(doc);
+      }
+      // If a requested ID isn't returned (e.g. deleted), store null.
+      for (final id in chunk) {
+        result.putIfAbsent(id, () => null);
+      }
     }
-
-    return out;
+    return result;
   }
-
   // ---------- CREATE ----------
 
   /// Create a new client. Returns the created domain object (with id).
