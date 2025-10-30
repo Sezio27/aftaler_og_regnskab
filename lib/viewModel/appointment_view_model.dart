@@ -52,6 +52,8 @@ class AppointmentViewModel extends ChangeNotifier {
   StreamSubscription<List<AppointmentModel>>? _initialSubscription;
   final Map<DateTime, StreamSubscription<List<AppointmentModel>>>
   _windowSubscriptions = {};
+  final Map<String, StreamSubscription<AppointmentModel?>>
+  _appointmentSubscriptions = {};
 
   DateTime? _initialStart;
   DateTime? _initialEnd;
@@ -72,6 +74,40 @@ class AppointmentViewModel extends ChangeNotifier {
       ? apptCache.getAppointmentsBetween(_listStart!, _listEnd!)
       : const [];
 
+  Future<void> subscribeToAppointment(String id) async {
+    if (_appointmentSubscriptions.containsKey(id)) return;
+
+    // If we already have it in cache and it's covered, skip opening a per-doc sub.
+    final cached = apptCache.getAppointment(id);
+    if (cached != null && _isSubCovered(cached.dateTime)) {
+      return;
+    }
+
+    // Else attach a per-doc subscription. If/when coverage becomes true,
+    // we'll auto-cancel (either here on first tick or in _handleSnapshot).
+    final sub = _repo.watchAppointment(id).listen((doc) {
+      if (doc != null) {
+        apptCache.cacheAppointment(doc);
+        // If the document's date is within coverage, drop this listener.
+        if (_isSubCovered(doc.dateTime)) {
+          _appointmentSubscriptions.remove(id)?.cancel();
+          notifyListeners();
+          return;
+        }
+      } else {
+        apptCache.remove(id);
+      }
+      notifyListeners();
+    });
+    _appointmentSubscriptions[id] = sub;
+  }
+
+  void unsubscribeFromAppointment(String id) {
+    _appointmentSubscriptions.remove(id)?.cancel();
+  }
+
+  AppointmentModel? getAppointment(String id) => apptCache.getAppointment(id);
+
   Future<void> _handleSnapshot(
     List<AppointmentModel> fetched,
     DateTime start,
@@ -85,7 +121,14 @@ class AppointmentViewModel extends ChangeNotifier {
     final changed = await _prefetchClientsAndServices(
       apptCache.getAppointmentsBetween(start, end),
     );
-
+    for (final a in fetched) {
+      final id = a.id;
+      if (id != null &&
+          _appointmentSubscriptions.containsKey(id) &&
+          _isSubCovered(a.dateTime)) {
+        _appointmentSubscriptions.remove(id)?.cancel();
+      }
+    }
     if (becameReady || changed) notifyListeners();
   }
 
@@ -108,6 +151,10 @@ class AppointmentViewModel extends ChangeNotifier {
       sub.cancel();
     }
     _windowSubscriptions.clear();
+    for (final sub in _appointmentSubscriptions.values) {
+      sub.cancel();
+    }
+    _appointmentSubscriptions.clear();
     super.dispose();
   }
 
@@ -115,6 +162,19 @@ class AppointmentViewModel extends ChangeNotifier {
     final monthEnd = endOfMonthInclusive(monthStart);
     return !monthStart.isBefore(_initialStart!) &&
         !monthEnd.isAfter(_initialEnd!);
+  }
+
+  bool _isSubCovered(DateTime? dt) {
+    if (dt == null) return false;
+
+    if (_initialStart != null && _initialEnd != null) {
+      final inInitial =
+          !dt.isBefore(_initialStart!) && !dt.isAfter(_initialEnd!);
+      if (inInitial) return true;
+    }
+
+    final month = startOfMonth(dt);
+    return _windowSubscriptions.containsKey(month);
   }
 
   Future<void> setInitialRange() async {
@@ -424,8 +484,6 @@ class AppointmentViewModel extends ChangeNotifier {
   // ────────────────────────────────────────────────────────────────────────────
   // Query methods
   // ────────────────────────────────────────────────────────────────────────────
-  Stream<AppointmentModel?> watchAppointmentById(String id) =>
-      _repo.watchAppointment(id);
 
   List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
     return apptCache.getAppointmentsBetween(
@@ -648,7 +706,10 @@ class AppointmentViewModel extends ChangeNotifier {
     _initialStart = null;
     _initialEnd = null;
     _activeMonthStart = null;
-
+    for (final sub in _appointmentSubscriptions.values) {
+      sub.cancel();
+    }
+    _appointmentSubscriptions.clear();
     _listStart = null;
     _listEnd = null;
     _listLoading = false;

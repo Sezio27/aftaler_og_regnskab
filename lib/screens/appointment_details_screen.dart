@@ -29,25 +29,40 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-class AppointmentDetailsScreen extends StatelessWidget {
+class AppointmentDetailsScreen extends StatefulWidget {
   const AppointmentDetailsScreen({super.key, required this.appointmentId});
   final String appointmentId;
 
   @override
+  State<AppointmentDetailsScreen> createState() =>
+      _AppointmentDetailsScreenState();
+}
+
+class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
+  late final AppointmentViewModel _vm;
+  bool _subscribed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vm = context.read<AppointmentViewModel>();
+    _vm.subscribeToAppointment(widget.appointmentId);
+    _subscribed = true;
+  }
+
+  @override
+  void dispose() {
+    if (_subscribed) {
+      _vm.unsubscribeFromAppointment(widget.appointmentId);
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final appVm = context.read<AppointmentViewModel>();
-
-    return StreamBuilder<AppointmentModel?>(
-      stream: appVm.watchAppointmentById(appointmentId),
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Center(child: Text('Fejl: ${snap.error}'));
-        }
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final appointment = snap.data;
+    return Selector<AppointmentViewModel, AppointmentModel?>(
+      selector: (_, vm) => vm.getAppointment(widget.appointmentId),
+      builder: (context, appointment, _) {
         if (appointment == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pop();

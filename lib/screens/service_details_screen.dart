@@ -13,24 +13,39 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class ServiceDetailsScreen extends StatelessWidget {
+class ServiceDetailsScreen extends StatefulWidget {
   const ServiceDetailsScreen({super.key, required this.serviceId});
   final String serviceId;
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.read<ServiceViewModel>();
-    return StreamBuilder<ServiceModel?>(
-      stream: vm.watchService(serviceId),
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Center(child: Text('Fejl: ${snap.error}'));
-        }
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  State<ServiceDetailsScreen> createState() => _ServiceDetailsScreenState();
+}
 
-        final service = snap.data;
+class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
+  late final ServiceViewModel _vm;
+  bool _subscribed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vm = context.read<ServiceViewModel>();
+    _vm.subscribeToService(widget.serviceId);
+    _subscribed = true;
+  }
+
+  @override
+  void dispose() {
+    if (_subscribed) {
+      _vm.unsubscribeFromService(widget.serviceId);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<ServiceViewModel, ServiceModel?>(
+      selector: (_, vm) => vm.getService(widget.serviceId),
+      builder: (context, service, _) {
         if (service == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pop();

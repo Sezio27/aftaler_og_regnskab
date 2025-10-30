@@ -14,15 +14,14 @@ class ClientViewModel extends ChangeNotifier {
   final ClientCache _cache;
 
   StreamSubscription<List<ClientModel>>? _sub;
+  final Map<String, StreamSubscription<ClientModel?>> _clientSubscriptions = {};
 
   String _query = '';
-  ClientModel? _client;
   List<ClientModel> _all = const [];
   List<ClientModel> _allFiltered = const [];
   List<ClientModel> _private = const [];
   List<ClientModel> _business = const [];
 
-  ClientModel? get client => _client;
   List<ClientModel> get allClients => _allFiltered;
   List<ClientModel> get privateClients => _private;
   List<ClientModel> get businessClients => _business;
@@ -30,26 +29,50 @@ class ClientViewModel extends ChangeNotifier {
   int get privateCount => _private.length;
   int get businessCount => _business.length;
 
+  bool _saving = false;
+  String? _error;
+
+  bool get saving => _saving;
+  String? get error => _error;
+
   @override
   void dispose() {
     _sub?.cancel();
+    for (final s in _clientSubscriptions.values) {
+      s.cancel();
+    }
+    _clientSubscriptions.clear();
     super.dispose();
   }
 
-  Future<void> prefetchClient(String id) async {
-    if (_cache.getClient(id) != null) return;
-
-    final result = await _cache.fetchClients({id});
-    final fetched = result[id];
-    if (fetched != null) {
-      _cache.cacheClient(fetched);
-      _client = fetched;
+  void subscribeToClient(String id) {
+    if (_clientSubscriptions.containsKey(id)) return;
+    _clientSubscriptions[id] = _repo.watchClient(id).listen((doc) {
+      if (doc != null) {
+        _cache.cacheClient(doc);
+      } else {
+        _cache.remove(id);
+      }
       notifyListeners();
-    }
+    });
+  }
+
+  void unsubscribeFromClient(String id) {
+    _clientSubscriptions.remove(id)?.cancel();
+  }
+
+  Future<ClientModel?> prefetchClient(String id) async {
+    final cached = _cache.getClient(id);
+    if (cached != null) return cached;
+
+    final res = await _cache.fetchClients({id});
+    final fetched = res[id];
+    if (fetched != null) notifyListeners();
+    return fetched;
   }
 
   void initClientFilters({String initialQuery = ''}) {
-    if (_sub != null) return; // already initialized
+    if (_sub != null) return;
     _query = initialQuery.trim();
 
     _sub = _repo.watchClients().listen((items) {
@@ -85,41 +108,21 @@ class ClientViewModel extends ChangeNotifier {
 
   void _recompute() {
     final q = _query.toLowerCase();
-    bool m(String? v) => (v ?? '').toLowerCase().contains(q);
+    bool matches(String? v) => (v ?? '').toLowerCase().contains(q);
 
     final searched = q.isEmpty
         ? _all
-        : _all.where((c) => m(c.name) || m(c.phone) || m(c.email)).toList();
+        : _all
+              .where(
+                (c) => matches(c.name) || matches(c.phone) || matches(c.email),
+              )
+              .toList();
 
     _allFiltered = searched;
-
-    bool hasCvr(ClientModel c) => (c.cvr ?? '').trim().isNotEmpty;
-
-    final business = <ClientModel>[];
-    final priv = <ClientModel>[];
-
-    for (final c in searched) {
-      (hasCvr(c) ? business : priv).add(c);
-      _cache.cacheClient(c);
-    }
-
-    _business = business;
-    _private = priv;
-
+    _business = searched.where((c) => (c.cvr ?? '').trim().isNotEmpty).toList();
+    _private = searched.where((c) => (c.cvr ?? '').trim().isEmpty).toList();
     notifyListeners();
   }
-
-  Stream<List<ClientModel>> get clientsStream => _repo.watchClients();
-  Stream<ClientModel?> watchClient(String id) => _repo.watchClient(id);
-  Future<ClientModel?> getClientOnce(String id) => _repo.getClientOnce(id);
-
-  bool _saving = false;
-  String? _error;
-  ClientModel? _lastAdded;
-
-  bool get saving => _saving;
-  String? get error => _error;
-  ClientModel? get lastAdded => _lastAdded;
 
   Future<bool> addClient({
     required String? name,
@@ -149,12 +152,10 @@ class ClientViewModel extends ChangeNotifier {
       String? imageUrl;
 
       if (image != null) {
-        debugPrint('upload start');
         imageUrl = await _imageStorage.uploadClientImage(
           clientId: docRef.id,
           image: image,
         );
-        debugPrint('upload done: $imageUrl');
       }
 
       final model = ClientModel(
@@ -169,12 +170,11 @@ class ClientViewModel extends ChangeNotifier {
       );
       await _repo.createClientWithId(docRef.id, model);
 
-      try {
-        final cache = model.copyWith(id: docRef.id);
-        _cache.cacheClient(cache);
-      } catch (_) {}
+      final created = model.copyWith(id: docRef.id);
+      _cache.cacheClient(created);
+      _all = [..._all, created];
+      _recompute(); // single notify inside
 
-      _lastAdded = model;
       return true;
     } catch (e) {
       _error = 'Kunne ikke tilføje klient: ${e.toString()}';
@@ -223,7 +223,6 @@ class ClientViewModel extends ChangeNotifier {
       put('postal', postal);
       put('cvr', cvr);
 
-      // Image precedence: new image > remove flag
       if (newImage != null) {
         final url = await _imageStorage.uploadClientImage(
           clientId: id,
@@ -232,7 +231,7 @@ class ClientViewModel extends ChangeNotifier {
         fields['image'] = url;
       } else if (removeImage) {
         deletes.add('image');
-        // Optional storage cleanup; don't fail the whole op if it throws
+
         try {
           await _imageStorage.deleteClientImage(id);
         } catch (_) {}
@@ -273,14 +272,8 @@ class ClientViewModel extends ChangeNotifier {
         );
 
         _cache.cacheClient(updated);
-        _all = [
-          for (final c in _all)
-            if (c.id == id) updated else c,
-        ];
-        _allFiltered = [
-          for (final c in _allFiltered)
-            if (c.id == id) updated else c,
-        ];
+        _all = [for (final c in _all) (c.id == id) ? updated : c];
+        _recompute();
       }
 
       return true;
@@ -309,7 +302,6 @@ class ClientViewModel extends ChangeNotifier {
     _sub?.cancel();
     _sub = null;
     _query = '';
-    _client = null;
     _all = const [];
     _allFiltered = const [];
     _private = const [];

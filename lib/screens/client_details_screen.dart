@@ -14,25 +14,39 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class ClientDetailsScreen extends StatelessWidget {
+class ClientDetailsScreen extends StatefulWidget {
   const ClientDetailsScreen({super.key, required this.clientId});
   final String clientId;
 
   @override
+  State<ClientDetailsScreen> createState() => _ClientDetailsScreenState();
+}
+
+class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
+  late final ClientViewModel _vm;
+  bool _subscribed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vm = context.read<ClientViewModel>();
+    _vm.subscribeToClient(widget.clientId);
+    _subscribed = true;
+  }
+
+  @override
+  void dispose() {
+    if (_subscribed) {
+      _vm.unsubscribeFromClient(widget.clientId);
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final vm = context.read<ClientViewModel>();
-
-    return StreamBuilder<ClientModel?>(
-      stream: vm.watchClient(clientId),
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Center(child: Text('Fejl: ${snap.error}'));
-        }
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final client = snap.data;
+    return Selector<ClientViewModel, ClientModel?>(
+      selector: (_, vm) => vm.getClient(widget.clientId),
+      builder: (context, client, _) {
         if (client == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) context.pop();

@@ -42,8 +42,7 @@ class ClientRepository {
         .map((q) => q.docs.map(_fromDoc).toList());
   }
 
-  /// Fetch one client once (returns null if not found).
-  Future<ClientModel?> getClientOnce(String id) async {
+  Future<ClientModel?> getClient(String id) async {
     final uid = _uidOrThrow;
     final snap = await _collection(uid).doc(id).get();
     if (!snap.exists) return null;
