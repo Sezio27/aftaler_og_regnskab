@@ -22,6 +22,7 @@ import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -136,6 +137,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (ctx) => OnboardingViewModel(ctx.read<UserRepository>()),
         ),
+
+        ChangeNotifierProvider(
+          create: (ctx) => UserViewModel(ctx.read<UserRepository>()),
+        ),
       ],
       child: _AppBootstrap(router: router),
     );
@@ -155,6 +160,7 @@ class _AppBootstrap extends StatefulWidget {
 class _AppBootstrapState extends State<_AppBootstrap> {
   StreamSubscription<User?>? _authSub;
   bool _didBootstrap = false;
+  Future<void>? _themeInit;
 
   void _bootstrapTwoMonthRange() {
     final vm = context.read<AppointmentViewModel>();
@@ -185,6 +191,7 @@ class _AppBootstrapState extends State<_AppBootstrap> {
       context.read<ClientViewModel>().reset();
       context.read<ServiceViewModel>().reset();
       context.read<AppointmentViewModel>().resetOnAuthChange();
+      context.read<UserViewModel>().onAuthChanged();
 
       if (user != null) {
         if (!_didBootstrap) {
@@ -206,20 +213,41 @@ class _AppBootstrapState extends State<_AppBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      locale: const Locale('da'),
-      supportedLocales: const [Locale('da'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      debugShowCheckedModeBanner: false,
-      title: 'Aftaler & Regnskab',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
-      routerConfig: widget.router,
+    _themeInit ??= context.read<UserViewModel>().loadLocalPreferences();
+
+    return FutureBuilder<void>(
+      future: _themeInit,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: ThemeMode.system,
+            home: const SizedBox.shrink(),
+          );
+        }
+
+        final themeMode = context.select<UserViewModel, ThemeMode>(
+          (vm) => vm.themeMode,
+        );
+
+        return MaterialApp.router(
+          locale: const Locale('da'),
+          supportedLocales: const [Locale('da'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          debugShowCheckedModeBanner: false,
+          title: 'Aftaler & Regnskab',
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: themeMode,
+          routerConfig: widget.router,
+        );
+      },
     );
   }
 }

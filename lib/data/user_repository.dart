@@ -40,21 +40,18 @@ class UserRepository {
     }
   }
 
-  /// Fetch the user's Firestore doc once.
   Future<DocumentSnapshot<Map<String, dynamic>>?> fetchUserDoc() async {
     final uid = _uid;
     if (uid == null) return null;
     return _db.collection('users').doc(uid).get();
   }
 
-  /// Live stream of the user's doc (useful for profile screens).
   Stream<DocumentSnapshot<Map<String, dynamic>>?> userDocStream() {
     final uid = _uid;
     if (uid == null) return const Stream.empty();
     return _db.collection('users').doc(uid).snapshots();
   }
 
-  /// Convenience method to update a subset of fields later on.
   Future<void> patchUserData(Map<String, Object?> patch) async {
     final uid = _uid;
     if (uid == null) throw StateError('Not signed in');

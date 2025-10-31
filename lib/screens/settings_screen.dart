@@ -2,45 +2,121 @@ import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _remindersOn = true;
+  bool _paymentOn = true;
+  @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    // UI-only toggles for now (no backend logic)
+
     final titleStyle = AppTypography.settingsTitle;
     final labelStyle = AppTypography.settingsLabel;
     final valueStyle = AppTypography.settingsValue;
+
+    final userVM = context.watch<UserViewModel>();
+    final isDark = userVM.themeMode == ThemeMode.dark;
+
+    final modeLabel = isDark ? "Mørk tilstand" : "Lys tilstand";
+    final modeAction = isDark
+        ? "   Skift til lyst tema"
+        : "   Skift til mørkt tema";
+    final businessName = (userVM.businessName.isNotEmpty)
+        ? userVM.businessName
+        : '---';
+    final addressParts = <String>[
+      userVM.address,
+      if (userVM.postal.trim().isNotEmpty) userVM.postal,
+      if (userVM.city.trim().isNotEmpty) userVM.city,
+    ].where((s) => s.trim().isNotEmpty).toList();
+
+    final addressCombined = addressParts.isNotEmpty
+        ? addressParts.join(', ')
+        : '---';
 
     var businessInfo = [
       Text("Forretningsinformation", style: titleStyle),
       const SizedBox(height: 26),
       Text("Forretningsnavn", style: labelStyle),
       const SizedBox(height: 10),
-      Text("MyPhung", style: valueStyle),
+      Text(businessName, style: valueStyle),
       const SizedBox(height: 20),
       Text("Adresse", style: labelStyle),
       const SizedBox(height: 10),
-      Text("Østergade 25, 1100 København K", style: valueStyle),
+      Text(addressCombined, style: valueStyle),
     ];
 
     var preferences = [
       Text("Præferencer", style: titleStyle),
       const SizedBox(height: 26),
-      Text("Mørk tilstand", style: labelStyle),
-      const SizedBox(height: 22),
-      Text("   Skift til mørkt tema", style: valueStyle),
+      Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(modeLabel, style: labelStyle),
+                  const SizedBox(height: 22),
+                  Text(modeAction, style: valueStyle),
+                ],
+              ),
+            ),
+            const _ThemeModeButton(),
+          ],
+        ),
+      ),
+
       const SizedBox(height: 30),
       Text("Notifikationer", style: labelStyle),
       const SizedBox(height: 22),
-      Text("   Aftalepåmindelser", style: valueStyle),
+      // Aftalepåmindelser
+      Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Row(
+          children: [
+            Expanded(child: Text("   Aftalepåmindelser", style: valueStyle)),
+            _PeachToggleIcon(
+              isOn: _remindersOn,
+              icon: Icons.check,
+              onTap: () => setState(() => _remindersOn = !_remindersOn),
+            ),
+          ],
+        ),
+      ),
+
       const SizedBox(height: 30),
-      Text("   Betaling forfalden", style: valueStyle),
+
+      // Betalingsnotifikationer
+      Padding(
+        padding: const EdgeInsets.only(right: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text("   Betalingsnotifikationer", style: valueStyle),
+            ),
+            _PeachToggleIcon(
+              isOn: _paymentOn,
+              icon: Icons.check,
+              onTap: () => setState(() => _paymentOn = !_paymentOn),
+            ),
+          ],
+        ),
+      ),
     ];
 
     var clients = [
@@ -198,6 +274,111 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemeModeButton extends StatelessWidget {
+  const _ThemeModeButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<UserViewModel>();
+    final isDark = vm.themeMode == ThemeMode.dark;
+    final cs = Theme.of(context).colorScheme;
+
+    final Color bg = isDark ? cs.primary : AppColors.peachBackground;
+    final Color icon = isDark ? cs.onPrimary : cs.primary;
+
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () {
+          final next = isDark ? ThemeMode.light : ThemeMode.dark;
+          context.read<UserViewModel>().setThemeMode(next);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: bg,
+            shape: BoxShape.circle,
+            boxShadow: [
+              // subtle lift in light mode only
+              if (!isDark)
+                const BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.06),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.nightlight_round, // moon-ish
+            size: 16,
+            color: icon,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PeachToggleIcon extends StatelessWidget {
+  final bool isOn;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? onColor; // defaults to theme.primary
+  final Color? offColor; // defaults to AppColors.peachBackground
+  final double size;
+
+  const _PeachToggleIcon({
+    required this.isOn,
+    required this.icon,
+    required this.onTap,
+    this.onColor,
+    this.offColor,
+    this.size = 32,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final Color bg = isOn
+        ? (onColor ?? cs.primary)
+        : (offColor ?? AppColors.peachBackground);
+    final Color ic = isOn ? cs.onPrimary : cs.primary;
+
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: bg,
+            shape: BoxShape.circle,
+            boxShadow: [
+              if (!isOn)
+                const BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.06),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: size * 0.5, color: ic),
         ),
       ),
     );
