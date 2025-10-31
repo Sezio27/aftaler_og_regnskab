@@ -15,6 +15,7 @@ import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/firebase_options.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/services/notification_service.dart';
 import 'package:aftaler_og_regnskab/theme/app_theme.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
@@ -78,6 +79,7 @@ class MyApp extends StatelessWidget {
               AppointmentRepository(auth: auth, firestore: db),
         ),
         Provider(create: (_) => ImageStorage()),
+        Provider<NotificationService>(create: (_) => NotificationService()),
         Provider<ClientCache>(
           create: (ctx) => ClientCache(ctx.read<ClientRepository>()),
         ),
@@ -175,10 +177,13 @@ class _AppBootstrapState extends State<_AppBootstrap> {
 
     // If user is already signed in at app start
     if (auth.currentUser != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!_didBootstrap) {
           _bootstrapTwoMonthRange();
           _didBootstrap = true;
+          final ns = context.read<NotificationService>();
+          await ns.init();
+          await ns.requestPermissionIfNeeded();
         }
       });
     }
