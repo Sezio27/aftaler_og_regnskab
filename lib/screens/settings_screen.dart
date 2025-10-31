@@ -1,5 +1,6 @@
 import 'package:aftaler_og_regnskab/app_router.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
+import 'package:aftaler_og_regnskab/services/notification_service.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
@@ -83,8 +84,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       const SizedBox(height: 30),
       Text("Notifikationer", style: labelStyle),
-      const SizedBox(height: 22),
-      // Aftalepåmindelser
+      const SizedBox(height: 26),
+
       Padding(
         padding: const EdgeInsets.only(right: 10),
         child: Row(
@@ -94,25 +95,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               isOn: _remindersOn,
               icon: Icons.check,
               onTap: () => setState(() => _remindersOn = !_remindersOn),
-            ),
-          ],
-        ),
-      ),
-
-      const SizedBox(height: 30),
-
-      // Betalingsnotifikationer
-      Padding(
-        padding: const EdgeInsets.only(right: 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text("   Betalingsnotifikationer", style: valueStyle),
-            ),
-            _PeachToggleIcon(
-              isOn: _paymentOn,
-              icon: Icons.check,
-              onTap: () => setState(() => _paymentOn = !_paymentOn),
             ),
           ],
         ),
@@ -199,6 +181,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () => context.read<NotificationService>().showNow(),
+              child: const Text('Show now'),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton(
+              onPressed: () =>
+                  context.read<NotificationService>().scheduleInSeconds(10),
+              child: const Text('Notify +10s'),
+            ),
+            const SizedBox(width: 12),
+            OutlinedButton(
+              onPressed: () async {
+                final pending = await context
+                    .read<NotificationService>()
+                    .pendingNotificationRequests(); // helper below
+                // log IDs for now
+                debugPrint('PENDING: ${pending.map((e) => e.id).toList()}');
+              },
+              child: const Text('List pending'),
+            ),
             const SizedBox(height: 16),
 
             Align(

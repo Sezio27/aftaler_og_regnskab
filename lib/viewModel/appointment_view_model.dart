@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:aftaler_og_regnskab/application/appointment_notifications.dart';
 import 'package:aftaler_og_regnskab/data/cache/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/data/cache/checklist_cache.dart';
@@ -26,6 +27,7 @@ class AppointmentViewModel extends ChangeNotifier {
     required this.checklistCache,
     required this.apptCache,
     required this.financeVM,
+    required this.notifications,
   });
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -38,6 +40,7 @@ class AppointmentViewModel extends ChangeNotifier {
   final AppointmentCache apptCache;
   final ImageStorage _imageStorage;
   final FinanceViewModel financeVM;
+  final AppointmentNotifications notifications;
 
   // ────────────────────────────────────────────────────────────────────────────
   // Simple UI state flags
@@ -147,6 +150,9 @@ class AppointmentViewModel extends ChangeNotifier {
       }
     }
     if (becameReady || changed) notifyListeners();
+    if (_coversToday(start, end)) {
+      unawaited(syncTodayNotifications());
+    }
   }
 
   StreamSubscription<List<AppointmentModel>> _subscribeMonth(
@@ -280,7 +286,13 @@ class AppointmentViewModel extends ChangeNotifier {
       );
 
       await _repo.createAppointmentWithId(docRef.id, model);
-      apptCache.cacheAppointment(model.copyWith(id: docRef.id));
+      final created = model.copyWith(id: docRef.id);
+      apptCache.cacheAppointment(created);
+
+      if (created.dateTime != null &&
+          dateOnly(created.dateTime!) == dateOnly(DateTime.now())) {
+        unawaited(onAppointmentChangedNotifications(created));
+      }
 
       await financeVM.onAddAppointment(
         status: PaymentStatusX.fromString(status),
@@ -475,6 +487,11 @@ class AppointmentViewModel extends ChangeNotifier {
       imageUrls: finalImageUrls,
     );
     apptCache.cacheAppointment(updated);
+
+    if (updated.dateTime != null &&
+        dateOnly(updated.dateTime!) == dateOnly(DateTime.now())) {
+      unawaited(onAppointmentChangedNotifications(updated));
+    }
   }
 
   Future<bool> updateAppointmentFields(
@@ -568,7 +585,9 @@ class AppointmentViewModel extends ChangeNotifier {
     try {
       await _imageStorage.deleteAppointmentImages(id);
     } catch (_) {}
+    await notifications.cancelFor(id);
     await _repo.deleteAppointment(id);
+
     apptCache.remove(id);
     financeVM.onDeleteAppointment(
       status: PaymentStatusX.fromString(status),
@@ -673,6 +692,27 @@ class AppointmentViewModel extends ChangeNotifier {
     ]);
 
     return true;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Notifications coordination
+  // ────────────────────────────────────────────────────────────────────────────
+
+  bool _coversToday(DateTime start, DateTime end) {
+    final today = dateOnly(DateTime.now());
+    return !today.isBefore(dateOnly(start)) && !today.isAfter(dateOnly(end));
+  }
+
+  /// Re-evaluate notifications for today's appointments.
+  /// Pass your UI/setting toggles here (wire them later from Settings/UserVM).
+  Future<void> syncTodayNotifications() async {
+    final todayAppts = _dayAppts(DateTime.now());
+    await notifications.syncToday(appointments: todayAppts);
+  }
+
+  /// For a single appointment that changed (create/update)
+  Future<void> onAppointmentChangedNotifications(AppointmentModel appt) async {
+    await notifications.onAppointmentChanged(appt);
   }
 
   // ────────────────────────────────────────────────────────────────────────────

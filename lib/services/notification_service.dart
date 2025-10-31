@@ -1,10 +1,10 @@
-import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-/// Local notifications (Android/iOS) with time-zone aware scheduling.
 class NotificationService {
   NotificationService();
 
@@ -15,30 +15,24 @@ class NotificationService {
   static const _channelName = 'Aftaler';
   static const _channelDesc = 'Påmindelser for aftaler og betalinger';
 
-  /// Call once after runApp (e.g., from AppBootstrap initState)
   Future<void> init() async {
     if (_initialized) return;
 
-    // Timezone init
     tz.initializeTimeZones();
-    final local = tz.getLocation(DateTime.now().timeZoneName);
-    tz.setLocalLocation(local);
+    await _setLocalTimeZone();
 
-    // Android init
+    // 2) Plugin init
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    // iOS init
     const darwinInit = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
-
     await _plugin.initialize(
       const InitializationSettings(android: androidInit, iOS: darwinInit),
     );
 
-    // Ensure Android channel
+    // 3) Ensure Android channel exists
     const androidDetails = AndroidNotificationChannel(
       _channelId,
       _channelName,
@@ -54,28 +48,45 @@ class NotificationService {
     _initialized = true;
   }
 
-  /// Ask runtime notification permission (iOS + Android 13+).
+  Future<void> _setLocalTimeZone() async {
+    try {
+      final info = await FlutterTimezone.getLocalTimezone();
+
+      tz.setLocalLocation(tz.getLocation(info.identifier));
+    } catch (e) {
+      try {
+        tz.setLocalLocation(tz.getLocation('Europe/Copenhagen'));
+      } catch (_) {
+        tz.setLocalLocation(tz.UTC);
+      }
+    }
+  }
+
   Future<void> requestPermissionIfNeeded() async {
-    final androidPlugin = _plugin
+    final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    await androidPlugin?.requestNotificationsPermission();
+    await android?.requestNotificationsPermission();
 
-    final iosPlugin = _plugin
+    final ios = _plugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
         >();
-    await iosPlugin?.requestPermissions(alert: true, sound: true, badge: true);
+    await ios?.requestPermissions(alert: true, sound: true, badge: true);
   }
 
-  /// Stable int id from a string (e.g., appointmentId + tag).
-  int stableId(String key) {
-    // Simple deterministic hash (fits 32-bit int)
-    return key.codeUnits.fold<int>(0, (p, c) => (p * 31 + c) & 0x7fffffff);
+  Future<void> requestExactAlarmIfNeeded() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android?.requestExactAlarmsPermission();
   }
 
-  /// Schedules a notification at [whenLocal]. If [whenLocal] is in the past, skip.
+  int stableId(String key) =>
+      key.codeUnits.fold<int>(0, (p, c) => (p * 31 + c) & 0x7fffffff);
+
   Future<void> scheduleAt({
     required int id,
     required String title,
@@ -83,34 +94,54 @@ class NotificationService {
     required DateTime whenLocal,
     String? payload,
   }) async {
-    final now = tz.TZDateTime.now(tz.local);
     final ts = tz.TZDateTime.from(whenLocal, tz.local);
-    if (!ts.isAfter(now)) return;
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      ts,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDesc,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: const DarwinNotificationDetails(),
+    if (!ts.isAfter(tz.TZDateTime.now(tz.local))) return;
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: payload,
+      iOS: const DarwinNotificationDetails(),
     );
+
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        ts,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+      );
+    } on PlatformException catch (e) {
+      // Android 14+ when exact alarms aren’t permitted
+      final notPermitted = e.code == 'exact_alarms_not_permitted';
+      if (Platform.isAndroid && notPermitted) {
+        // Fallback: inexact alarm (does NOT need exact-alarm access)
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          ts,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+        );
+      } else {
+        rethrow;
+      }
+    }
   }
 
-  /// Cancel by id
   Future<void> cancel(int id) => _plugin.cancel(id);
+  Future<void> cancelAll() => _plugin.cancelAll();
 
-  /// Convenience: schedule “2 hours before” if appointment is today.
   Future<void> scheduleSameDayTwoHoursBefore({
     required String appointmentId,
     required DateTime appointmentDateTime, // local
@@ -122,34 +153,67 @@ class NotificationService {
     final end = start.add(const Duration(days: 1));
     if (appointmentDateTime.isBefore(start) ||
         !appointmentDateTime.isBefore(end)) {
-      // Not today → skip
-      return;
+      return; // not today
     }
     final trigger = appointmentDateTime.subtract(const Duration(hours: 2));
     final id = stableId('appt-$appointmentId-2h');
-    await scheduleAt(id: id, title: title, body: body, whenLocal: trigger);
+    await scheduleAt(
+      id: id,
+      title: title,
+      body: body,
+      whenLocal: trigger,
+      payload: 'appt:$appointmentId', // keep payload to allow targeted cancels
+    );
   }
 
-  /// Example: schedule payment reminder today at 10:00 if payDate is today.
-  Future<void> schedulePaymentReminderToday({
-    required String appointmentId,
-    required DateTime? payDate, // local date-only semantics expected
-    String title = 'Betaling forfalden',
-    required String body,
-    int hour = 10,
+  /// Cancel any pending notifications for this appointment (idempotent).
+  Future<void> cancelForAppointment(String appointmentId) async {
+    // Cancel by payload (covers all future variants)
+    final pending = await _plugin.pendingNotificationRequests();
+    for (final r in pending) {
+      if ((r.payload ?? '') == 'appt:$appointmentId') {
+        await _plugin.cancel(r.id);
+      }
+    }
+    // Also cancel by our stable id
+    await _plugin.cancel(stableId('appt-$appointmentId-2h'));
+  }
+
+  //for debugging
+  Future<void> showNow({
+    int id = 9999,
+    String title = 'Test',
+    String body = 'It works!',
   }) async {
-    if (payDate == null) return;
-    final now = DateTime.now();
-    final isSameDay =
-        (payDate.year == now.year &&
-        payDate.month == now.month &&
-        payDate.day == now.day);
-    if (!isSameDay) return;
-
-    final when = DateTime(now.year, now.month, now.day, hour);
-    final id = stableId('pay-$appointmentId-$hour');
-    await scheduleAt(id: id, title: title, body: body, whenLocal: when);
+    await _plugin.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
   }
 
-  Future<void> cancelAll() => _plugin.cancelAll();
+  /// DEV: schedule a one-shot notification in [seconds] from now.
+  Future<void> scheduleInSeconds(int seconds) async {
+    final when = DateTime.now().add(Duration(seconds: seconds));
+    await scheduleAt(
+      id: stableId('debug-$seconds'),
+      title: 'Scheduled',
+      body: '+$seconds sec',
+      whenLocal: when,
+    );
+  }
+
+  Future<List<PendingNotificationRequest>> pendingNotificationRequests() {
+    return _plugin.pendingNotificationRequests();
+  }
 }
