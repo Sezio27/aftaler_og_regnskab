@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:aftaler_og_regnskab/data/appointment_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
-import 'package:aftaler_og_regnskab/data/checklist_cache.dart';
-import 'package:aftaler_og_regnskab/data/client_cache.dart';
-import 'package:aftaler_og_regnskab/data/service_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/checklist_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/client_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/service_cache.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
@@ -77,6 +77,20 @@ class AppointmentViewModel extends ChangeNotifier {
       ? apptCache.getAppointmentsBetween(_listStart!, _listEnd!)
       : const [];
 
+  @override
+  void dispose() {
+    _initialSubscription?.cancel();
+    for (final sub in _windowSubscriptions.values) {
+      sub.cancel();
+    }
+    _windowSubscriptions.clear();
+    for (final sub in _appointmentSubscriptions.values) {
+      sub.cancel();
+    }
+    _appointmentSubscriptions.clear();
+    super.dispose();
+  }
+
   Future<void> subscribeToAppointment(String id) async {
     if (_appointmentSubscriptions.containsKey(id)) return;
 
@@ -145,20 +159,6 @@ class AppointmentViewModel extends ChangeNotifier {
     ) async {
       await _handleSnapshot(fetched, monthStart, monthEnd);
     });
-  }
-
-  @override
-  void dispose() {
-    _initialSubscription?.cancel();
-    for (final sub in _windowSubscriptions.values) {
-      sub.cancel();
-    }
-    _windowSubscriptions.clear();
-    for (final sub in _appointmentSubscriptions.values) {
-      sub.cancel();
-    }
-    _appointmentSubscriptions.clear();
-    super.dispose();
   }
 
   bool _isMonthCoveredByInitial(DateTime monthStart) {
@@ -320,6 +320,169 @@ class AppointmentViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<List<String>> handleImages(
+    List<({Uint8List bytes, String name, String? mimeType})> newImages,
+    List<String> removedImageUrls,
+    List<String> currentImageUrls,
+    String id,
+  ) async {
+    final uploadedUrls = newImages.isEmpty
+        ? const <String>[]
+        : await _imageStorage.uploadAppointmentImages(
+            appointmentId: id,
+            images: newImages,
+          );
+
+    final removedSet = removedImageUrls.toSet();
+    final kept = currentImageUrls.where((u) => !removedSet.contains(u));
+
+    return <String>{...kept, ...uploadedUrls}.toList();
+  }
+
+  Set<String>? handeNewChecklists(List<String>? checklistIds) {
+    Set<String>? newChecklistSelection;
+    if (checklistIds != null) {
+      newChecklistSelection = {
+        for (final id in checklistIds)
+          if (id.trim().isNotEmpty) id.trim(),
+      };
+    }
+    return newChecklistSelection;
+  }
+
+  Set<String> handleRemovedChecklists(
+    Set<String>? newChecklists,
+    List<String> oldChecklists,
+  ) {
+    return (newChecklists != null)
+        ? oldChecklists.toSet().difference(newChecklists)
+        : <String>{};
+  }
+
+  void handleFields(
+    Map<String, Object?> fields,
+    List<String> finalImageUrls,
+    Set<String> deletes,
+    String? clientId,
+    String? serviceId,
+    String? location,
+    String? note,
+    String? status,
+    DateTime? dateTime,
+    DateTime? payDate,
+    double? price,
+    double? servicePrice,
+    Set<String>? newChecklistSelection,
+    Set<String> removedChecklists,
+  ) {
+    fields['imageUrls'] = finalImageUrls;
+    void putStr(String key, String? v) {
+      if (v == null) return;
+      final t = v.trim();
+      if (t.isEmpty) {
+        deletes.add(key);
+      } else {
+        fields[key] = t;
+      }
+    }
+
+    void putTs(String key, DateTime? v) {
+      if (v != null) fields[key] = Timestamp.fromDate(v);
+    }
+
+    // Scalars
+    putStr('clientId', clientId);
+    putStr('serviceId', serviceId);
+    putStr('location', location);
+    putStr('note', note);
+    putStr('status', status);
+    putTs('dateTime', dateTime);
+    putTs('payDate', payDate);
+
+    if (price != null || servicePrice != null) {
+      final chosen = price ?? servicePrice;
+      if (chosen == null) {
+        deletes.add('price');
+      } else {
+        fields['price'] = chosen;
+      }
+    }
+
+    if (newChecklistSelection != null) {
+      fields['checklistIds'] = newChecklistSelection.toList();
+    }
+    for (final id in removedChecklists) {
+      deletes.add('progress.$id');
+    }
+  }
+
+  Future<void> handleDeleteImage(List<String> removedImageUrls) async {
+    try {
+      await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
+    } catch (_) {}
+  }
+
+  Future<void> handleUpdateFinance(
+    AppointmentModel old,
+    String? status,
+    double? price,
+    DateTime? dateTime,
+  ) async {
+    final oldStatus = PaymentStatusX.fromString(old.status);
+    final newStatus = status != null
+        ? PaymentStatusX.fromString(status)
+        : oldStatus;
+    final oldPrice = old.price ?? 0.0;
+    final newPrice = price ?? 0.0;
+    final oldDate = old.dateTime;
+    final newDate = dateTime ?? oldDate;
+
+    await financeVM.onUpdateAppointmentFields(
+      oldStatus: oldStatus,
+      newStatus: newStatus,
+      oldPrice: oldPrice,
+      newPrice: newPrice,
+      oldDate: oldDate,
+      newDate: newDate,
+    );
+  }
+
+  Future<void> handleUpdate(
+    AppointmentModel old,
+    Map<String, Object?> fields,
+    Set<String> deletes,
+    String? clientId,
+    String? serviceId,
+    Set<String>? newChecklistSelection,
+    DateTime? dateTime,
+    DateTime? payDate,
+    List<String> finalImageUrls,
+  ) async {
+    await _repo.updateAppointment(old.id!, fields: fields, deletes: deletes);
+
+    final updated = old.copyWith(
+      clientId: clientId ?? old.clientId,
+      serviceId: serviceId ?? old.serviceId,
+      checklistIds: newChecklistSelection?.toList() ?? old.checklistIds,
+      dateTime: dateTime ?? old.dateTime,
+      payDate: payDate ?? old.payDate,
+      location: fields.containsKey('location')
+          ? fields['location'] as String?
+          : (deletes.contains('location') ? null : old.location),
+      note: fields.containsKey('note')
+          ? fields['note'] as String?
+          : (deletes.contains('note') ? null : old.note),
+      status: fields.containsKey('status')
+          ? fields['status'] as String?
+          : (deletes.contains('status') ? null : old.status),
+      price: fields.containsKey('price')
+          ? (fields['price'] as num?)?.toDouble()
+          : (deletes.contains('price') ? null : old.price),
+      imageUrls: finalImageUrls,
+    );
+    apptCache.cacheAppointment(updated);
+  }
+
   Future<bool> updateAppointmentFields(
     AppointmentModel old, {
     String? clientId,
@@ -342,127 +505,56 @@ class AppointmentViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      List<String> uploadedUrls = const [];
-      if (newImages.isNotEmpty) {
-        uploadedUrls = await _imageStorage.uploadAppointmentImages(
-          appointmentId: old.id!,
-          images: newImages,
-        );
-      }
-
-      final removedSet = removedImageUrls.toSet();
-      final kept = currentImageUrls.where((u) => !removedSet.contains(u));
-      final finalImageUrls = <String>{...kept, ...uploadedUrls}.toList();
-
-      final fields = <String, Object?>{'imageUrls': finalImageUrls};
+      final finalImageUrls = await handleImages(
+        newImages,
+        removedImageUrls,
+        currentImageUrls,
+        old.id!,
+      );
+      final newChecklistSelection = handeNewChecklists(checklistIds);
+      final removedChecklists = handleRemovedChecklists(
+        newChecklistSelection,
+        old.checklistIds,
+      );
+      final fields = <String, Object?>{};
       final deletes = <String>{};
 
-      void putStr(String key, String? v) {
-        if (v == null) return;
-        final t = v.trim();
-        if (t.isEmpty) {
-          deletes.add(key);
-        } else {
-          fields[key] = t;
-        }
-      }
-
-      void putTs(String key, DateTime? v) {
-        if (v != null) fields[key] = Timestamp.fromDate(v);
-      }
-
-      // Scalars
-      putStr('clientId', clientId);
-      putStr('serviceId', serviceId);
-      putStr('location', location);
-      putStr('note', note);
-      putStr('status', status);
-      putTs('dateTime', dateTime);
-      putTs('payDate', payDate);
-
-      // Price: prefer custom, else service, and allow clearing
-      if (price != null || servicePrice != null) {
-        final chosen = price ?? servicePrice;
-        if (chosen == null) {
-          deletes.add('price');
-        } else {
-          fields['price'] = chosen;
-        }
-      }
-
-      Set<String>? newChecklistSelection;
-      if (checklistIds != null) {
-        newChecklistSelection = {
-          for (final id in checklistIds)
-            if (id.trim().isNotEmpty) id.trim(),
-        };
-      }
-
-      final removedChecklists = (newChecklistSelection != null)
-          ? old.checklistIds.toSet().difference(newChecklistSelection)
-          : <String>{};
-      // Lists
-      if (newChecklistSelection != null) {
-        fields['checklistIds'] = newChecklistSelection.toList();
-      }
-
-      for (final id in removedChecklists) {
-        deletes.add('progress.$id');
-      }
+      handleFields(
+        fields,
+        finalImageUrls,
+        deletes,
+        clientId,
+        serviceId,
+        location,
+        note,
+        status,
+        dateTime,
+        payDate,
+        price,
+        servicePrice,
+        newChecklistSelection,
+        removedChecklists,
+      );
 
       if (fields.isNotEmpty || deletes.isNotEmpty) {
-        await _repo.updateAppointment(
-          old.id!,
-          fields: fields,
-          deletes: deletes,
+        await handleUpdate(
+          old,
+          fields,
+          deletes,
+          clientId,
+          serviceId,
+          newChecklistSelection,
+          dateTime,
+          payDate,
+          finalImageUrls,
         );
-
-        final updated = old.copyWith(
-          clientId: clientId ?? old.clientId,
-          serviceId: serviceId ?? old.serviceId,
-          checklistIds: newChecklistSelection?.toList() ?? old.checklistIds,
-          dateTime: dateTime ?? old.dateTime,
-          payDate: payDate ?? old.payDate,
-          location: fields.containsKey('location')
-              ? fields['location'] as String?
-              : (deletes.contains('location') ? null : old.location),
-          note: fields.containsKey('note')
-              ? fields['note'] as String?
-              : (deletes.contains('note') ? null : old.note),
-          status: fields.containsKey('status')
-              ? fields['status'] as String?
-              : (deletes.contains('status') ? null : old.status),
-          price: fields.containsKey('price')
-              ? (fields['price'] as num?)?.toDouble()
-              : (deletes.contains('price') ? null : old.price),
-          imageUrls: finalImageUrls,
-        );
-        apptCache.cacheAppointment(updated);
       }
 
       if (removedImageUrls.isNotEmpty) {
-        try {
-          await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
-        } catch (_) {}
+        await handleDeleteImage(removedImageUrls);
       }
 
-      final oldStatus = PaymentStatusX.fromString(old.status);
-      final newStatus = status != null
-          ? PaymentStatusX.fromString(status)
-          : oldStatus;
-      final oldPrice = old.price ?? 0.0;
-      final newPrice = price ?? 0.0;
-      final oldDate = old.dateTime;
-      final newDate = dateTime ?? oldDate;
-
-      await financeVM.onUpdateAppointmentFields(
-        oldStatus: oldStatus,
-        newStatus: newStatus,
-        oldPrice: oldPrice,
-        newPrice: newPrice,
-        oldDate: oldDate,
-        newDate: newDate,
-      );
+      await handleUpdateFinance(old, status, price, dateTime);
 
       return true;
     } catch (e) {
@@ -625,7 +717,6 @@ class AppointmentViewModel extends ChangeNotifier {
     _listLoading = true;
     notifyListeners();
 
-    var loadedAny = false;
     try {
       var remaining = count;
       while (remaining > 0 && _listHasMore) {
@@ -650,7 +741,6 @@ class AppointmentViewModel extends ChangeNotifier {
 
         _prefetchClientsAndServices(items);
 
-        loadedAny = true;
         if (items.length < _listPageSize) {
           _listHasMore = false;
           break;

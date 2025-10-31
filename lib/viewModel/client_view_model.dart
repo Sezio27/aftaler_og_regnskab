@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:aftaler_og_regnskab/data/client_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/model/client_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
