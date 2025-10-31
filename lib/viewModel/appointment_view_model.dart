@@ -371,7 +371,6 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime? dateTime,
     DateTime? payDate,
     double? price,
-    double? servicePrice,
     Set<String>? newChecklistSelection,
     Set<String> removedChecklists,
   ) {
@@ -399,13 +398,8 @@ class AppointmentViewModel extends ChangeNotifier {
     putTs('dateTime', dateTime);
     putTs('payDate', payDate);
 
-    if (price != null || servicePrice != null) {
-      final chosen = price ?? servicePrice;
-      if (chosen == null) {
-        deletes.add('price');
-      } else {
-        fields['price'] = chosen;
-      }
+    if (price != null) {
+      fields['price'] = price;
     }
 
     if (newChecklistSelection != null) {
@@ -493,7 +487,7 @@ class AppointmentViewModel extends ChangeNotifier {
     String? location,
     String? note,
     double? price,
-    double? servicePrice,
+
     String? status,
     required List<String> currentImageUrls,
     List<String> removedImageUrls = const [],
@@ -531,7 +525,6 @@ class AppointmentViewModel extends ChangeNotifier {
         dateTime,
         payDate,
         price,
-        servicePrice,
         newChecklistSelection,
         removedChecklists,
       );

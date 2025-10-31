@@ -1,13 +1,13 @@
 ﻿// main.dart
 import 'dart:async';
 import 'package:aftaler_og_regnskab/app_router.dart';
-import 'package:aftaler_og_regnskab/data/appointment_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
-import 'package:aftaler_og_regnskab/data/checklist_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/checklist_cache.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
-import 'package:aftaler_og_regnskab/data/client_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
-import 'package:aftaler_og_regnskab/data/service_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/service_cache.dart';
 import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
 import 'package:aftaler_og_regnskab/data/service_repository.dart';
 import 'package:aftaler_og_regnskab/data/user_repository.dart';

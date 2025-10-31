@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:aftaler_og_regnskab/data/client_cache.dart';
-import 'package:aftaler_og_regnskab/data/service_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/client_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/service_cache.dart';
 import 'package:aftaler_og_regnskab/utils/showOtpDialog.dart';
 import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';

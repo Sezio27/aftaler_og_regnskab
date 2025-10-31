@@ -17,7 +17,7 @@ PreferredSizeWidget buildTopBarForRouteName(
         center: false,
         width: maxContentWidth,
         height: fixedHeight,
-        action: SizedBox(width: 220, child: CalendarTabSwitcher()),
+        action: SizedBox(width: 260, child: CalendarTabSwitcher()),
       );
     case 'finance':
       return AppTopBar(

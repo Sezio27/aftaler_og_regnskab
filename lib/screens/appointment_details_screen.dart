@@ -768,7 +768,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
             payDate: _payDate,
             location: _locationCtrl.text,
             note: _noteCtrl.text,
-            price: customPrice,
+            price: customPrice ?? 0.0,
             status: _status.label,
             currentImageUrls: _currentImages, // original URLs from initState
             removedImageUrls: _removedImages, // URLs user removed in UI

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:aftaler_og_regnskab/data/checklist_cache.dart';
+import 'package:aftaler_og_regnskab/data/cache/checklist_cache.dart';
 import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
 import 'package:aftaler_og_regnskab/model/checklist_model.dart';
 import 'package:flutter/material.dart';
@@ -142,7 +142,7 @@ class ChecklistViewModel extends ChangeNotifier {
       if (created.id != null) {
         _cache.cacheChecklist(created);
         _all = [..._all, created];
-        _recompute(); // single notify inside}
+        _recompute();
       }
       return true;
     } catch (e) {
@@ -179,44 +179,11 @@ class ChecklistViewModel extends ChangeNotifier {
 
     try {
       final fields = <String, Object?>{};
-      void put(String k, String? v) {
-        if (v == null) return;
-        final t = v.trim();
-        fields[k] = t.isEmpty ? null : t;
-      }
-
-      void putPoints(List<String>? pts) {
-        if (pts == null) return; // no change
-        final cleaned = <String>[
-          for (final p in pts)
-            if (p.trim().isNotEmpty) p.trim(),
-        ];
-        fields['points'] = cleaned; // write [] if all empty
-      }
-
-      put('name', name);
-      put('description', description);
-      putPoints(points);
+      handleUpdateFields(fields, name, description, points);
 
       if (fields.isNotEmpty) {
         await _repo.updateChecklist(id, fields: fields);
-      }
-      final cached = _cache.getChecklist(id);
-      if (cached != null) {
-        final updated = cached.copyWith(
-          name: fields.containsKey('name')
-              ? fields['name'] as String?
-              : cached.name,
-          description: fields.containsKey('description')
-              ? fields['description'] as String?
-              : cached.description,
-          points: fields.containsKey('points')
-              ? (fields['points'] as List<String>)
-              : cached.points,
-        );
-        _cache.cacheChecklist(updated);
-        _all = [for (final c in _all) (c.id == id) ? updated : c];
-        _recompute();
+        cacheUpdated(id, fields);
       }
       return true;
     } catch (e) {
@@ -228,13 +195,58 @@ class ChecklistViewModel extends ChangeNotifier {
     }
   }
 
+  void cacheUpdated(String id, Map<String, Object?> fields) {
+    final cached = _cache.getChecklist(id);
+    if (cached != null) {
+      final updated = cached.copyWith(
+        name: fields.containsKey('name')
+            ? fields['name'] as String?
+            : cached.name,
+        description: fields.containsKey('description')
+            ? fields['description'] as String?
+            : cached.description,
+        points: fields.containsKey('points')
+            ? (fields['points'] as List<String>)
+            : cached.points,
+      );
+      _cache.cacheChecklist(updated);
+      _all = [for (final c in _all) (c.id == id) ? updated : c];
+      _recompute();
+    }
+  }
+
+  void handleUpdateFields(
+    Map<String, Object?> fields,
+    String? name,
+    String? description,
+    List<String>? points,
+  ) {
+    void put(String k, String? v) {
+      if (v == null) return;
+      final t = v.trim();
+      fields[k] = t.isEmpty ? null : t;
+    }
+
+    void putPoints(List<String>? pts) {
+      if (pts == null) return; // no change
+      final cleaned = <String>[
+        for (final p in pts)
+          if (p.trim().isNotEmpty) p.trim(),
+      ];
+      fields['points'] = cleaned; // write [] if all empty
+    }
+
+    put('name', name);
+    put('description', description);
+    putPoints(points);
+  }
+
   // ------------ Delete ------------
   Future<void> delete(String id) async {
     await _repo.deleteChecklist(id);
     _all = _all.where((c) => c.id != id).toList();
-    _allFiltered = _allFiltered.where((c) => c.id != id).toList();
     _cache.remove(id);
-    notifyListeners();
+    _recompute();
   }
 
   void reset() {
@@ -244,62 +256,6 @@ class ChecklistViewModel extends ChangeNotifier {
     _all = const [];
     _allFiltered = const [];
     notifyListeners();
-  }
-
-  Future<void> addPoint(String checklistId, String text) async {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
-
-    final m = await _fetchChecklist(checklistId);
-    if (m == null) return;
-
-    final updated = [...m.points, trimmed];
-    await _repo.setPoints(checklistId, _normalize(updated));
-  }
-
-  Future<void> updatePointAt(
-    String checklistId, {
-    required int index,
-    required String newText,
-  }) async {
-    final trimmed = newText.trim();
-    final m = await _fetchChecklist(checklistId);
-    if (m == null) return;
-
-    final list = [...m.points];
-    if (index < 0 || index >= list.length) return;
-
-    if (trimmed.isEmpty) {
-      list.removeAt(index);
-    } else {
-      list[index] = trimmed;
-    }
-    await _repo.setPoints(checklistId, _normalize(list));
-  }
-
-  Future<void> removePointAt(String checklistId, int index) async {
-    final m = await _fetchChecklist(checklistId);
-    if (m == null) return;
-
-    final list = [...m.points];
-    if (index < 0 || index >= list.length) return;
-
-    list.removeAt(index);
-    await _repo.setPoints(checklistId, _normalize(list));
-  }
-
-  /// Replace all points at once (e.g., after drag-reorder).
-  Future<void> setPoints(String checklistId, List<String> points) async {
-    await _repo.setPoints(checklistId, _normalize(points));
-  }
-
-  // ------------ Utils ------------
-  Future<ChecklistModel?> _fetchChecklist(String id) async {
-    final cached = _cache.getChecklist(id);
-    if (cached != null) return cached;
-
-    final res = await _cache.fetchChecklists({id});
-    return res[id];
   }
 
   List<String> _normalize(List<String> points) =>

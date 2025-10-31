@@ -5,6 +5,7 @@ import 'package:aftaler_og_regnskab/data/cache/client_cache.dart';
 import 'package:aftaler_og_regnskab/data/client_repository.dart';
 import 'package:aftaler_og_regnskab/model/client_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class ClientViewModel extends ChangeNotifier {
@@ -132,8 +133,7 @@ class ClientViewModel extends ChangeNotifier {
     String? city,
     String? postal,
     String? cvr,
-    ({Uint8List bytes, String name, String? mimeType})?
-    image, // keep as URL string (upload to Storage elsewhere)
+    ({Uint8List bytes, String name, String? mimeType})? image,
   }) async {
     final nm = (name ?? '').trim();
     final em = (email ?? '').trim();
@@ -142,7 +142,6 @@ class ClientViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-
     _saving = true;
     _error = null;
     notifyListeners();
@@ -151,12 +150,7 @@ class ClientViewModel extends ChangeNotifier {
       final docRef = _repo.newClientRef();
       String? imageUrl;
 
-      if (image != null) {
-        imageUrl = await _imageStorage.uploadClientImage(
-          clientId: docRef.id,
-          image: image,
-        );
-      }
+      imageUrl = await handleUploadImage(image, imageUrl, docRef);
 
       final model = ClientModel(
         name: nm.isEmpty ? null : nm,
@@ -170,10 +164,7 @@ class ClientViewModel extends ChangeNotifier {
       );
       await _repo.createClientWithId(docRef.id, model);
 
-      final created = model.copyWith(id: docRef.id);
-      _cache.cacheClient(created);
-      _all = [..._all, created];
-      _recompute(); // single notify inside
+      cacheNewClient(model, docRef);
 
       return true;
     } catch (e) {
@@ -183,6 +174,30 @@ class ClientViewModel extends ChangeNotifier {
       _saving = false;
       notifyListeners();
     }
+  }
+
+  void cacheNewClient(
+    ClientModel model,
+    DocumentReference<Map<String, dynamic>> docRef,
+  ) {
+    final created = model.copyWith(id: docRef.id);
+    _cache.cacheClient(created);
+    _all = [..._all, created];
+    _recompute();
+  }
+
+  Future<String?> handleUploadImage(
+    ({Uint8List bytes, String? mimeType, String name})? image,
+    String? imageUrl,
+    DocumentReference<Map<String, dynamic>> docRef,
+  ) async {
+    if (image != null) {
+      imageUrl = await _imageStorage.uploadClientImage(
+        clientId: docRef.id,
+        image: image,
+      );
+    }
+    return imageUrl;
   }
 
   Future<bool> updateClientFields(
@@ -205,75 +220,24 @@ class ClientViewModel extends ChangeNotifier {
       final fields = <String, Object?>{};
       final deletes = <String>{};
 
-      void put(String key, String? v) {
-        if (v == null) return;
-        final t = v.trim();
-        if (t.isEmpty) {
-          deletes.add(key);
-        } else {
-          fields[key] = t;
-        }
-      }
-
-      put('name', name);
-      put('phone', phone);
-      put('email', email);
-      put('address', address);
-      put('city', city);
-      put('postal', postal);
-      put('cvr', cvr);
-
-      if (newImage != null) {
-        final url = await _imageStorage.uploadClientImage(
-          clientId: id,
-          image: newImage,
-        );
-        fields['image'] = url;
-      } else if (removeImage) {
-        deletes.add('image');
-
-        try {
-          await _imageStorage.deleteClientImage(id);
-        } catch (_) {}
-      }
+      await handleUpdateFields(
+        deletes,
+        fields,
+        name,
+        phone,
+        email,
+        address,
+        city,
+        postal,
+        cvr,
+        newImage,
+        id,
+        removeImage,
+      );
 
       if (fields.isNotEmpty || deletes.isNotEmpty) {
         await _repo.updateClient(id, fields: fields, deletes: deletes);
-      }
-
-      // Optional: best-effort cache touch
-      final cached = _cache.getClient(id);
-      if (cached != null) {
-        final updated = cached.copyWith(
-          name: fields.containsKey('name')
-              ? fields['name'] as String?
-              : (deletes.contains('name') ? null : cached.name),
-          phone: fields.containsKey('phone')
-              ? fields['phone'] as String?
-              : (deletes.contains('phone') ? null : cached.phone),
-          email: fields.containsKey('email')
-              ? fields['email'] as String?
-              : (deletes.contains('email') ? null : cached.email),
-          address: fields.containsKey('address')
-              ? fields['address'] as String?
-              : (deletes.contains('address') ? null : cached.address),
-          city: fields.containsKey('city')
-              ? fields['city'] as String?
-              : (deletes.contains('city') ? null : cached.city),
-          postal: fields.containsKey('postal')
-              ? fields['postal'] as String?
-              : (deletes.contains('postal') ? null : cached.postal),
-          cvr: fields.containsKey('cvr')
-              ? fields['cvr'] as String?
-              : (deletes.contains('cvr') ? null : cached.cvr),
-          image: fields.containsKey('image')
-              ? fields['image'] as String?
-              : (deletes.contains('image') ? null : cached.image),
-        );
-
-        _cache.cacheClient(updated);
-        _all = [for (final c in _all) (c.id == id) ? updated : c];
-        _recompute();
+        cacheUpdatedClient(id, fields, deletes);
       }
 
       return true;
@@ -286,6 +250,93 @@ class ClientViewModel extends ChangeNotifier {
     }
   }
 
+  void cacheUpdatedClient(
+    String id,
+    Map<String, Object?> fields,
+    Set<String> deletes,
+  ) {
+    final cached = _cache.getClient(id);
+    if (cached != null) {
+      final updated = cached.copyWith(
+        name: fields.containsKey('name')
+            ? fields['name'] as String?
+            : (deletes.contains('name') ? null : cached.name),
+        phone: fields.containsKey('phone')
+            ? fields['phone'] as String?
+            : (deletes.contains('phone') ? null : cached.phone),
+        email: fields.containsKey('email')
+            ? fields['email'] as String?
+            : (deletes.contains('email') ? null : cached.email),
+        address: fields.containsKey('address')
+            ? fields['address'] as String?
+            : (deletes.contains('address') ? null : cached.address),
+        city: fields.containsKey('city')
+            ? fields['city'] as String?
+            : (deletes.contains('city') ? null : cached.city),
+        postal: fields.containsKey('postal')
+            ? fields['postal'] as String?
+            : (deletes.contains('postal') ? null : cached.postal),
+        cvr: fields.containsKey('cvr')
+            ? fields['cvr'] as String?
+            : (deletes.contains('cvr') ? null : cached.cvr),
+        image: fields.containsKey('image')
+            ? fields['image'] as String?
+            : (deletes.contains('image') ? null : cached.image),
+      );
+
+      _cache.cacheClient(updated);
+      _all = [for (final c in _all) (c.id == id) ? updated : c];
+      _recompute();
+    }
+  }
+
+  Future<void> handleUpdateFields(
+    Set<String> deletes,
+    Map<String, Object?> fields,
+    String? name,
+    String? phone,
+    String? email,
+    String? address,
+    String? city,
+    String? postal,
+    String? cvr,
+    ({Uint8List bytes, String? mimeType, String name})? newImage,
+    String id,
+    bool removeImage,
+  ) async {
+    void put(String key, String? v) {
+      if (v == null) return;
+      final t = v.trim();
+      if (t.isEmpty) {
+        deletes.add(key);
+      } else {
+        fields[key] = t;
+      }
+    }
+
+    put('name', name);
+    put('phone', phone);
+    put('email', email);
+    put('address', address);
+    put('city', city);
+    put('postal', postal);
+    put('cvr', cvr);
+
+    if (newImage != null) {
+      final url = await _imageStorage.uploadClientImage(
+        clientId: id,
+        image: newImage,
+      );
+      fields['image'] = url;
+    } else if (removeImage) {
+      deletes.add('image');
+
+      try {
+        await _imageStorage.deleteClientImage(id);
+      } catch (_) {}
+    }
+  }
+
   Future<void> delete(String id) async {
     try {
       await _imageStorage.deleteClientImage(id);
@@ -293,9 +344,8 @@ class ClientViewModel extends ChangeNotifier {
 
     await _repo.deleteClient(id);
     _all = _all.where((c) => c.id != id).toList();
-    _allFiltered = _allFiltered.where((c) => c.id != id).toList();
     _cache.remove(id);
-    notifyListeners();
+    _recompute();
   }
 
   void reset() {

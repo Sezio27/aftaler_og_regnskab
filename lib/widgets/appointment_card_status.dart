@@ -94,7 +94,7 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
                   ),
                 ),
                 SizedBox(
-                  width: 140,
+                  width: 150,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

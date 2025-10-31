@@ -12,7 +12,6 @@ class CalendarViewModel extends ChangeNotifier {
   DateTime get selectedDay => _selectedDay;
 
   void selectDay(DateTime day) {
-    // keep only date part
     final d = DateTime(day.year, day.month, day.day);
     if (_selectedDay == d) return;
     _selectedDay = d;
@@ -20,7 +19,6 @@ class CalendarViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------- Month state --------
   DateTime _visibleMonth;
   DateTime get visibleMonth => _visibleMonth;
 
