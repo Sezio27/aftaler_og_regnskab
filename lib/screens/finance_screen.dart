@@ -2,22 +2,22 @@
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/stat_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/stat_card.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/appointment_card_status.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/appointment_card_status.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 
 enum Tabs { month, year, lifetime }

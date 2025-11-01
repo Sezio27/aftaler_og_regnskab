@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
@@ -6,8 +6,8 @@ import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
-import 'package:aftaler_og_regnskab/widgets/appointment_card_status.dart';
-import 'package:aftaler_og_regnskab/widgets/date_picker.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/appointment_card_status.dart';
+import 'package:aftaler_og_regnskab/widgets/pickers/date_picker.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:flutter/cupertino.dart';

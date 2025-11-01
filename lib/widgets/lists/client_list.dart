@@ -1,47 +1,54 @@
-import 'package:aftaler_og_regnskab/model/service_model.dart';
+import 'package:aftaler_og_regnskab/model/client_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
-import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/service_tile.dart';
-import 'package:aftaler_og_regnskab/widgets/small_list.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/widgets/lists/client_tile.dart';
+import 'package:aftaler_og_regnskab/widgets/lists/small_list.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class ServiceList extends StatelessWidget {
-  const ServiceList({
+class ClientList extends StatelessWidget {
+  const ClientList({
     super.key,
     this.selectedId,
     required this.onPick,
     this.smallList = true,
+    this.hasCvr,
     this.collapseWhenSelected = true,
   });
 
   final String? selectedId;
-  final ValueChanged<ServiceModel> onPick;
+  final ValueChanged<ClientModel> onPick;
   final bool smallList;
+  final bool? hasCvr;
   final bool collapseWhenSelected;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final items = context.select<ServiceViewModel, List<ServiceModel>>(
-      (vm) => vm.allServices,
+    // Just read the precomputed list from VM (no streams here)
+    final items = context.select<ClientViewModel, List<ClientModel>>(
+      (vm) => hasCvr == null
+          ? vm.allClients
+          : hasCvr!
+          ? vm.businessClients
+          : vm.privateClients,
     );
 
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(12),
         child: Text(
-          'Ingen services fundet',
+          'Ingen klienter fundet',
           style: AppTypography.b5.copyWith(color: cs.onSurface.withAlpha(200)),
         ),
       );
     }
 
-    ServiceModel? selectedItem;
+    ClientModel? selectedItem;
     if (collapseWhenSelected && selectedId != null) {
-      for (final s in items) {
-        if (s.id == selectedId) {
-          selectedItem = s;
+      for (final c in items) {
+        if (c.id == selectedId) {
+          selectedItem = c;
           break;
         }
       }
@@ -73,20 +80,26 @@ class ServiceList extends StatelessWidget {
           ? SizedBox(
               key: ValueKey('selected_${selectedItem.id}'),
               height: 90,
-              child: ServiceTile(s: selectedItem, selected: true),
+              child: ClientTile(c: selectedItem, selected: true),
             )
           : KeyedSubtree(
               key: const ValueKey('list'),
               child: smallList
-                  ? SmallList<ServiceModel>(
+                  ? SmallList<ClientModel>(
                       items: items,
                       selectedId: selectedId,
                       onPick: onPick,
                       idOf: (c) => c.id ?? '',
-                      tileBuilder: (ctx, s, selected, onTap) =>
-                          ServiceTile(s: s, selected: selected, onTap: onTap),
+                      tileBuilder: (ctx, c, selected, onTap) => SizedBox(
+                        height: 90,
+                        child: ClientTile(
+                          c: c,
+                          selected: selected,
+                          onTap: onTap,
+                        ),
+                      ),
                     )
-                  : _FullServiceList(
+                  : _FullClientList(
                       items: items,
                       selectedId: selectedId,
                       onPick: onPick,
@@ -96,17 +109,17 @@ class ServiceList extends StatelessWidget {
   }
 }
 
-class _FullServiceList extends StatelessWidget {
-  const _FullServiceList({
+class _FullClientList extends StatelessWidget {
+  const _FullClientList({
     required this.items,
 
     required this.selectedId,
     required this.onPick,
   });
 
-  final List<ServiceModel> items;
+  final List<ClientModel> items;
   final String? selectedId;
-  final ValueChanged<ServiceModel> onPick;
+  final ValueChanged<ClientModel> onPick;
 
   @override
   Widget build(BuildContext context) {
@@ -115,11 +128,11 @@ class _FullServiceList extends StatelessWidget {
       itemCount: items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) {
-        final s = items[i];
-        return ServiceTile(
-          s: s,
-          selected: s.id == selectedId,
-          onTap: () => onPick(s),
+        final c = items[i];
+        return ClientTile(
+          c: c,
+          selected: c.id == selectedId,
+          onTap: () => onPick(c),
         );
       },
     );

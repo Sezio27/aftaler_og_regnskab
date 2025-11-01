@@ -1,6 +1,6 @@
 ﻿// main.dart
 import 'dart:async';
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/application/appointment_notifications.dart';
 import 'package:aftaler_og_regnskab/data/cache/appointment_cache.dart';
 import 'package:aftaler_og_regnskab/data/appointment_repository.dart';

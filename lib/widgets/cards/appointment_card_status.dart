@@ -3,7 +3,7 @@ import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/widgets/status.dart';
 import 'package:flutter/material.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 
 class AppointmentStatusCard extends StatefulWidget {

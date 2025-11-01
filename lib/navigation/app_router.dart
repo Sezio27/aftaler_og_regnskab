@@ -1,9 +1,9 @@
 import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
 
 import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
-import 'package:aftaler_og_regnskab/screens/appointment_details_screen.dart';
-import 'package:aftaler_og_regnskab/screens/checklist_details_screen.dart';
-import 'package:aftaler_og_regnskab/screens/client_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/details/appointment_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/details/checklist_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/details/client_details_screen.dart';
 import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
@@ -12,20 +12,20 @@ import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.d
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
-import 'package:aftaler_og_regnskab/screens/service_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/details/service_details_screen.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'auth_gate.dart';
-import 'screens/home_screen.dart';
-import 'screens/calendar/calendar_screen.dart';
-import 'screens/finance_screen.dart';
-import 'screens/services_overview_screen.dart';
-import 'screens/settings_screen.dart';
-import 'screens/new_appointment_screen.dart';
+import '../auth_gate.dart';
+import '../screens/home_screen.dart';
+import '../screens/calendar/calendar_screen.dart';
+import '../screens/finance_screen.dart';
+import '../screens/services_overview_screen.dart';
+import '../screens/settings_screen.dart';
+import '../screens/new_appointment_screen.dart';
 
 enum AppRoute {
   gate,
@@ -68,7 +68,10 @@ GoRouter createRouter() {
       GoRoute(
         path: '/onboarding',
         name: AppRoute.onboarding.name,
-        builder: (_, __) => const Scaffold(body: SizedBox.shrink()),
+        redirect: (_, state) {
+          final isExactOnboarding = state.uri.path == '/onboarding';
+          return isExactOnboarding ? '/login' : null;
+        },
         routes: [
           GoRoute(
             path: 'email',
@@ -79,11 +82,13 @@ GoRouter createRouter() {
             path: 'phone',
             name: AppRoute.onboardingPhone.name,
             builder: (_, __) => const ObEnterPhoneScreen(),
-          ),
-          GoRoute(
-            path: 'phone/validate',
-            name: AppRoute.onboardingPhoneValidate.name,
-            builder: (_, __) => const ObValidatePhoneScreen(),
+            routes: [
+              GoRoute(
+                path: 'validate',
+                name: AppRoute.onboardingPhoneValidate.name,
+                builder: (_, __) => const ObValidatePhoneScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: 'name',

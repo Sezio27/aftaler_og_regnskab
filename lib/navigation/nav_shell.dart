@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/app_layout.dart';
+import 'package:aftaler_og_regnskab/widgets/layout/app_layout.dart';
 import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:flutter/material.dart';
 import 'tab_config.dart';

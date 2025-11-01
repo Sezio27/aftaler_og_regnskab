@@ -1,5 +1,4 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
@@ -19,7 +18,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final logoPath = isDark ? 'assets/logo_white.png' : 'assets/logo_black.png';
 
     return Scaffold(
       body: SafeArea(
@@ -30,22 +32,19 @@ class _LoginScreenState extends State<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+
                 children: [
                   //Logo
                   SizedBox(
-                    width: size.width * 0.6,
-                    child: Image.asset(
-                      'assets/logo_black.png',
-                      fit: BoxFit.contain,
-                    ),
+                    width: 200,
+                    child: Image.asset(logoPath, fit: BoxFit.fitWidth),
                   ),
 
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 50),
 
                   //Buttons
                   SizedBox(
-                    height: 50,
+                    height: 48,
                     child: CustomButton(
                       onTap: () {
                         context.read<OnboardingViewModel>().setAttemptLogin(
@@ -59,10 +58,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
 
                   SizedBox(
-                    height: 50,
+                    height: 48,
                     child: CustomButton(
                       onTap: () {
                         context.read<OnboardingViewModel>().setAttemptLogin(

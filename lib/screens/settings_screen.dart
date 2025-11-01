@@ -1,11 +1,11 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/services/notification_service.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';

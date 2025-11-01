@@ -1,5 +1,5 @@
 import 'package:aftaler_og_regnskab/screens/calendar/calendar_tab_switcher.dart';
-import 'package:aftaler_og_regnskab/widgets/app_top_bar.dart';
+import 'package:aftaler_og_regnskab/widgets/layout/app_top_bar.dart';
 import 'package:flutter/material.dart';
 
 PreferredSizeWidget buildTopBarForRouteName(

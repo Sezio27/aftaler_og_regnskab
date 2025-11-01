@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_grid.dart';
 import 'package:aftaler_og_regnskab/screens/calendar/month_switcher.dart';
@@ -10,7 +10,7 @@ import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/appointment_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/appointment_card.dart';
 import 'package:aftaler_og_regnskab/widgets/avatar.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:flutter/material.dart';

@@ -2,7 +2,7 @@ import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
-import 'package:aftaler_og_regnskab/widgets/service_list.dart';
+import 'package:aftaler_og_regnskab/widgets/lists/service_list.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';

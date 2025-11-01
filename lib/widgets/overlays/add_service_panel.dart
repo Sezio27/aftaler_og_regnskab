@@ -4,7 +4,7 @@ import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
-import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
+import 'package:aftaler_og_regnskab/widgets/pickers/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/photo_circle.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';

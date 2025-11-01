@@ -1,8 +1,8 @@
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:flutter/material.dart';
-import 'navigation/tab_config.dart';
-import 'navigation/topbar_builder.dart';
-import 'widgets/app_bottom_nav_bar.dart';
+import '../../navigation/tab_config.dart';
+import '../../navigation/topbar_builder.dart';
+import 'app_bottom_nav_bar.dart';
 
 class AppLayout extends StatelessWidget {
   const AppLayout({

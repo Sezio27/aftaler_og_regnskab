@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:aftaler_og_regnskab/widgets/image_picker_helper.dart';
+import 'package:aftaler_og_regnskab/widgets/pickers/image_picker_helper.dart';
 
 class ImagesPickerGrid extends StatefulWidget {
   const ImagesPickerGrid({

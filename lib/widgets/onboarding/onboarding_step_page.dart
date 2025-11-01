@@ -1,7 +1,7 @@
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
-import 'package:aftaler_og_regnskab/widgets/step__bar.dart';
+import 'package:aftaler_og_regnskab/widgets/onboarding/step__bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

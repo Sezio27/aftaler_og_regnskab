@@ -1,6 +1,6 @@
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/client_list.dart';
+import 'package:aftaler_og_regnskab/widgets/lists/client_list.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_client_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';

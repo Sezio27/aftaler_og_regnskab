@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
 import 'package:aftaler_og_regnskab/model/checklist_model.dart';
-import 'package:aftaler_og_regnskab/screens/appointment_details_screen.dart';
+import 'package:aftaler_og_regnskab/screens/details/appointment_details_screen.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/appointment_checklist_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/appointment_checklist_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

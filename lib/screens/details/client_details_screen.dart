@@ -6,7 +6,7 @@ import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/utils/phone_format.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/details/image_pickers.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';

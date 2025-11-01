@@ -1,7 +1,7 @@
-import 'package:aftaler_og_regnskab/app_router.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/ob_textfield.dart';
-import 'package:aftaler_og_regnskab/widgets/onboarding_step_page.dart';
+import 'package:aftaler_og_regnskab/widgets/onboarding/ob_textfield.dart';
+import 'package:aftaler_og_regnskab/widgets/onboarding/onboarding_step_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

@@ -5,7 +5,7 @@ import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
+import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';

@@ -1,7 +1,7 @@
 import 'package:aftaler_og_regnskab/model/checklist_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
-import 'package:aftaler_og_regnskab/widgets/checklist_tile.dart';
+import 'package:aftaler_og_regnskab/widgets/lists/checklist_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
