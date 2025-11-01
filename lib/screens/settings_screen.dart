@@ -3,6 +3,7 @@ import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/services/notification_service.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
+import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_card.dart';
 import 'package:flutter/material.dart';
@@ -17,11 +18,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _remindersOn = true;
-  bool _paymentOn = true;
   @override
   Widget build(BuildContext context) {
-    // UI-only toggles for now (no backend logic)
+    var remindersOn = context.select<UserViewModel, bool>(
+      (vm) => vm.notificationsOn,
+    );
 
     final titleStyle = AppTypography.settingsTitle;
     final labelStyle = AppTypography.settingsLabel;
@@ -92,9 +93,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Expanded(child: Text("   Aftalepåmindelser", style: valueStyle)),
             _PeachToggleIcon(
-              isOn: _remindersOn,
+              isOn: remindersOn,
               icon: Icons.check,
-              onTap: () => setState(() => _remindersOn = !_remindersOn),
+              onTap: () async {
+                final ns = context.read<NotificationService>();
+                final vm = context.read<UserViewModel>();
+
+                // Always read the freshest value from the VM
+                final current = vm.notificationsOn;
+                final next = !current; // the next state we intend to apply
+
+                if (next) {
+                  var granted = await ns.areEnabled();
+                  if (!granted) {
+                    await ns.requestPermissionIfNeeded();
+                    granted = await ns.areEnabled();
+                  }
+                  if (!granted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Tillad notifikationer i indstillinger'),
+                      ),
+                    );
+                    return;
+                  }
+                }
+
+                await vm.setNotificationsOn(next, ns);
+
+                if (next) {
+                  await context
+                      .read<AppointmentViewModel>()
+                      .rescheduleTodayAndFuture(ns);
+                }
+              },
             ),
           ],
         ),

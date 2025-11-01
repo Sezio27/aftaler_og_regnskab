@@ -9,6 +9,7 @@ import 'package:aftaler_og_regnskab/data/cache/service_cache.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/model/appointment_model.dart';
 import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/services/notification_service.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
@@ -150,9 +151,6 @@ class AppointmentViewModel extends ChangeNotifier {
       }
     }
     if (becameReady || changed) notifyListeners();
-    if (_coversToday(start, end)) {
-      unawaited(syncTodayNotifications());
-    }
   }
 
   StreamSubscription<List<AppointmentModel>> _subscribeMonth(
@@ -289,10 +287,7 @@ class AppointmentViewModel extends ChangeNotifier {
       final created = model.copyWith(id: docRef.id);
       apptCache.cacheAppointment(created);
 
-      if (created.dateTime != null &&
-          dateOnly(created.dateTime!) == dateOnly(DateTime.now())) {
-        unawaited(onAppointmentChangedNotifications(created));
-      }
+      unawaited(notifications.onAppointmentChanged(created));
 
       await financeVM.onAddAppointment(
         status: PaymentStatusX.fromString(status),
@@ -487,11 +482,7 @@ class AppointmentViewModel extends ChangeNotifier {
       imageUrls: finalImageUrls,
     );
     apptCache.cacheAppointment(updated);
-
-    if (updated.dateTime != null &&
-        dateOnly(updated.dateTime!) == dateOnly(DateTime.now())) {
-      unawaited(onAppointmentChangedNotifications(updated));
-    }
+    unawaited(notifications.onAppointmentChanged(updated));
   }
 
   Future<bool> updateAppointmentFields(
@@ -695,24 +686,44 @@ class AppointmentViewModel extends ChangeNotifier {
   }
 
   // ────────────────────────────────────────────────────────────────────────────
-  // Notifications coordination
+  // Notification
   // ────────────────────────────────────────────────────────────────────────────
 
-  bool _coversToday(DateTime start, DateTime end) {
-    final today = dateOnly(DateTime.now());
-    return !today.isBefore(dateOnly(start)) && !today.isAfter(dateOnly(end));
-  }
+  Future<void> rescheduleTodayAndFuture(NotificationService ns) async {
+    await ns.cancelAll();
 
-  /// Re-evaluate notifications for today's appointments.
-  /// Pass your UI/setting toggles here (wire them later from Settings/UserVM).
-  Future<void> syncTodayNotifications() async {
+    // Today
     final todayAppts = _dayAppts(DateTime.now());
     await notifications.syncToday(appointments: todayAppts);
-  }
 
-  /// For a single appointment that changed (create/update)
-  Future<void> onAppointmentChangedNotifications(AppointmentModel appt) async {
-    await notifications.onAppointmentChanged(appt);
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = DateTime(2100, 1, 1);
+
+    DocumentSnapshot<Map<String, dynamic>>? cursor;
+    const pageSize = 50;
+
+    while (true) {
+      final page = await _repo.getAppointmentsPaged(
+        startInclusive: start,
+        endInclusive: end,
+        pageSize: pageSize,
+        startAfterDoc: cursor,
+        descending: false,
+      );
+      final items = page.items;
+      if (items.isEmpty) break;
+
+      for (final appt in items) {
+        if (appt.id == null || appt.dateTime == null) continue;
+
+        // Schedule via your existing coordinator
+        await notifications.onAppointmentChanged(appt);
+      }
+
+      cursor = page.lastDoc;
+      if (items.length < pageSize) break;
+    }
   }
 
   // ────────────────────────────────────────────────────────────────────────────

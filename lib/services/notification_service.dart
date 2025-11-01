@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -10,10 +11,14 @@ class NotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _enabled = true;
+  bool get enabled => _enabled;
 
   static const _channelId = 'appointments_channel';
   static const _channelName = 'Aftaler';
   static const _channelDesc = 'Påmindelser for aftaler og betalinger';
+  Future<void> cancel(int id) => _plugin.cancel(id);
+  Future<void> cancelAll() => _plugin.cancelAll();
 
   Future<void> init() async {
     if (_initialized) return;
@@ -48,6 +53,11 @@ class NotificationService {
     _initialized = true;
   }
 
+  Future<void> applyEnabled(bool enabled) async {
+    _enabled = enabled;
+    if (!enabled) await cancelAll();
+  }
+
   Future<void> _setLocalTimeZone() async {
     try {
       final info = await FlutterTimezone.getLocalTimezone();
@@ -60,6 +70,13 @@ class NotificationService {
         tz.setLocalLocation(tz.UTC);
       }
     }
+  }
+
+  Future<bool> requestAllIfNeeded() async {
+    await requestPermissionIfNeeded();
+    await requestExactAlarmIfNeeded();
+
+    return areEnabled();
   }
 
   Future<void> requestPermissionIfNeeded() async {
@@ -94,6 +111,10 @@ class NotificationService {
     required DateTime whenLocal,
     String? payload,
   }) async {
+    if (!_enabled) {
+      return;
+    }
+
     final ts = tz.TZDateTime.from(whenLocal, tz.local);
 
     if (!ts.isAfter(tz.TZDateTime.now(tz.local))) return;
@@ -139,9 +160,6 @@ class NotificationService {
     }
   }
 
-  Future<void> cancel(int id) => _plugin.cancel(id);
-  Future<void> cancelAll() => _plugin.cancelAll();
-
   Future<void> scheduleSameDayTwoHoursBefore({
     required String appointmentId,
     required DateTime appointmentDateTime, // local
@@ -162,13 +180,16 @@ class NotificationService {
       title: title,
       body: body,
       whenLocal: trigger,
-      payload: 'appt:$appointmentId', // keep payload to allow targeted cancels
+      payload: 'appt:$appointmentId',
     );
   }
 
-  /// Cancel any pending notifications for this appointment (idempotent).
+  Future<bool> areEnabled() async {
+    final status = await Permission.notification.status;
+    return status.isGranted;
+  }
+
   Future<void> cancelForAppointment(String appointmentId) async {
-    // Cancel by payload (covers all future variants)
     final pending = await _plugin.pendingNotificationRequests();
     for (final r in pending) {
       if ((r.payload ?? '') == 'appt:$appointmentId') {

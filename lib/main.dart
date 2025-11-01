@@ -170,30 +170,38 @@ class _AppBootstrap extends StatefulWidget {
 class _AppBootstrapState extends State<_AppBootstrap> {
   StreamSubscription<User?>? _authSub;
   bool _didBootstrap = false;
-  Future<void>? _themeInit;
+  Future<void>? _prefsInit;
 
   Future<void> _onSignedIn() async {
     if (_didBootstrap) {
-      // Re-bootstrap cleanly if you switch accounts
       context.read<AppointmentViewModel>().setInitialRange();
-      // (optional) re-sync today’s notifications etc.
       return;
     }
-    // 1) Appointments initial window
-    context.read<AppointmentViewModel>().setInitialRange();
 
-    // 2) Notifications MUST be ready before any schedule calls
     final ns = context.read<NotificationService>();
+    final userVM = context.read<UserViewModel>();
+    final apptVM = context.read<AppointmentViewModel>();
+
+    //Notifications
     await ns.init();
-    await ns.requestPermissionIfNeeded();
-    await ns.requestExactAlarmIfNeeded();
+    _prefsInit = userVM.loadLocalPreferences(ns);
+    await userVM.initNotificationsIfFirstRun(ns);
+    await _prefsInit;
+
+    await ns.applyEnabled(userVM.notificationsOn);
+
+    apptVM.setInitialRange();
+
+    if (userVM.notificationsOn) {
+      await apptVM.rescheduleTodayAndFuture(ns);
+    }
 
     _didBootstrap = true;
     debugPrint('BOOT: notifications+range ready @ ${DateTime.now()}');
   }
 
   void _onSignedOut() {
-    // Clear caches & reset flags
+    // Clear data & reset flags
     context.read<ClientCache>().clear();
     context.read<ServiceCache>().clear();
     context.read<AppointmentCache>().clear();
@@ -201,8 +209,8 @@ class _AppBootstrapState extends State<_AppBootstrap> {
     context.read<ServiceViewModel>().reset();
     context.read<AppointmentViewModel>().resetOnAuthChange();
     context.read<UserViewModel>().onAuthChanged();
+    _prefsInit = null;
     _didBootstrap = false;
-    debugPrint('BOOT: signed out, state reset');
   }
 
   @override
@@ -211,7 +219,6 @@ class _AppBootstrapState extends State<_AppBootstrap> {
 
     final auth = context.read<FirebaseAuth>();
 
-    // Subscribe once and drive boot from here (robust on cold start)
     _authSub = auth.authStateChanges().listen((user) async {
       if (user == null) {
         _onSignedOut();
@@ -219,11 +226,6 @@ class _AppBootstrapState extends State<_AppBootstrap> {
         await _onSignedIn();
       }
     });
-
-    // (Optional) If you want to keep the “already signed in” fast path:
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (auth.currentUser != null) _onSignedIn();
-    // });
   }
 
   @override
@@ -234,9 +236,8 @@ class _AppBootstrapState extends State<_AppBootstrap> {
 
   @override
   Widget build(BuildContext context) {
-    _themeInit ??= context.read<UserViewModel>().loadLocalPreferences();
     return FutureBuilder<void>(
-      future: _themeInit,
+      future: _prefsInit ?? Future.value(),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return MaterialApp(
@@ -247,9 +248,11 @@ class _AppBootstrapState extends State<_AppBootstrap> {
             home: const SizedBox.shrink(),
           );
         }
+
         final themeMode = context.select<UserViewModel, ThemeMode>(
           (vm) => vm.themeMode,
         );
+
         return MaterialApp.router(
           locale: const Locale('da'),
           supportedLocales: const [Locale('da'), Locale('en')],
