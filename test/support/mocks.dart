@@ -1,6 +1,7 @@
 // test/helpers/mocks.dart
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:mocktail/mocktail.dart';
@@ -25,6 +26,10 @@ class MockCalendarVM extends Mock
 class MockServiceVM extends Mock
     with ChangeNotifier
     implements ServiceViewModel {}
+
+class MockClientVM extends Mock
+    with ChangeNotifier
+    implements ClientViewModel {}
 
 class MockChecklistVM extends Mock
     with ChangeNotifier
