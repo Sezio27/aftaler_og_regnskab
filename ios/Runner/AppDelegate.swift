@@ -14,11 +14,21 @@ import UserNotifications
     FirebaseApp.configure()
     GeneratedPluginRegistrant.register(with: self)
 
-    // Register for APNs so Firebase Auth can do instant/silent verification.
-    UNUserNotificationCenter.current().requestAuthorization(options: []) { _, _ in }
+    UNUserNotificationCenter.current().delegate = self
+
     UIApplication.shared.registerForRemoteNotifications()
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  override func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                       willPresent notification: UNNotification,
+                                       withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    if #available(iOS 14.0, *) {
+      completionHandler([.banner, .sound, .badge])
+    } else {
+      completionHandler([.alert, .sound, .badge])
+    }
   }
 
   // APNs token (needed by Firebase Auth)
@@ -29,13 +39,11 @@ import UserNotifications
     #else
     Auth.auth().setAPNSToken(deviceToken, type: .prod)
     #endif
-    print("✅ APNs token registered: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 
   override func application(_ application: UIApplication,
                             didFailToRegisterForRemoteNotificationsWithError error: Error) {
-    print("❌ Failed to register for remote notifications: \(error)")
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
@@ -43,9 +51,8 @@ import UserNotifications
   override func application(_ app: UIApplication,
                             open url: URL,
                             options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-    print("🔥 AppDelegate openURL: \(url.absoluteString)")
     if Auth.auth().canHandle(url) {
-      print("✅ FirebaseAuth handled URL")
+  
       return true
     }
     return super.application(app, open: url, options: options)
@@ -56,9 +63,9 @@ import UserNotifications
                             continue userActivity: NSUserActivity,
                             restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
     if let url = userActivity.webpageURL {
-      print("🌐 continueUserActivity URL: \(url.absoluteString)")
+     
       if Auth.auth().canHandle(url) {
-        print("✅ FirebaseAuth handled universal link")
+    
         return true
       }
     }
