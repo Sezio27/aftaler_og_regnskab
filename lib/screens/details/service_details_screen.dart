@@ -81,7 +81,7 @@ class _ServiceDetailsViewState extends State<_ServiceDetailsView> {
           hPad,
           10,
           hPad,
-          LayoutMetrics.navBarHeight(context) + 30,
+          LayoutMetrics.navBarHeight(context) + 50,
         ),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),

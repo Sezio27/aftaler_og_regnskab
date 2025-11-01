@@ -1,3 +1,4 @@
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/widgets/custom_button.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,7 @@ class ReadActionsRow extends StatelessWidget {
                 color: cs.onSurface.withAlpha(200),
               ),
               color: cs.onPrimary,
-              borderStroke: Border.all(color: cs.onSurface.withAlpha(200)),
+              elevation: 2,
             ),
           ),
           const SizedBox(width: 20),
@@ -48,7 +49,7 @@ class ReadActionsRow extends StatelessWidget {
               borderRadius: 12,
               icon: Icon(Icons.delete, color: cs.error.withAlpha(200)),
               color: cs.onPrimary,
-              borderStroke: Border.all(color: cs.error.withAlpha(200)),
+              elevation: 2,
             ),
           ),
         ],
@@ -84,23 +85,20 @@ class EditActionsRow extends StatelessWidget {
               onTap: saving ? () {} : onCancel,
               borderRadius: 12,
               color: cs.onPrimary,
-              textStyle: AppTypography.button3.copyWith(
-                color: cs.onSurface.withAlpha(200),
-              ),
-              borderStroke: Border.all(color: cs.onSurface.withAlpha(200)),
+              textStyle: AppTypography.button3.copyWith(color: cs.onSurface),
+              elevation: 2,
             ),
           ),
           const SizedBox(width: 20),
           Expanded(
             child: CustomButton(
               text: !saving ? "Bekræft" : "",
-              icon: saving
-                  ? CircularProgressIndicator(color: Colors.white)
-                  : null,
               onTap: saving ? () {} : onConfirm,
+              loading: saving,
               borderRadius: 12,
-              color: cs.primary.withAlpha(200),
-              textStyle: AppTypography.button3.copyWith(color: cs.onPrimary),
+              gradient: AppGradients.peach3,
+              textStyle: AppTypography.button3.copyWith(color: Colors.white),
+              elevation: 2,
             ),
           ),
         ],

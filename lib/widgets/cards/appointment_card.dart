@@ -38,10 +38,16 @@ class AppointmentCard extends StatelessWidget {
     return CustomCard(
       width: double.infinity,
       constraints: BoxConstraints(minHeight: 90),
-      blurStyle: BlurStyle.inner,
-      shadowColor: color,
-      shadowX: -5,
-      shadowY: 0,
+      shadow: [
+        BoxShadow(
+          color: color!,
+          spreadRadius: 0,
+          blurRadius: 4,
+          offset: Offset(-5, 0),
+          blurStyle: BlurStyle.inner,
+        ),
+      ],
+
       field: GestureDetector(
         behavior: HitTestBehavior.opaque, // ✅ full card is tappable
         onTap: onTap,

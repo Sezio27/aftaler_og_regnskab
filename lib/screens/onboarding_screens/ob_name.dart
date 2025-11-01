@@ -53,22 +53,24 @@ class _ObNameScreenState extends State<ObNameScreen> {
     return OnboardingStepPage(
       progress: 0.45,
       title: 'Hvad er dit navn?',
-      fields: [
-        ObTextfield(
-          hintText: 'Indtast fornavn',
-          controller: ctrlFirst,
-          autofillHints: const [AutofillHints.givenName],
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: const SizedBox(height: 30),
-        ),
-        ObTextfield(
-          hintText: 'Indtast efternavn',
-          controller: ctrlLast,
-          autofillHints: const [AutofillHints.familyName],
-        ),
-      ],
+      fields: Column(
+        children: [
+          ObTextfield(
+            hintText: 'Indtast fornavn',
+            controller: ctrlFirst,
+            autofillHints: const [AutofillHints.givenName],
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: const SizedBox(height: 30),
+          ),
+          ObTextfield(
+            hintText: 'Indtast efternavn',
+            controller: ctrlLast,
+            autofillHints: const [AutofillHints.familyName],
+          ),
+        ],
+      ),
       enabled: canContinue,
       onContinue: () {
         context.goNamed(AppRoute.onboardingBusinessName.name);

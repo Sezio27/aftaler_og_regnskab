@@ -101,26 +101,29 @@ class _ObForretningNavnScreenState extends State<ObBusinessLocationScreen> {
     return OnboardingStepPage(
       progress: 0.95,
       title: 'Hvad ligger din forretning?',
-      fields: [
-        ObTextfield(
-          hintText: 'Indtast addresse',
-          controller: ctrl_address,
-          autofillHints: const [AutofillHints.postalAddress],
-        ),
-        const SizedBox(height: 40),
-        ObTextfield(
-          hintText: 'Indtast by',
-          controller: ctrl_city,
-          autofillHints: const [AutofillHints.addressCity],
-        ),
-        const SizedBox(height: 40),
-        ObTextfield(
-          hintText: 'Indtast postnummer',
-          controller: ctrl_postal,
-          autofillHints: const [AutofillHints.postalCode],
-          keyboardType: TextInputType.number,
-        ),
-      ],
+      fields: Column(
+        children: [
+          ObTextfield(
+            hintText: 'Indtast addresse',
+            controller: ctrl_address,
+            autofillHints: const [AutofillHints.postalAddress],
+          ),
+          const SizedBox(height: 20),
+          ObTextfield(
+            hintText: 'Indtast by',
+            controller: ctrl_city,
+            autofillHints: const [AutofillHints.addressCity],
+          ),
+          const SizedBox(height: 20),
+          ObTextfield(
+            hintText: 'Indtast postnummer',
+            controller: ctrl_postal,
+            autofillHints: const [AutofillHints.postalCode],
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+
       enabled: canContinue,
       isLoading: _saving,
       onContinue: _finishOnboarding,

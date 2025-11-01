@@ -45,13 +45,12 @@ class _ObForretningNavnScreenState extends State<ObBusinessNameScreen> {
     return OnboardingStepPage(
       progress: 0.75,
       title: 'Hvad hedder din forretning?',
-      fields: [
-        ObTextfield(
-          hintText: 'Indtast forretningsnavn',
-          controller: ctrl,
-          autofillHints: const [AutofillHints.organizationName],
-        ),
-      ],
+      fields: ObTextfield(
+        hintText: 'Indtast forretningsnavn',
+        controller: ctrl,
+        autofillHints: const [AutofillHints.organizationName],
+      ),
+
       enabled: canContinue,
       onContinue: () {
         context.goNamed(AppRoute.onboardingBusinessLocation.name);

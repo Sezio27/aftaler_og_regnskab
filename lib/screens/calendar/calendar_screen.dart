@@ -154,20 +154,20 @@ class _WeekViewBody extends StatelessWidget {
                     child: CustomButton(
                       text: "Ny aftale",
                       icon: Icon(Icons.add, size: 18, color: cs.onSurface),
-                      color: cs.surface,
+                      color: cs.onSecondary,
                       width: 170,
                       borderRadius: 18,
                       textStyle: AppTypography.button2.copyWith(
                         color: cs.onSurface,
                       ),
-                      borderStroke: Border.all(color: cs.secondary, width: 1),
-                      // pass the selected day to the route
+
                       onTap: () => context.pushNamed(
                         AppRoute.newAppointment.name,
                         queryParameters: {
                           'date': selectedDay.toIso8601String(),
                         },
                       ),
+                      elevation: 2.2,
                     ),
                   ),
                   const SizedBox(height: 20),

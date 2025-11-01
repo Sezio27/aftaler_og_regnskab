@@ -196,7 +196,7 @@ class _AddClientPanelState extends State<AddClientPanel> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 10),
 
                 PhotoCircle(
                   image: _photo,

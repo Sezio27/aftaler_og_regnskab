@@ -205,8 +205,10 @@ class _AppBootstrapState extends State<_AppBootstrap> {
     context.read<ClientCache>().clear();
     context.read<ServiceCache>().clear();
     context.read<AppointmentCache>().clear();
+    context.read<ChecklistCache>().clear();
     context.read<ClientViewModel>().reset();
     context.read<ServiceViewModel>().reset();
+    context.read<ChecklistViewModel>().reset();
     context.read<AppointmentViewModel>().resetOnAuthChange();
     context.read<UserViewModel>().onAuthChanged();
     _prefsInit = null;

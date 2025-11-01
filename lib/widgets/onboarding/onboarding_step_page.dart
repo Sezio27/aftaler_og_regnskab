@@ -9,7 +9,7 @@ class OnboardingStepPage extends StatelessWidget {
   final double progress;
   final String title;
   final String? subtitle;
-  final List<Widget> fields;
+  final Widget fields;
   final String buttonText;
   final bool enabled;
   final bool isLoading;
@@ -29,98 +29,74 @@ class OnboardingStepPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // progress
-              StepBar(value: progress),
+          child: TapRegion(
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // progress
+                StepBar(value: progress),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              //Back button
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/login');
-                  }
-                },
-              ),
+                //Back button
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/login');
+                    }
+                  },
+                ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              //Question - Title
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(title, style: AppTypography.h2),
-              ),
-
-              // Optional subtitle
-              if (subtitle != null) ...[
-                const SizedBox(height: 10),
+                //Question - Title
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 4,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(title, style: AppTypography.h2),
+                ),
+
+                // Optional subtitle
+                if (subtitle != null) ...[
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 4,
+                    ),
+                    child: Text(subtitle!, style: AppTypography.num1),
                   ),
-                  child: Text(subtitle!, style: AppTypography.num1),
+                ],
+
+                const SizedBox(height: 40),
+
+                fields,
+                const SizedBox(height: 40),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: CustomButton(
+                    onTap: (enabled && !isLoading) ? onContinue : () {},
+                    text: isLoading ? '' : buttonText,
+                    textStyle: AppTypography.button1.copyWith(
+                      color: enabled
+                          ? Colors.white
+                          : Colors.white.withAlpha(180),
+                    ),
+                    gradient: enabled ? AppGradients.peach3 : null,
+                    color: enabled ? null : cs.onPrimary,
+                    loading: isLoading,
+                  ),
                 ),
               ],
-
-              const SizedBox(height: 40),
-
-              ...fields,
-
-              const Spacer(),
-              //Continue button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  height: 52, // same visual height as your button
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // The button (disabled while loading or not enabled)
-                      CustomButton(
-                        onTap: (enabled && !isLoading) ? onContinue : () {},
-                        text: isLoading ? '' : buttonText,
-                        textStyle: AppTypography.button1,
-                        gradient: enabled ? AppGradients.peach3 : null,
-                        color: enabled ? null : Colors.black26,
-                      ),
-
-                      // Progress overlay
-                      if (isLoading)
-                        const IgnorePointer(
-                          // block taps during loading
-                          ignoring: true,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(), // transparent overlay
-                            child: Center(
-                              child: SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

@@ -80,86 +80,88 @@ class _ObEnterPhoneScreenState extends State<ObEnterPhoneScreen> {
       progress: 0.02,
       title: vm.attemptLogin ? "Indtast dit nummer" : 'Hvad er dit nummer?',
       isLoading: _loading,
-      fields: [
-        Padding(
-          padding: EdgeInsets.only(left: 18, right: 26),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: cs.onSurface, width: 1),
+      fields: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 18, right: 26),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: cs.onSurface, width: 1),
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    onTap: () {
-                      showCountryPicker(
-                        context: context,
-                        showPhoneCode: true,
-                        onSelect: (c) {
-                          setState(() => iso = c.countryCode);
-                          vm.setCurrentDial('+${c.phoneCode}');
-                        },
-                      );
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$iso ${vm.currentDial}',
-                          style: AppTypography.onSurface(
-                            context,
-                            AppTypography.num1,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: InkWell(
+                      onTap: () {
+                        showCountryPicker(
+                          context: context,
+                          showPhoneCode: true,
+                          onSelect: (c) {
+                            setState(() => iso = c.countryCode);
+                            vm.setCurrentDial('+${c.phoneCode}');
+                          },
+                        );
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$iso ${vm.currentDial}',
+                            style: AppTypography.onSurface(
+                              context,
+                              AppTypography.num1,
+                            ),
                           ),
-                        ),
-                        const Icon(Icons.arrow_drop_down),
-                      ],
+                          const Icon(Icons.arrow_drop_down),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              Expanded(
-                child: TextField(
-                  controller: ctrl,
-                  keyboardType: TextInputType.number,
-                  style: AppTypography.onSurface(
-                    context,
-                    AppTypography.phoneInput,
-                  ),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  autofillHints: const [AutofillHints.telephoneNumber],
-                  decoration: InputDecoration(
-                    enabledBorder: underline,
-                    focusedBorder: underline,
-                    disabledBorder: underline,
-                    isDense: true,
-                    isCollapsed: true,
-                    contentPadding: EdgeInsets.only(bottom: 8),
-                    labelStyle: TextStyle(color: cs.onSurface),
-                    floatingLabelStyle: TextStyle(color: cs.onSurface),
+                Expanded(
+                  child: TextField(
+                    controller: ctrl,
+                    keyboardType: TextInputType.number,
+                    style: AppTypography.onSurface(
+                      context,
+                      AppTypography.phoneInput,
+                    ),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    autofillHints: const [AutofillHints.telephoneNumber],
+                    decoration: InputDecoration(
+                      enabledBorder: underline,
+                      focusedBorder: underline,
+                      disabledBorder: underline,
+                      isDense: true,
+                      isCollapsed: true,
+                      contentPadding: EdgeInsets.only(bottom: 8),
+                      labelStyle: TextStyle(color: cs.onSurface),
+                      floatingLabelStyle: TextStyle(color: cs.onSurface),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 30),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Vi vil sende dig en besked, for at bekræfte, at det virkelig er dig.',
-            style: AppTypography.onSurface(context, AppTypography.b2),
+          const SizedBox(height: 30),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Vi vil sende dig en besked, for at bekræfte, at det virkelig er dig.',
+              style: AppTypography.onSurface(context, AppTypography.b2),
+            ),
           ),
-        ),
-        const Spacer(),
-      ],
+        ],
+      ),
+
       enabled: canContinue,
       onContinue: _sendCode,
     );

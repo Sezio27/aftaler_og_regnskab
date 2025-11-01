@@ -147,23 +147,29 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               child: Column(
                 children: [
-                  CupertinoSearchTextField(
-                    controller: _searchCtrl,
-                    placeholder: 'Søg',
-                    onChanged: (q) => setState(() => _query = q.trim()),
-                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                    itemColor: cs.onSurface.withAlpha(180),
-                    style: AppTypography.b2.copyWith(color: cs.onSurface),
-                    placeholderStyle: AppTypography.b2.copyWith(
-                      color: cs.onSurface.withAlpha(180),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: cs.onPrimary,
-                      borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  Material(
+                    elevation: 1,
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                    child: CupertinoSearchTextField(
+                      controller: _searchCtrl,
+                      placeholder: 'Søg',
+                      onChanged: (q) => setState(() => _query = q.trim()),
+                      onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                      itemColor: cs.onSurface.withAlpha(180),
+                      style: AppTypography.b2.copyWith(color: cs.onSurface),
+                      placeholderStyle: AppTypography.b2.copyWith(
+                        color: cs.onSurface.withAlpha(180),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cs.onPrimary,
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(10),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -566,28 +572,32 @@ class _FilterField extends StatelessWidget {
       children: [
         Text(label, style: AppTypography.b2),
         const SizedBox(height: 6),
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: cs.onPrimary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    valueText,
-                    style:
-                        style ??
-                        AppTypography.b2.copyWith(
-                          color: cs.onSurface.withAlpha(180),
-                        ),
+        Material(
+          elevation: 1,
+          borderRadius: BorderRadius.circular(16),
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: cs.onPrimary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      valueText,
+                      style:
+                          style ??
+                          AppTypography.b2.copyWith(
+                            color: cs.onSurface.withAlpha(180),
+                          ),
+                    ),
                   ),
-                ),
-                const Icon(CupertinoIcons.chevron_down, size: 16),
-              ],
+                  const Icon(CupertinoIcons.chevron_down, size: 16),
+                ],
+              ),
             ),
           ),
         ),

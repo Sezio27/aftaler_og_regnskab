@@ -84,19 +84,19 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-            const SizedBox(height: 26),
+            const SizedBox(height: 34),
 
             CustomButton(
               text: "Ny aftale",
               icon: Icon(Icons.add, size: 18, color: cs.onSurface),
-              color: cs.surface,
+              color: cs.onSecondary,
               width: 170,
               borderRadius: 18,
               textStyle: AppTypography.button2.copyWith(color: cs.onSurface),
-              borderStroke: Border.all(color: cs.secondary, width: 1),
               onTap: () => context.pushNamed(AppRoute.newAppointment.name),
+              elevation: 2.2,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),

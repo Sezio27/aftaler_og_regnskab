@@ -212,7 +212,7 @@ class _ChecklistReadPane extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 50),
         ReadActionsRow(onEdit: onEdit, onDelete: onDelete),
       ],
     );
@@ -318,7 +318,7 @@ class __ChecklistEditPaneState extends State<_ChecklistEditPane> {
                                 color: cs.onSurface.withAlpha(150),
                               ),
                               controller: _nameCtrl,
-                              fill: cs.onPrimary,
+                              fill: cs.onSecondary,
                               strokeColor: _active != 1
                                   ? cs.onSurface.withAlpha(50)
                                   : cs.primary,
@@ -339,7 +339,7 @@ class __ChecklistEditPaneState extends State<_ChecklistEditPane> {
                                 color: cs.onSurface.withAlpha(150),
                               ),
                               controller: _descCtrl,
-                              fill: cs.onPrimary,
+                              fill: cs.onSecondary,
                               strokeColor: _active != 2
                                   ? cs.onSurface.withAlpha(50)
                                   : cs.primary,
@@ -402,7 +402,7 @@ class __ChecklistEditPaneState extends State<_ChecklistEditPane> {
                                   child: SoftTextField(
                                     hintText: 'Punkt',
                                     controller: _pointCtrls[i],
-                                    fill: cs.onPrimary,
+                                    fill: cs.onSecondary,
                                     borderRadius: 8,
                                     showStroke: true,
                                     strokeColor: cs.onSurface.withAlpha(50),
@@ -444,7 +444,7 @@ class __ChecklistEditPaneState extends State<_ChecklistEditPane> {
               ),
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 50),
           Selector<ChecklistViewModel, bool>(
             selector: (_, vm) => vm.saving,
             builder: (context, saving, _) => EditActionsRow(

@@ -61,22 +61,30 @@ class _FinanceScreenState extends State<FinanceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CupertinoSlidingSegmentedControl<Tabs>(
-              groupValue: _tab,
-              backgroundColor: cs.onPrimary,
-              thumbColor: cs.secondary,
-              onValueChanged: (v) {
-                if (v == null) return;
-                setState(() => _tab = v);
-              },
-              children: {
-                Tabs.month: SegItem(text: 'Måned', active: _tab == Tabs.month),
-                Tabs.year: SegItem(text: 'År', active: _tab == Tabs.year),
-                Tabs.lifetime: SegItem(
-                  text: 'Total',
-                  active: _tab == Tabs.lifetime,
-                ),
-              },
+            Material(
+              elevation: 1,
+              borderRadius: const BorderRadius.all(Radius.circular(9)),
+              child: CupertinoSlidingSegmentedControl<Tabs>(
+                padding: const EdgeInsets.all(0),
+                groupValue: _tab,
+                backgroundColor: cs.onPrimary,
+                thumbColor: cs.secondary,
+                onValueChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _tab = v);
+                },
+                children: {
+                  Tabs.month: SegItem(
+                    text: 'Måned',
+                    active: _tab == Tabs.month,
+                  ),
+                  Tabs.year: SegItem(text: 'År', active: _tab == Tabs.year),
+                  Tabs.lifetime: SegItem(
+                    text: 'Total',
+                    active: _tab == Tabs.lifetime,
+                  ),
+                },
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -137,135 +145,115 @@ class _FinanceScreenState extends State<FinanceScreen> {
             const SizedBox(height: 16),
 
             // Recent list (cached Future + per-row Stream so only changed row rebuilds)
-            CustomCard(
-              color: cs.surface,
-              field: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 20,
-                  horizontal: 10,
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.receipt_long_outlined),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Seneste aftaler',
-                            style: AppTypography.b2.copyWith(
-                              color: cs.onSurface,
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () => context.pushNamed(
-                              AppRoute.allAppointments.name,
-                            ),
-                            child: Text(
-                              'Se alle',
-                              style: AppTypography.b3.copyWith(
-                                color: cs.onSurface,
-                              ),
-                            ),
-                          ),
-                        ],
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.receipt_long_outlined),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Seneste aftaler',
+                        style: AppTypography.b2.copyWith(color: cs.onSurface),
                       ),
-                    ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () =>
+                            context.pushNamed(AppRoute.allAppointments.name),
+                        child: Text(
+                          'Se alle',
+                          style: AppTypography.b3.copyWith(color: cs.onSurface),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-                    Selector<AppointmentViewModel, List<AppointmentCardModel>>(
-                      selector: (_, vm) {
-                        final now = DateTime.now();
-                        final r = monthRange(now);
-                        return vm.cardsForRange(r.start, r.end);
-                      },
-                      shouldRebuild: (a, b) {
-                        // Optional: micro-optimization; compare lengths or ids
-                        if (a.length != b.length) return true;
-                        for (var i = 0; i < a.length; i++) {
-                          if (a[i].id != b[i].id ||
-                              a[i].status != b[i].status ||
-                              a[i].price != b[i].price) {
-                            return true;
-                          }
-                        }
-                        return false;
-                      },
-                      builder: (context, items, _) {
-                        final cs = Theme.of(context).colorScheme;
+                Selector<AppointmentViewModel, List<AppointmentCardModel>>(
+                  selector: (_, vm) {
+                    final now = DateTime.now();
+                    final r = monthRange(now);
+                    return vm.cardsForRange(r.start, r.end);
+                  },
+                  shouldRebuild: (a, b) {
+                    // Optional: micro-optimization; compare lengths or ids
+                    if (a.length != b.length) return true;
+                    for (var i = 0; i < a.length; i++) {
+                      if (a[i].id != b[i].id ||
+                          a[i].status != b[i].status ||
+                          a[i].price != b[i].price) {
+                        return true;
+                      }
+                    }
+                    return false;
+                  },
+                  builder: (context, items, _) {
+                    final cs = Theme.of(context).colorScheme;
 
-                        if (items.isEmpty) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                    if (items.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "Ingen kommende aftaler",
+                            style: AppTypography.b3.copyWith(
+                              color: cs.onSurface.withAlpha(150),
                             ),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Ingen kommende aftaler",
-                                style: AppTypography.b3.copyWith(
-                                  color: cs.onSurface.withAlpha(150),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        return ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
                           ),
-                          itemCount: items.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, i) {
-                            final a = items[i];
-                            final dateText = DateFormat(
-                              'd/M',
-                              'da',
-                            ).format(a.time);
+                        ),
+                      );
+                    }
 
-                            return AppointmentStatusCard(
-                              key: ValueKey('appt-${a.id}'),
-                              title: a.clientName,
-                              service: a.serviceName,
-                              dateText: dateText,
-                              price: a.price,
-                              status: a.status,
-                              onSeeDetails: () {
-                                context.pushNamed(
-                                  AppRoute.appointmentDetails.name,
-                                  pathParameters: {'id': a.id},
-                                );
-                              },
-                              onChangeStatus: (newStatus) {
-                                if (PaymentStatusX.fromString(a.status) ==
-                                    newStatus) {
-                                  return;
-                                }
-                                context
-                                    .read<AppointmentViewModel>()
-                                    .updateStatus(
-                                      a.id,
-                                      a.status,
-                                      a.price,
-                                      newStatus.label,
-                                      a.time,
-                                    );
-                              },
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final a = items[i];
+                        final dateText = DateFormat('d/M', 'da').format(a.time);
+
+                        return AppointmentStatusCard(
+                          key: ValueKey('appt-${a.id}'),
+                          title: a.clientName,
+                          service: a.serviceName,
+                          dateText: dateText,
+                          price: a.price,
+                          status: a.status,
+                          onSeeDetails: () {
+                            context.pushNamed(
+                              AppRoute.appointmentDetails.name,
+                              pathParameters: {'id': a.id},
+                            );
+                          },
+                          onChangeStatus: (newStatus) {
+                            if (PaymentStatusX.fromString(a.status) ==
+                                newStatus) {
+                              return;
+                            }
+                            context.read<AppointmentViewModel>().updateStatus(
+                              a.id,
+                              a.status,
+                              a.price,
+                              newStatus.label,
+                              a.time,
                             );
                           },
                         );
                       },
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              ),
+              ],
             ),
           ],
         ),

@@ -127,54 +127,56 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
       progress: 0.1,
       title: "Indtast din kode",
       subtitle: vm.fullPhoneForSession.isEmpty ? null : vm.fullPhoneForSession,
-      fields: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+      fields: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
 
-          child: Pinput(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            length: 6,
-            controller: ctrl,
-            defaultPinTheme: defaultPinTheme,
-            focusedPinTheme: focusedPinTheme,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
+            child: Pinput(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              length: 6,
+              controller: ctrl,
+              defaultPinTheme: defaultPinTheme,
+              focusedPinTheme: focusedPinTheme,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // Send igen
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Modtog du ikke en besked? Prøv igen.',
-                style: AppTypography.b2,
-              ),
-              const SizedBox(height: 8),
+          // Send igen
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Modtog du ikke en besked? Prøv igen.',
+                  style: AppTypography.b2,
+                ),
+                const SizedBox(height: 8),
 
-              Row(
-                children: [
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: (_secondsLeft == 0 && !_loading) ? _resend : null,
-                    child: Text(
-                      _secondsLeft == 0
-                          ? 'Send igen'
-                          : 'Send igen (${_secondsLeft}s)',
-                      style: AppTypography.b2.copyWith(
-                        color: _secondsLeft == 0 ? cs.primary : cs.onSurface,
+                Row(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: (_secondsLeft == 0 && !_loading) ? _resend : null,
+                      child: Text(
+                        _secondsLeft == 0
+                            ? 'Send igen'
+                            : 'Send igen (${_secondsLeft}s)',
+                        style: AppTypography.b2.copyWith(
+                          color: _secondsLeft == 0 ? cs.primary : cs.onSurface,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
       enabled: canContinue,
       isLoading: _loading,
       onContinue: _confirmAndRoute,

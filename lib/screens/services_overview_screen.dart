@@ -302,7 +302,7 @@ class _ChecklistsList extends StatelessWidget {
                         Text("${items[i].name}", style: AppTypography.h4),
                         SizedBox(height: 10),
                         Text(
-                          "${items[i].description}",
+                          items[i].description ?? "---",
                           style: AppTypography.b6,
                         ),
                       ],

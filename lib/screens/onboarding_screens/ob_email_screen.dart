@@ -46,13 +46,12 @@ class _ObEmailScreenState extends State<ObEmailScreen> {
     return OnboardingStepPage(
       progress: 0.25,
       title: 'Hvad er din email?',
-      fields: [
-        ObTextfield(
-          hintText: 'Indtast e-mail',
-          controller: ctrl,
-          autofillHints: const [AutofillHints.email],
-        ),
-      ],
+      fields: ObTextfield(
+        hintText: 'Indtast e-mail',
+        controller: ctrl,
+        autofillHints: const [AutofillHints.email],
+      ),
+
       enabled: canContinue,
       onContinue: () {
         context.goNamed(AppRoute.onboardingName.name);

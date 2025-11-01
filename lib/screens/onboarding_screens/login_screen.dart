@@ -53,7 +53,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         context.goNamed(AppRoute.onboardingPhone.name);
                       },
                       text: 'Login',
-                      textStyle: AppTypography.button1,
+                      textStyle: AppTypography.button1.copyWith(
+                        color: Colors.white,
+                      ),
                       gradient: AppGradients.peach3,
                     ),
                   ),
@@ -70,7 +72,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         context.goNamed(AppRoute.onboardingPhone.name);
                       },
                       text: 'Tilmeld',
-                      textStyle: AppTypography.button1,
+                      textStyle: AppTypography.button1.copyWith(
+                        color: Colors.white,
+                      ),
                       gradient: AppGradients.peach3,
                     ),
                   ),

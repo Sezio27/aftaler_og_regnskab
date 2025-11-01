@@ -14,7 +14,7 @@ class CustomButton extends StatelessWidget {
   final List<BoxShadow>? shadow;
   final TextStyle? textStyle;
   final BoxBorder? borderStroke;
-
+  final bool loading;
   final Widget? icon;
 
   const CustomButton({
@@ -31,6 +31,7 @@ class CustomButton extends StatelessWidget {
     this.icon,
     this.borderStroke,
     this.elevation = 0.5,
+    this.loading = false,
   });
 
   @override
@@ -47,30 +48,46 @@ class CustomButton extends StatelessWidget {
         ) ??
         TextStyle(color: cs.onPrimary);
 
-    return Material(
-      elevation: elevation,
-      color: Colors.transparent,
-      borderRadius: radius,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        //borderRadius: radius,
-        onTap: onTap,
-        child: Ink(
-          height: height,
-          width: width ?? double.infinity,
-          decoration: BoxDecoration(
-            gradient: gradient,
-            color: bgColor,
-            borderRadius: radius,
-            boxShadow: shadow,
-            border: borderStroke,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[icon!, const SizedBox(width: 6)],
-              Text(text, style: labelStyle, textAlign: TextAlign.center),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: shadow,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: Material(
+        elevation: elevation,
+        color: Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          //borderRadius: radius,
+          onTap: onTap,
+          child: Ink(
+            height: height,
+            width: width ?? double.infinity,
+            decoration: BoxDecoration(
+              gradient: gradient,
+              color: bgColor,
+              borderRadius: radius,
+              border: borderStroke,
+            ),
+            child: loading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (icon != null) ...[icon!, const SizedBox(width: 6)],
+                      Text(
+                        text,
+                        style: labelStyle,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
