@@ -106,11 +106,9 @@ class ChecklistViewModel extends ChangeNotifier {
     if (missing.isEmpty) return;
 
     final res = await _cache.fetchChecklists(missing);
-    // If any non-null came in, notify so UI can rebuild
     if (res.values.any((v) => v != null)) notifyListeners();
   }
 
-  // ------------ Create (single write) ------------
   Future<bool> addChecklist({
     required String? name,
     String? description,
@@ -166,7 +164,6 @@ class ChecklistViewModel extends ChangeNotifier {
     );
   }
 
-  // ------------ Update (fields only) ------------
   Future<bool> updateChecklistFields(
     String id, {
     String? name,
@@ -228,12 +225,12 @@ class ChecklistViewModel extends ChangeNotifier {
     }
 
     void putPoints(List<String>? pts) {
-      if (pts == null) return; // no change
+      if (pts == null) return;
       final cleaned = <String>[
         for (final p in pts)
           if (p.trim().isNotEmpty) p.trim(),
       ];
-      fields['points'] = cleaned; // write [] if all empty
+      fields['points'] = cleaned;
     }
 
     put('name', name);
@@ -241,7 +238,6 @@ class ChecklistViewModel extends ChangeNotifier {
     putPoints(points);
   }
 
-  // ------------ Delete ------------
   Future<void> delete(String id) async {
     await _repo.deleteChecklist(id);
     _all = _all.where((c) => c.id != id).toList();

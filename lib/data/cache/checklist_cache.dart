@@ -8,13 +8,11 @@ class ChecklistCache {
 
   final Map<String, ChecklistModel?> _cache = {};
 
-  /// Store a single client in the cache.
   void cacheChecklist(ChecklistModel model) {
     final id = model.id;
     if (id != null) _cache[id] = model;
   }
 
-  /// Store multiple clients in the cache at once.
   void cacheChecklists(Iterable<ChecklistModel> models) {
     for (final c in models) {
       final id = c.id;

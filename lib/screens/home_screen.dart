@@ -1,5 +1,4 @@
-﻿// lib/screens/home_screen.dart
-import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
+﻿import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
@@ -120,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 2),
 
-            // Upcoming list fed from VM memory
             Selector<
               AppointmentViewModel,
               ({bool ready, List<AppointmentCardModel> items})
@@ -129,7 +127,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ready: vm.isReady,
                 items: vm.cardsForRange(twoWeek.start, twoWeek.end),
               ),
-              // keep it simple: let it rebuild whenever the tuple changes
               builder: (context, data, _) {
                 if (!data.ready) {
                   return const Padding(

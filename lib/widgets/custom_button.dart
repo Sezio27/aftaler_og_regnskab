@@ -59,7 +59,6 @@ class CustomButton extends StatelessWidget {
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          //borderRadius: radius,
           onTap: onTap,
           child: Ink(
             height: height,

@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Immutable state for the onboarding flow.
-/// Keep this a plain data object (no Firebase/UI here).
 @immutable
 class OnboardingModel {
   final String? phone;

@@ -39,12 +39,10 @@ class OnboardingStepPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // progress
                 StepBar(value: progress),
 
                 const SizedBox(height: 16),
 
-                //Back button
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () {
@@ -58,13 +56,11 @@ class OnboardingStepPage extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                //Question - Title
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(title, style: AppTypography.h2),
                 ),
 
-                // Optional subtitle
                 if (subtitle != null) ...[
                   const SizedBox(height: 10),
                   Padding(

@@ -68,13 +68,11 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
       ? 'dd/mm/år'
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  // --- Simple client-side filters (cheap, easy to understand) ---
   bool _statusMatches(String? apptStatus) {
     if (_status == PaymentStatus.all) return true;
     return PaymentStatusX.fromString(apptStatus) == _status;
   }
 
-  // NOTE: You didn’t share how “type” is stored. For now we keep all.
   bool _typeMatches(ApptType sel, AppointmentCardModel a) {
     if (sel == ApptType.all) return true;
     return sel == ApptType.business ? a.isBusiness : !a.isBusiness;
@@ -89,7 +87,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
 
   void _reloadRangeIfValid() {
     if (!_to.isBefore(_from)) {
-      // optional: scroll to top so the user sees new results
       if (_scrollCtrl.hasClients) _scrollCtrl.jumpTo(0);
       context.read<AppointmentViewModel>().beginListRange(_from, _to);
     }
@@ -113,7 +110,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
     );
     final hPad = LayoutMetrics.horizontalPadding(context);
 
-    // Filter visible items for the list (status/type/query)
     final items = listCards.where((a) {
       return _statusMatches(a.status) &&
           _typeMatches(_type, a) &&
@@ -131,10 +127,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
         controller: _scrollCtrl,
 
         itemCount: (() {
-          // 1 filter card + 1 results header +  (items or a single "state" row) + optional loader
-          final itemsCount = items.isNotEmpty
-              ? items.length
-              : 1; // one row for empty/loading
+          final itemsCount = items.isNotEmpty ? items.length : 1;
           final loaderCount = listLoading ? 1 : 0;
           return 1 + 1 + itemsCount + loaderCount;
         })(),
@@ -174,7 +167,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Filters row 1
                   Row(
                     children: [
                       Expanded(
@@ -196,7 +188,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Filters row 2
                   Row(
                     children: [
                       Expanded(
@@ -213,7 +204,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                             );
                             if (picked != null) {
                               setState(() => _from = picked);
-                              _reloadRangeIfValid(); // <— auto fetch
+                              _reloadRangeIfValid();
                             }
                           },
                         ),
@@ -233,7 +224,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                             );
                             if (picked != null) {
                               setState(() => _to = picked);
-                              _reloadRangeIfValid(); // <— auto fetch
+                              _reloadRangeIfValid();
                             }
                           },
                         ),
@@ -260,12 +251,9 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
             );
           }
 
-          // Adjust index for items section
           final itemIndex = index - 2;
 
-          // 2) LIST CONTENT (empty/loading state or real items)
           if (items.isEmpty) {
-            // Single row representing empty/loading state
             if (listLoading) {
               return const Padding(
                 padding: EdgeInsets.all(24),
@@ -286,7 +274,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
             );
           }
 
-          // When we have items:
           if (itemIndex < items.length) {
             final a = items[itemIndex];
             final dateText = DateFormat('d/M/yy', 'da').format(a.time);
@@ -317,7 +304,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
             );
           }
 
-          // 3) FOOTER LOADER (optional, only when more to load)
           final isLoaderRow = (itemIndex == items.length) && listLoading;
           if (isLoaderRow) {
             return const Padding(
@@ -326,7 +312,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
             );
           }
 
-          // Fallback: nothing
           return const SizedBox.shrink();
         },
       ),
@@ -343,7 +328,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // RESET
                 FloatingActionButton.small(
                   heroTag: 'fab-reset',
                   tooltip: 'Reset counters',
@@ -351,7 +335,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                   child: const Icon(Icons.restart_alt),
                 ),
                 const SizedBox(height: 8),
-                // SEED
+
                 FloatingActionButton.small(
                   heroTag: 'fab-seed',
                   tooltip: 'Seed demo data',
@@ -359,7 +343,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                   child: const Icon(Icons.dataset),
                 ),
                 const SizedBox(height: 8),
-                // LOG
+
                 FloatingActionButton.small(
                   heroTag: 'fab-log',
                   tooltip: 'Log BENCH',
@@ -402,25 +386,19 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
 
       final now = DateTime.now();
       final months = [
-        mStart(now), // M0 (LIVE)
-        mStart(addMonths(now, 1)), // M+1 (LIVE)
-        mStart(addMonths(now, 2)), // M+2 (NON-LIVE initially)
-        mStart(addMonths(now, 3)), // M+3 (NON-LIVE initially)
+        mStart(now),
+        mStart(addMonths(now, 1)),
+        mStart(addMonths(now, 2)),
+        mStart(addMonths(now, 3)),
       ];
 
       List<AppointmentModel> monthDocs(DateTime start) {
-        // 5 docs per month, safe days inside month
         const days = [3, 10, 17, 24, 27];
         return List.generate(5, (i) {
-          final dt = DateTime(
-            start.year,
-            start.month,
-            days[i],
-            10 + i,
-          ); // 10:00..14:00
+          final dt = DateTime(start.year, start.month, days[i], 10 + i);
           return AppointmentModel(
             dateTime: dt,
-            // Only fields needed for our bench
+
             status: 'uninvoiced',
             checklistIds: const [],
             imageUrls: const [],
@@ -428,7 +406,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
         });
       }
 
-      // Commit per-month to minimize snapshot churn (4 commits total)
       for (final m in months) {
         await repo.createAppointmentsBatch(monthDocs(m));
       }
@@ -478,14 +455,10 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
       final repo = context.read<AppointmentRepository>();
       final vm = context.read<AppointmentViewModel>();
 
-      // Do the nuke
       final deleted = await repo.deleteAllAppointments();
 
-      // Rebuild list state so stale paged data disappears
-      // (live months will also clear via listeners)
       vm.beginListRange(_from, _to);
 
-      // Optional: reset your bench counters after a nuke
       bench
         ?..pagedReads = 0
         ..liveFirstReads = 0

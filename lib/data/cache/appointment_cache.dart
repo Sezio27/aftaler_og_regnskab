@@ -7,14 +7,11 @@ class AppointmentCache {
   final AppointmentRepository _appointmentRepo;
 
   final Map<String, AppointmentModel?> _cache = {};
-
-  /// Store a single client in the cache.
   void cacheAppointment(AppointmentModel model) {
     final id = model.id;
     if (id != null) _cache[id] = model;
   }
 
-  /// Store multiple clients in the cache at once.
   void cacheAppointments(Iterable<AppointmentModel> models) {
     for (final a in models) {
       final id = a.id;

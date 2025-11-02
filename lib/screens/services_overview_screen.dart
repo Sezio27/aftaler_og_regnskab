@@ -91,7 +91,6 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
 
                 const SizedBox(height: 16),
 
-                //Search
                 CupertinoSearchTextField(
                   controller: _searchCtrl,
 
@@ -118,7 +117,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
                 ),
 
                 const SizedBox(height: 24),
-                // Body
+
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 180),
@@ -133,7 +132,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
 
           Positioned(
             right: 16,
-            bottom: 36, // keep above your bottom nav
+            bottom: 36,
             child: FloatingActionButton(
               onPressed: () async {
                 if (_tab == Tabs.services) {

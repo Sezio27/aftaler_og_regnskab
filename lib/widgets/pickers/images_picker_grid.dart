@@ -1,9 +1,6 @@
-﻿// lib/widgets/images_picker_grid.dart
-import 'dart:io';
-import 'dart:typed_data';
+﻿import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:aftaler_og_regnskab/widgets/pickers/image_picker_helper.dart';
 
 class ImagesPickerGrid extends StatefulWidget {
@@ -56,8 +53,6 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // Empty state: just a "+ Tilføj billeder" button
-
     if (_images.isEmpty) {
       return Center(
         child: widget.viewOnly
@@ -73,7 +68,6 @@ class _ImagesPickerGridState extends State<ImagesPickerGrid> {
       );
     }
 
-    // With images: grid + "+ Tilføj" underneath
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

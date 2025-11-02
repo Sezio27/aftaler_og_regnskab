@@ -36,7 +36,7 @@ class ChecklistTile extends StatelessWidget {
         child: Row(
           children: [
             Transform.scale(
-              scale: 1.3, // 1.0 = default; try 1.2–1.6
+              scale: 1.3,
               child: CupertinoCheckbox(
                 value: selected,
                 onChanged: (v) => onChanged(v ?? false),

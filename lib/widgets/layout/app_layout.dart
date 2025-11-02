@@ -32,7 +32,6 @@ class AppLayout extends StatelessWidget {
 
       extendBody: true,
 
-      // Horizontal: 1 | 10 | 1
       body: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: LayoutMetrics.horizontalPadding(context),
@@ -40,13 +39,12 @@ class AppLayout extends StatelessWidget {
         child: child,
       ),
 
-      // Nav bar spans full width; inner content clamped; fixed sizes per your rule
       bottomNavigationBar: showNavBar
           ? AppBottomNavBar(
               currentIndex: idx,
               onItemSelected: (i) => goToTab(context, i),
               maxContentWidth: maxW,
-              iconSize: 24, // keep icon/text size constant across devices
+              iconSize: 24,
             )
           : null,
     );

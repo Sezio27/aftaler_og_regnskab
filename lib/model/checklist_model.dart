@@ -5,8 +5,6 @@ class ChecklistModel {
   final String? id;
   final String? name;
   final String? description;
-
-  /// Ordered list of point texts (index = order).
   final List<String> points;
 
   const ChecklistModel({

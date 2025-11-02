@@ -2,7 +2,7 @@ import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:flutter/material.dart';
 
 class StepBar extends StatelessWidget {
-  final double value; // 0.0..1.0
+  final double value;
   const StepBar({super.key, required this.value});
 
   @override

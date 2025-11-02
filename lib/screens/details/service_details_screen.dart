@@ -75,7 +75,7 @@ class _ServiceDetailsViewState extends State<_ServiceDetailsView> {
     final hPad = LayoutMetrics.horizontalPadding(context);
 
     return SingleChildScrollView(
-      key: const PageStorageKey('serviceDetailsScroll'), // keeps scroll offset
+      key: const PageStorageKey('serviceDetailsScroll'),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           hPad,
@@ -136,18 +136,16 @@ class _ServiceReadPane extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                //Image
                 BannerImagePicker(
                   url: service.image,
                   aspectRatio: 16 / 9,
                   borderRadius: 12,
                 ),
                 const SizedBox(height: 40),
-                //Title
+
                 Text(service.name!, style: AppTypography.h3),
                 const SizedBox(height: 40),
 
-                // Price
                 _InfoRow(
                   icon: Icons.sell_outlined,
                   label: 'Pris',
@@ -156,7 +154,6 @@ class _ServiceReadPane extends StatelessWidget {
 
                 const SizedBox(height: 26),
 
-                // Duration
                 _InfoRow(
                   icon: Icons.schedule,
                   label: 'Varighed',
@@ -167,7 +164,6 @@ class _ServiceReadPane extends StatelessWidget {
 
                 const SizedBox(height: 40),
 
-                // Description
                 if ((service.description ?? '').isNotEmpty) ...[
                   Text(service.description!, style: AppTypography.b2),
                 ] else ...[
@@ -249,7 +245,7 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
         removeImage: _removeImage,
       ),
       errorText: () => context.read<ServiceViewModel>().error ?? 'Ukendt fejl',
-      onSuccess: widget.onSaved, // flip back to read mode
+      onSuccess: widget.onSaved,
     );
   }
 
@@ -301,7 +297,6 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
                   ),
                   const SizedBox(height: 18),
 
-                  // Price
                   SoftTextField(
                     hintText: 'Pris (fx 1200 kr)',
                     controller: _price,
@@ -320,7 +315,6 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
                   ),
                   const SizedBox(height: 18),
 
-                  // Duration
                   SoftTextField(
                     hintText: 'Varighed (timer, fx 1.5)',
                     controller: _dur,
@@ -339,7 +333,6 @@ class __ServiceEditPaneState extends State<_ServiceEditPane> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Description
                   SoftTextField(
                     hintText: 'Beskrivelse',
                     controller: _desc,

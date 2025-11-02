@@ -6,7 +6,7 @@ class AppTheme {
 
   static final ColorScheme _lightScheme =
       ColorScheme.fromSeed(
-        seedColor: AppColors.peach, // your peach
+        seedColor: AppColors.peach,
         brightness: Brightness.light,
       ).copyWith(
         primary: AppColors.peach,

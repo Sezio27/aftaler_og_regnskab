@@ -1,4 +1,3 @@
-import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

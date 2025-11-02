@@ -76,7 +76,7 @@ class _ClientDetailsViewState extends State<_ClientDetailsView> {
     final hPad = LayoutMetrics.horizontalPadding(context);
 
     return SingleChildScrollView(
-      key: const PageStorageKey('clientDetailsScroll'), // keeps scroll offset
+      key: const PageStorageKey('clientDetailsScroll'),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           hPad,
@@ -306,7 +306,7 @@ class __ClientEditPaneState extends State<_ClientEditPane> {
         removeImage: _removeImage,
       ),
       errorText: () => context.read<ClientViewModel>().error ?? 'Ukendt fejl',
-      onSuccess: widget.onSaved, // flip back to read mode
+      onSuccess: widget.onSaved,
     );
   }
 

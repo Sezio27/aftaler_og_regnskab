@@ -31,9 +31,6 @@ class AppointmentViewModel extends ChangeNotifier {
     required this.notifications,
   });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Dependencies
-  // ────────────────────────────────────────────────────────────────────────────
   final AppointmentRepository _repo;
   final ClientCache clientCache;
   final ServiceCache serviceCache;
@@ -43,9 +40,6 @@ class AppointmentViewModel extends ChangeNotifier {
   final FinanceViewModel financeVM;
   final AppointmentNotifications notifications;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Simple UI state flags
-  // ────────────────────────────────────────────────────────────────────────────
   bool isReady = false;
   bool _isSaving = false;
   String? _lastErrorMessage;
@@ -53,9 +47,6 @@ class AppointmentViewModel extends ChangeNotifier {
   bool get saving => _isSaving;
   String? get error => _lastErrorMessage;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Range subscription control
-  // ────────────────────────────────────────────────────────────────────────────
   StreamSubscription<List<AppointmentModel>>? _initialSubscription;
   final Map<DateTime, StreamSubscription<List<AppointmentModel>>>
   _windowSubscriptions = {};
@@ -66,9 +57,6 @@ class AppointmentViewModel extends ChangeNotifier {
   DateTime? _initialEnd;
   DateTime? _activeMonthStart;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // List mode (paged months)
-  // ────────────────────────────────────────────────────────────────────────────
   DateTime? _listStart, _listEnd;
   bool _listLoading = false;
   bool _listHasMore = false;
@@ -98,18 +86,14 @@ class AppointmentViewModel extends ChangeNotifier {
   Future<void> subscribeToAppointment(String id) async {
     if (_appointmentSubscriptions.containsKey(id)) return;
 
-    // If we already have it in cache and it's covered, skip opening a per-doc sub.
     final cached = apptCache.getAppointment(id);
     if (cached != null && _isSubCovered(cached.dateTime)) {
       return;
     }
 
-    // Else attach a per-doc subscription. If/when coverage becomes true,
-    // we'll auto-cancel (either here on first tick or in _handleSnapshot).
     final sub = _repo.watchAppointment(id).listen((doc) {
       if (doc != null) {
         apptCache.cacheAppointment(doc);
-        // If the document's date is within coverage, drop this listener.
         if (_isSubCovered(doc.dateTime)) {
           _appointmentSubscriptions.remove(id)?.cancel();
           notifyListeners();
@@ -226,9 +210,6 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // CRUD methods
-  // ────────────────────────────────────────────────────────────────────────────
   Future<bool> addAppointment({
     required String? clientId,
     required String? serviceId,
@@ -396,7 +377,6 @@ class AppointmentViewModel extends ChangeNotifier {
       if (v != null) fields[key] = Timestamp.fromDate(v);
     }
 
-    // Scalars
     putStr('clientId', clientId);
     putStr('serviceId', serviceId);
     putStr('location', location);
@@ -588,10 +568,6 @@ class AppointmentViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Query methods
-  // ────────────────────────────────────────────────────────────────────────────
-
   List<AppointmentModel> getAppointmentsInRange(DateTime start, DateTime end) {
     return apptCache.getAppointmentsBetween(
       dateOnly(start),
@@ -685,14 +661,9 @@ class AppointmentViewModel extends ChangeNotifier {
     return true;
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Notification
-  // ────────────────────────────────────────────────────────────────────────────
-
   Future<void> rescheduleTodayAndFuture(NotificationService ns) async {
     await ns.cancelAll();
 
-    // Today
     final todayAppts = _dayAppts(DateTime.now());
     await notifications.syncToday(appointments: todayAppts);
 
@@ -717,7 +688,6 @@ class AppointmentViewModel extends ChangeNotifier {
       for (final appt in items) {
         if (appt.id == null || appt.dateTime == null) continue;
 
-        // Schedule via your existing coordinator
         await notifications.onAppointmentChanged(appt);
       }
 
@@ -726,9 +696,6 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Checklist methods
-  // ────────────────────────────────────────────────────────────────────────────
   Stream<Map<String, Set<int>>> checklistProgressStream(String appointmentId) =>
       _repo.watchChecklistProgress(appointmentId);
 
@@ -736,10 +703,6 @@ class AppointmentViewModel extends ChangeNotifier {
     required String appointmentId,
     required Map<String, Set<int>> progress,
   }) => _repo.setAllChecklistProgress(appointmentId, progress);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // List mode methods
-  // ────────────────────────────────────────────────────────────────────────────
 
   Future<void> beginListRange(DateTime start, DateTime end) async {
     _listStart = dateOnly(start);

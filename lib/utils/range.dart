@@ -70,15 +70,12 @@ bool isInCurrentYear(DateTime date) {
   return d.year == now.year;
 }
 
-// -------- ISO week utilities --------
-// ISO week number: week containing Thursday is week of the year.
 int isoWeekNumber(DateTime date) {
   final thursday = toThursday(date);
   final firstThursday = toThursday(DateTime(thursday.year, 1, 4));
   return (thursday.difference(mondayOf(firstThursday)).inDays ~/ 7) + 1;
 }
 
-// ISO week-year (week may belong to prev/next year)
 int weekYear(DateTime date) => toThursday(date).year;
 
 DateTime toThursday(DateTime d) => DateTime(

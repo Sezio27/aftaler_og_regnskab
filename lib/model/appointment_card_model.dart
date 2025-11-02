@@ -1,4 +1,3 @@
-// lib/model/appointment_card_model.dart
 import 'package:flutter/foundation.dart';
 
 enum AppointmentStatus { notInvoiced, invoiced, cancelled }

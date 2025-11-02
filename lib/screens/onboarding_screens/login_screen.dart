@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final logoPath = isDark ? 'assets/logo_white.png' : 'assets/logo_black.png';
 
@@ -34,7 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
 
                 children: [
-                  //Logo
                   SizedBox(
                     width: 200,
                     child: Image.asset(logoPath, fit: BoxFit.fitWidth),
@@ -42,7 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 50),
 
-                  //Buttons
                   SizedBox(
                     height: 48,
                     child: CustomButton(

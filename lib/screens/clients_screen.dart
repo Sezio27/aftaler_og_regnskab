@@ -77,7 +77,6 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
                 const SizedBox(height: 12),
 
-                //Search
                 CupertinoSearchTextField(
                   controller: _searchCtrl,
                   placeholder: 'Søg',
@@ -111,11 +110,9 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 180),
                     layoutBuilder: (currentChild, previousChildren) {
-                      // Fill the available height instead of centering
                       return Stack(
-                        fit: StackFit.expand, // <-- important
+                        fit: StackFit.expand,
                         children: [
-                          // keep previous children for the outgoing animation
                           ...previousChildren,
                           if (currentChild != null) currentChild,
                         ],
@@ -154,7 +151,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
           Positioned(
             right: 16,
-            bottom: 36, // keep above your bottom nav
+            bottom: 36,
             child: FloatingActionButton(
               onPressed: () async {
                 await showOverlayPanel(

@@ -2,8 +2,6 @@ import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// Compact button + Cupertino wheel time picker modal.
-/// Rename/file as you like.
 class TimePicker extends StatelessWidget {
   const TimePicker({
     super.key,
@@ -36,7 +34,6 @@ class TimePicker extends StatelessWidget {
     return showCupertinoModalPopup<TimeOfDay>(
       context: context,
       builder: (popupContext) => Material(
-        // Material for TextButton ink + theme
         color: Theme.of(context).colorScheme.surface,
         child: SafeArea(
           top: false,
@@ -44,7 +41,6 @@ class TimePicker extends StatelessWidget {
             height: modalHeight,
             child: Column(
               children: [
-                // Action bar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -61,7 +57,7 @@ class TimePicker extends StatelessWidget {
                   ],
                 ),
                 const Divider(height: 0),
-                // Wheel
+
                 Expanded(
                   child: CupertinoDatePicker(
                     mode: CupertinoDatePickerMode.time,

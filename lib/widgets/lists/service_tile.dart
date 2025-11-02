@@ -112,12 +112,12 @@ class ServiceThumb extends StatelessWidget {
     this.imageUrl,
     this.name,
     this.size = 56,
-    this.radius = 8, // set to 0 for hard square
+    this.radius = 8,
     this.placeholderIcon = Icons.hotel_class,
   });
 
   final String? imageUrl;
-  final String? name; // optional, if you ever want to show initials, etc.
+  final String? name;
   final double size;
   final double radius;
   final IconData placeholderIcon;

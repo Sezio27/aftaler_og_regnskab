@@ -1,9 +1,7 @@
-// lib/widgets/date_picker.dart
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// Minimal, reusable button-style date picker (kept for places where you want a control).
 class DatePicker extends StatelessWidget {
   const DatePicker({
     super.key,
@@ -84,7 +82,6 @@ extension DatePickerContextExt on BuildContext {
               height: modalHeight,
               child: Column(
                 children: [
-                  // Toolbar
                   SizedBox(
                     height: 44,
                     child: Row(
@@ -102,7 +99,7 @@ extension DatePickerContextExt on BuildContext {
                     ),
                   ),
                   const Divider(height: 0),
-                  // Wheel
+
                   Expanded(
                     child: CupertinoDatePicker(
                       mode: CupertinoDatePickerMode.date,

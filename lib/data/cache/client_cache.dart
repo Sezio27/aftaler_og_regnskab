@@ -8,13 +8,11 @@ class ClientCache {
 
   final Map<String, ClientModel?> _clientCache = {};
 
-  /// Store a single client in the cache.
   void cacheClient(ClientModel model) {
     final id = model.id;
     if (id != null) _clientCache[id] = model;
   }
 
-  /// Store multiple clients in the cache at once.
   void cacheClients(Iterable<ClientModel> models) {
     for (final c in models) {
       final id = c.id;

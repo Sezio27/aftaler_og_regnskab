@@ -7,8 +7,8 @@ class LayoutMetrics {
   static const double navBarHeightTablet = 120;
   static const double topBarHeightTablet = 180;
 
-  static const double minHPadPhone = 14; // or 20
-  static const double minHPadTablet = 32; // or 40
+  static const double minHPadPhone = 14;
+  static const double minHPadTablet = 32;
 
   static bool isTablet(BuildContext ctx) =>
       MediaQuery.of(ctx).size.shortestSide >= tabletBreakpoint;

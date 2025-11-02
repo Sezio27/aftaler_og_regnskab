@@ -26,7 +26,6 @@ class _ObForretningNavnScreenState extends State<ObBusinessLocationScreen> {
   void initState() {
     super.initState();
 
-    // Pre-fill from VM so values persist if user navigates back.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = context.read<OnboardingViewModel>();
       ctrl_address.text = vm.address ?? '';

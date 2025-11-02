@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTypography {
-  AppTypography._(); // no instances
-  /// Base helper to set family/spacing consistently
+  AppTypography._();
   static TextStyle _raleway(
     double size,
     FontWeight w, {
@@ -13,7 +12,7 @@ class AppTypography {
     fontSize: size,
     fontWeight: w,
     height: height ?? 1.20,
-    letterSpacing: letter ?? -0.2, // tighter headings
+    letterSpacing: letter ?? -0.2,
   );
 
   static TextStyle _inter(
@@ -28,7 +27,6 @@ class AppTypography {
     letterSpacing: letter ?? 0.0,
   );
 
-  // Headings
   static final TextStyle h1 = _raleway(28, FontWeight.w700);
   static final TextStyle h2 = _raleway(20, FontWeight.w600);
   static final TextStyle h3 = _raleway(18, FontWeight.w600);

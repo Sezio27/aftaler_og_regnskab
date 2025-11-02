@@ -1,13 +1,7 @@
-// lib/services/image_storage.dart
-
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:image_picker/image_picker.dart';
 
 class ImageStorage {
   ImageStorage({FirebaseAuth? auth, FirebaseStorage? storage})
@@ -36,12 +30,11 @@ class ImageStorage {
     try {
       final snap = await ref
           .putData(image.bytes, meta)
-          .timeout(const Duration(seconds: 10)); // don’t hang forever
+          .timeout(const Duration(seconds: 10));
       return await snap.ref.getDownloadURL();
     } on TimeoutException {
       throw Exception('Billedupload tog for lang tid (timeout). Tjek netværk.');
     } on FirebaseException catch (e) {
-      // Surface readable Storage errors (rules, bucket, etc.)
       throw Exception('Storage-fejl: ${e.code} ${e.message ?? ""}'.trim());
     }
   }
@@ -59,12 +52,11 @@ class ImageStorage {
     try {
       final snap = await ref
           .putData(image.bytes, meta)
-          .timeout(const Duration(seconds: 10)); // don’t hang forever
+          .timeout(const Duration(seconds: 10));
       return await snap.ref.getDownloadURL();
     } on TimeoutException {
       throw Exception('Billedupload tog for lang tid (timeout). Tjek netværk.');
     } on FirebaseException catch (e) {
-      // Surface readable Storage errors (rules, bucket, etc.)
       throw Exception('Storage-fejl: ${e.code} ${e.message ?? ""}'.trim());
     }
   }
@@ -102,7 +94,7 @@ class ImageStorage {
       }());
     }
 
-    return Future.wait(uploads); // <- returns all download URLs
+    return Future.wait(uploads);
   }
 
   Future<void> deleteClientImage(String clientId) async {
@@ -111,7 +103,6 @@ class ImageStorage {
     try {
       await ref.delete();
     } on FirebaseException catch (e) {
-      // If there isn't an object to delete, treat it as already gone.
       if (e.code == 'object-not-found') return;
       rethrow;
     }

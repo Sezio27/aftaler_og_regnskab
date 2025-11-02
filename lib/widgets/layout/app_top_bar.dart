@@ -40,7 +40,6 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
             child: Image.asset(logoPath, fit: BoxFit.fitWidth),
           );
 
-    // Reusable: title/logo + optional subtitle
     Widget titleBlock({required bool centered}) {
       return Column(
         mainAxisSize: MainAxisSize.min,

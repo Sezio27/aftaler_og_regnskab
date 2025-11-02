@@ -6,19 +6,12 @@ class AppointmentModel {
   final String? clientId;
   final String? serviceId;
   final List<String> checklistIds;
-
-  /// When the appointment happens (local time on device).
   final DateTime? dateTime;
   final DateTime? payDate;
-
-  /// Stored, resolved price (custom price if provided; otherwise service price; otherwise null).
   final double? price;
-
   final String? location;
   final String? note;
   final List<String> imageUrls;
-
-  /// 'paid' | 'pending' | 'expired' | 'not_invoiced'
   final String? status;
 
   const AppointmentModel({

@@ -39,21 +39,17 @@ class CalendarViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------- Week state (Monday-based) --------
-  DateTime _visibleWeek; // Monday of visible week
+  DateTime _visibleWeek;
   DateTime get visibleWeek => _visibleWeek;
 
-  /// ISO-like title: "Uge 1, 2026"
   String get weekTitle =>
       'Uge ${isoWeekNumber(_visibleWeek)}, ${weekYear(_visibleWeek)}';
 
-  /// Use the ISO anchor (Thursday) so month/year line up with week-year.
   String get weekSubTitle {
     final anchor = toThursday(_visibleWeek);
     return DateFormat('MMMM y', 'da').format(anchor);
   }
 
-  /// The 7 dates (Mon..Sun) of the visible week.
   List<DateTime> get weekDays =>
       List.generate(7, (i) => _visibleWeek.add(Duration(days: i)));
 
@@ -77,7 +73,6 @@ class CalendarViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -------- Tabs --------
   Tabs _tab = Tabs.month;
   Tabs get tab => _tab;
   void setTab(Tabs value) {

@@ -42,7 +42,7 @@ class _ClientListOverlayState extends State<ClientListOverlay> {
 
   @override
   void dispose() {
-    _vm.clearSearch(); // <- no BuildContext used
+    _vm.clearSearch();
     _searchCtrl.dispose();
     super.dispose();
   }

@@ -16,22 +16,10 @@ class FirebaseAuthMethods {
   final FirebaseAuth _auth;
   FirebaseAuthMethods(this._auth);
 
-  // FOR EVERY FUNCTION HERE
-  // POP THE ROUTE USING: Navigator.of(context).pushNamedAndRemoveUntil('/', (Route<dynamic> route) => false);
-
-  // GET USER DATA
-  // using null check operator since this method should be called only
-  // when the user is logged in
   User get user => _auth.currentUser!;
 
-  // STATE PERSISTENCE STREAM
   Stream<User?> get authState => FirebaseAuth.instance.authStateChanges();
-  // OTHER WAYS (depends on use case):
-  // Stream get authState => FirebaseAuth.instance.userChanges();
-  // Stream get authState => FirebaseAuth.instance.idTokenChanges();
-  // KNOW MORE ABOUT THEM HERE: https://firebase.flutter.dev/docs/auth/start#auth-state
 
-  // PHONE SIGN IN
   Future<(String verificationId, int? resendToken)> startPhoneVerification(
     String phoneNumber, {
     int? forceResendingToken,
@@ -45,12 +33,9 @@ class FirebaseAuthMethods {
         timeout: timeout,
         forceResendingToken: forceResendingToken,
         verificationCompleted: (PhoneAuthCredential cred) async {
-          // Android instant verification / auto-retrieval
           try {
             await _auth.signInWithCredential(cred);
-          } catch (_) {
-            /* ignore */
-          }
+          } catch (_) {}
         },
         verificationFailed: (FirebaseAuthException e) {
           if (!completer.isCompleted) completer.completeError(e);
@@ -61,7 +46,6 @@ class FirebaseAuthMethods {
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          // Still return an id if timeout fires before codeSent (rare)
           if (!completer.isCompleted) {
             completer.complete((verificationId, null));
           }
@@ -71,7 +55,6 @@ class FirebaseAuthMethods {
       if (!completer.isCompleted) completer.completeError(e);
     }
 
-    // ✅ Always returns a value or throws — no “body might complete normally”
     return completer.future;
   }
 
@@ -86,8 +69,6 @@ class FirebaseAuthMethods {
     return _auth.signInWithCredential(cred);
   }
 
-  // SIGN OUT
-
   Future<void> signOut(BuildContext context) async {
     try {
       await _auth.signOut();
@@ -100,14 +81,11 @@ class FirebaseAuthMethods {
     }
   }
 
-  // DELETE ACCOUNT
   Future<void> deleteAccount(BuildContext context) async {
     try {
       await _auth.currentUser!.delete();
     } on FirebaseAuthException catch (e) {
-      showSnackBar(context, e.message!); // Displaying the error message
-      // if an error of requires-recent-login is thrown, make sure to log
-      // in user again and then delete account.
+      showSnackBar(context, e.message!);
     }
   }
 }

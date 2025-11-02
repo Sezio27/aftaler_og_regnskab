@@ -43,7 +43,6 @@ class CustomSearchBar extends StatelessWidget {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              // use your theme color if you want a subtle focus tint
               color: Colors.black.withOpacity(0.35),
               width: 1.2,
             ),

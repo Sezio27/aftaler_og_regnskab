@@ -103,7 +103,6 @@ class _AddServicePanelState extends State<AddServicePanel> {
           spacing: 14,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Stack(
@@ -143,7 +142,6 @@ class _AddServicePanelState extends State<AddServicePanel> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Fields
                 Expanded(
                   child: Column(
                     children: [

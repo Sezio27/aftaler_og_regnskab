@@ -11,7 +11,6 @@ class FinanceViewModel extends ChangeNotifier {
 
   final FinanceSummaryRepository _summaryRepo;
 
-  // Use FinanceModel instead of FinanceTotals
   final Map<Segment, FinanceModel> _financeModels = {
     Segment.month: FinanceModel(),
     Segment.year: FinanceModel(),
@@ -148,22 +147,16 @@ class FinanceViewModel extends ChangeNotifier {
       final isIn = inSeg(seg, newDate);
 
       if (wasIn && !isIn) {
-        // moved OUT of this segment
-
         totalCount--;
         if (wasPaid) paidSum -= oldPrice;
 
         counts[oldStatus] = (counts[oldStatus] ?? 0) - 1;
       } else if (!wasIn && isIn) {
-        // moved IN to this segment
-
         totalCount++;
         if (isPaid) paidSum += newPrice;
 
         counts[newStatus] = (counts[newStatus] ?? 0) + 1;
       } else if (wasIn && isIn) {
-        // stayed within this segment
-
         if (wasPaid && isPaid) {
           paidSum += (newPrice - oldPrice);
         } else if (wasPaid && !isPaid) {

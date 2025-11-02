@@ -65,9 +65,7 @@ class StatusPill extends StatelessWidget {
     return Expanded(
       child: Container(
         decoration: BoxDecoration(
-          color: selected
-              ? statusColor(label)
-              : cs.onPrimary, // filled vs unfilled
+          color: selected ? statusColor(label) : cs.onPrimary,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? statusColor(label) : cs.onSurface.withAlpha(80),
@@ -81,7 +79,7 @@ class StatusPill extends StatelessWidget {
           child: Text(
             label,
             style: AppTypography.button2.copyWith(
-              color: selected ? Colors.white : cs.onSurface, // text color
+              color: selected ? Colors.white : cs.onSurface,
             ),
           ),
         ),
@@ -105,7 +103,7 @@ class StatusIconRound extends StatelessWidget {
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       child: Container(
-        key: ValueKey(status), // animate on change
+        key: ValueKey(status),
         width: 34,
         height: 34,
         decoration: BoxDecoration(color: bg, shape: BoxShape.circle),

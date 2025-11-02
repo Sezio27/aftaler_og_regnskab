@@ -770,14 +770,14 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
             note: _noteCtrl.text,
             price: customPrice ?? 0.0,
             status: _status.label,
-            currentImageUrls: _currentImages, // original URLs from initState
-            removedImageUrls: _removedImages, // URLs user removed in UI
+            currentImageUrls: _currentImages,
+            removedImageUrls: _removedImages,
             newImages: _newImages,
           ),
 
       errorText: () =>
           context.read<AppointmentViewModel>().error ?? 'Ukendt fejl',
-      onSuccess: widget.onSaved, // flips back to read mode
+      onSuccess: widget.onSaved,
     );
   }
 

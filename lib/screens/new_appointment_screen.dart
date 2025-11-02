@@ -1,7 +1,4 @@
 ﻿import 'dart:typed_data';
-
-import 'package:aftaler_og_regnskab/services/image_storage.dart';
-import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -12,7 +9,6 @@ import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/lists/checklist_list.dart';
 import 'package:aftaler_og_regnskab/widgets/lists/client_list.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
 import 'package:aftaler_og_regnskab/widgets/pickers/date_picker.dart';
 import 'package:aftaler_og_regnskab/widgets/expandable_section.dart';
 import 'package:aftaler_og_regnskab/widgets/pickers/images_picker_grid.dart';
@@ -27,7 +23,6 @@ import 'package:aftaler_og_regnskab/widgets/pickers/time_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class NewAppointmentScreen extends StatefulWidget {
@@ -106,15 +101,14 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
     final customPrice = parsePrice(_customPriceCtrl.text);
 
-    // call the VM that resolves the final price etc.
     return await context.read<AppointmentViewModel>().addAppointment(
       clientId: _selectedClientId,
-      serviceId: _selectedServiceId, // may be null
+      serviceId: _selectedServiceId,
       dateTime: dateTime,
       checklistIds: _selectedChecklistIds.toList(),
       location: _locationCtrl.text,
       note: _noteCtrl.text,
-      price: customPrice, // UI override (optional)
+      price: customPrice,
       images: _images,
       status: _status.label,
     );
@@ -142,7 +136,6 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           Column(
             children: [
               const SizedBox(height: 20),
-              // Scrollable content
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
@@ -466,8 +459,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
                         const SizedBox(height: 45),
                         _Section(
-                          title:
-                              'Vælg status', // keep your section title, this row mirrors DatePicker
+                          title: 'Vælg status',
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             child: StatusChoice(
@@ -502,7 +494,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                               Expanded(
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: cs.onPrimary, // filled vs unfilled
+                                    color: cs.onPrimary,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: cs.onSurface.withAlpha(80),
@@ -518,7 +510,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                     child: Text(
                                       'Annuller',
                                       style: AppTypography.button2.copyWith(
-                                        color: cs.primary, // text color
+                                        color: cs.primary,
                                       ),
                                     ),
                                   ),
@@ -529,7 +521,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                               Expanded(
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: cs.primary, // filled vs unfilled
+                                    color: cs.primary,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: cs.primary,
@@ -576,7 +568,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                     child: Text(
                                       'Opret aftale',
                                       style: AppTypography.button2.copyWith(
-                                        color: cs.onPrimary, // text color
+                                        color: cs.onPrimary,
                                       ),
                                     ),
                                   ),
@@ -594,10 +586,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
           ),
           if (isSaving) ...[
             const Positioned.fill(
-              child: ModalBarrier(
-                dismissible: false,
-                color: Colors.black38, // dim background
-              ),
+              child: ModalBarrier(dismissible: false, color: Colors.black38),
             ),
             const Positioned.fill(
               child: Center(

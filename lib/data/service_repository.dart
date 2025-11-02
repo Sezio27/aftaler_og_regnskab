@@ -2,9 +2,6 @@ import 'package:aftaler_og_regnskab/model/service_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Repository = the app's data facade for Clients.
-/// - Hides Firestore specifics (FieldValue, Timestamp, paths).
-/// - Exposes typed methods the rest of the app can call.
 class ServiceRepository {
   ServiceRepository({FirebaseAuth? auth, FirebaseFirestore? firestore})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -93,21 +90,18 @@ class ServiceRepository {
     String id, {
     ServiceModel? patch,
     Map<String, Object?>? fields,
-    Set<String> deletes = const {}, // <-- NEW
+    Set<String> deletes = const {},
   }) async {
     final uid = _uidOrThrow;
 
-    // prefer explicit fields; otherwise map from patch
     final base = fields ?? _toFirestore(patch!, isCreate: false);
 
     final withMeta = <String, Object?>{...base};
 
-    // translate deletes here (Firebase-specific)
     for (final key in deletes) {
       withMeta[key] = FieldValue.delete();
     }
 
-    // keep dropping nulls, but don't drop FieldValue.delete()
     withMeta.removeWhere((k, v) => v == null);
 
     await _collection(uid).doc(id).set(withMeta, SetOptions(merge: true));

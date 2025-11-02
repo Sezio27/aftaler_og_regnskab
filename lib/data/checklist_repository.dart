@@ -98,10 +98,8 @@ class ChecklistRepository {
     await _collection(uid).doc(id).delete();
   }
 
-  // ---- Points: single-write replace strategy ----
   Future<void> setPoints(String checklistId, List<String> points) async {
     final uid = _uidOrThrow;
-    // Trim + drop empties just before writing
     final clean = points
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
@@ -111,7 +109,6 @@ class ChecklistRepository {
     ).doc(checklistId).set({'points': clean}, SetOptions(merge: true));
   }
 
-  // ---- Mapping ----
   ChecklistModel _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final data = d.data() ?? const <String, dynamic>{};
     final rawPoints = (data['points'] as List?) ?? const [];
@@ -139,7 +136,7 @@ class ChecklistRepository {
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
           .toList(),
-      if (isCreate) 'createdAt': FieldValue.serverTimestamp(), // Firestore-only
+      if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
     };
     map.removeWhere((_, v) => v == null);
     return map;

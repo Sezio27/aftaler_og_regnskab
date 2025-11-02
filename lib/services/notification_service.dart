@@ -145,10 +145,8 @@ class NotificationService {
         payload: payload,
       );
     } on PlatformException catch (e) {
-      // Android 14+ when exact alarms aren’t permitted
       final notPermitted = e.code == 'exact_alarms_not_permitted';
       if (Platform.isAndroid && notPermitted) {
-        // Fallback: inexact alarm (does NOT need exact-alarm access)
         await _plugin.zonedSchedule(
           id,
           title,
@@ -166,7 +164,7 @@ class NotificationService {
 
   Future<void> scheduleSameDayTwoHoursBefore({
     required String appointmentId,
-    required DateTime appointmentDateTime, // local
+    required DateTime appointmentDateTime,
     required String title,
     required String body,
   }) async {
@@ -175,7 +173,7 @@ class NotificationService {
     final end = start.add(const Duration(days: 1));
     if (appointmentDateTime.isBefore(start) ||
         !appointmentDateTime.isBefore(end)) {
-      return; // not today
+      return;
     }
     final trigger = appointmentDateTime.subtract(const Duration(hours: 2));
     final id = stableId('appt-$appointmentId-2h');
@@ -200,11 +198,9 @@ class NotificationService {
         await _plugin.cancel(r.id);
       }
     }
-    // Also cancel by our stable id
     await _plugin.cancel(stableId('appt-$appointmentId-2h'));
   }
 
-  //for debugging
   Future<void> showNow({
     int id = 9999,
     String title = 'Test',
@@ -226,14 +222,11 @@ class NotificationService {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
-          // Optional: help bypass Notification Summary
-          // interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
     );
   }
 
-  /// DEV: schedule a one-shot notification in [seconds] from now.
   Future<void> scheduleInSeconds(int seconds) async {
     final when = DateTime.now().add(Duration(seconds: seconds));
     await scheduleAt(

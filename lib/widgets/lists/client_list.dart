@@ -25,7 +25,7 @@ class ClientList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // Just read the precomputed list from VM (no streams here)
+
     final items = context.select<ClientViewModel, List<ClientModel>>(
       (vm) => hasCvr == null
           ? vm.allClients

@@ -66,18 +66,14 @@ class UserViewModel extends ChangeNotifier {
   Future<void> loadLocalPreferences(NotificationService ns) async {
     final sp = await SharedPreferences.getInstance();
 
-    // theme
     final localTheme = _fromString(sp.getString(_prefsKeyTheme) ?? 'system');
     if (localTheme != _themeMode) _themeMode = localTheme;
 
-    // notifications (app-level desired state)
     final localNoti = sp.getBool(_prefsKeyNoti);
     final osEnabled = await ns.areEnabled();
 
-    // If OS blocked, effective is OFF no matter what local says
     _notificationsOn = osEnabled && (localNoti ?? true);
 
-    // Make service match effective state
     await ns.applyEnabled(_notificationsOn);
 
     notifyListeners();
@@ -94,11 +90,9 @@ class UserViewModel extends ChangeNotifier {
       if (!granted) {
         granted = await ns.requestAllIfNeeded();
         if (!granted) {
-          // iOS & some Android cases require opening Settings after denial
-          await openAppSettings(); // from permission_handler
+          await openAppSettings();
           granted = await ns.areEnabled();
           if (!granted) {
-            // keep OFF – user didn’t enable in settings
             _notificationsOn = false;
             notifyListeners();
             final sp = await SharedPreferences.getInstance();
@@ -109,24 +103,21 @@ class UserViewModel extends ChangeNotifier {
         }
       }
 
-      // OS is granted; app-level ON
       _notificationsOn = true;
       final sp = await SharedPreferences.getInstance();
       await sp.setBool(_prefsKeyNoti, true);
       await ns.applyEnabled(true);
 
-      // Seed ALL: today + all future
       if (apptVM != null) {
         await apptVM.rescheduleTodayAndFuture(ns);
       }
       notifyListeners();
     } else {
-      // App-level kill switch OFF (even if OS grants)
       _notificationsOn = false;
       notifyListeners();
       final sp = await SharedPreferences.getInstance();
       await sp.setBool(_prefsKeyNoti, false);
-      await ns.applyEnabled(false); // also cancels all
+      await ns.applyEnabled(false);
     }
   }
 
@@ -136,14 +127,12 @@ class UserViewModel extends ChangeNotifier {
       final data = snapshot.data();
       if (data == null) return;
 
-      // Business info
       final business = data['business'] as Map<String, dynamic>?;
       _businessName = (business?['name'] as String?)?.trim() ?? '';
       _address = (business?['address'] as String?)?.trim() ?? '';
       _city = (business?['city'] as String?)?.trim() ?? '';
       _postal = (business?['postal'] as String?)?.trim() ?? '';
 
-      // Theme from Firestore: prefs.theme = 'light'|'dark'|'system'
       final remote = (data['prefs'] as Map?)?['theme'] as String?;
       if (remote != null) {
         final remoteMode = _fromString(remote);

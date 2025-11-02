@@ -1,5 +1,4 @@
-﻿// main.dart
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/application/appointment_notifications.dart';
 import 'package:aftaler_og_regnskab/data/cache/appointment_cache.dart';
@@ -155,8 +154,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// Sets the initial active range to the current year after auth.
-/// Leaves screens free of setActiveRange calls.
 class _AppBootstrap extends StatefulWidget {
   final GoRouter router;
   const _AppBootstrap({required this.router});
@@ -164,8 +161,6 @@ class _AppBootstrap extends StatefulWidget {
   @override
   State<_AppBootstrap> createState() => _AppBootstrapState();
 }
-
-// _AppBootstrapState (replace your initState with this version)
 
 class _AppBootstrapState extends State<_AppBootstrap> {
   StreamSubscription<User?>? _authSub;
@@ -182,7 +177,6 @@ class _AppBootstrapState extends State<_AppBootstrap> {
     final userVM = context.read<UserViewModel>();
     final apptVM = context.read<AppointmentViewModel>();
 
-    //Notifications
     await ns.init();
     _prefsInit = userVM.loadLocalPreferences(ns);
     await userVM.initNotificationsIfFirstRun(ns);
@@ -201,7 +195,6 @@ class _AppBootstrapState extends State<_AppBootstrap> {
   }
 
   void _onSignedOut() {
-    // Clear data & reset flags
     context.read<ClientCache>().clear();
     context.read<ServiceCache>().clear();
     context.read<AppointmentCache>().clear();

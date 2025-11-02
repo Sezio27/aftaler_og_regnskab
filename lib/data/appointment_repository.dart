@@ -12,9 +12,6 @@ class AppointmentRepository {
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Internals
-  // ────────────────────────────────────────────────────────────────────────────
   String get _uidOrThrow {
     final uid = _auth.currentUser?.uid;
     if (uid == null) throw StateError('Not signed in');
@@ -46,12 +43,6 @@ class AppointmentRepository {
     await _collection(uid).doc(id).set(payload);
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Reads (range & detail)
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Stream appointments with `dateTime` in [start, end], inclusive.
-  /// Sorted by `dateTime` ascending (what calendar/agenda UIs need).
   Stream<List<AppointmentModel>> watchAppointmentsBetween(
     DateTime startInclusive,
     DateTime endInclusive,
@@ -74,11 +65,10 @@ class AppointmentRepository {
           assert(() {
             if (!q.metadata.isFromCache) {
               if (!countedFirstServer) {
-                bench?.liveFirstReads += q.docs.length; // count full set once
+                bench?.liveFirstReads += q.docs.length;
                 countedFirstServer = true;
               } else {
-                bench?.liveUpdateReads +=
-                    q.docChanges.length; // only changes after
+                bench?.liveUpdateReads += q.docChanges.length;
               }
             }
             return true;
@@ -88,7 +78,6 @@ class AppointmentRepository {
         });
   }
 
-  /// One-time fetch of an appointment by id.
   Future<AppointmentModel?> getAppointmentOnce(String id) async {
     final uid = _uidOrThrow;
     final snap = await _collection(uid).doc(id).get();
@@ -121,8 +110,6 @@ class AppointmentRepository {
     return result;
   }
 
-  // in AppointmentRepository
-  // appointment_repository.dart
   Future<List<AppointmentModel>> getAppointmentsBetween(
     DateTime startInclusive,
     DateTime endInclusive,
@@ -157,11 +144,6 @@ class AppointmentRepository {
     return q.docs.map(_fromDoc).toList();
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Writes
-  // ────────────────────────────────────────────────────────────────────────────
-
-  /// Create a new appointment (id auto-generated).
   Future<AppointmentModel> addAppointment(AppointmentModel model) async {
     final uid = _uidOrThrow;
     final doc = _collection(uid).doc();
@@ -170,11 +152,9 @@ class AppointmentRepository {
     return model.copyWith(id: doc.id);
   }
 
-  /// Patch fields on an appointment.
-  /// Prefer passing a `fields` map (what your ViewModel does).
   Future<void> updateAppointment(
     String id, {
-    AppointmentModel? patch, // optional: convert model into fields
+    AppointmentModel? patch,
     Map<String, Object?>? fields,
     Set<String> deletes = const {},
   }) async {
@@ -188,14 +168,12 @@ class AppointmentRepository {
     payload.removeWhere((k, v) => v == null);
 
     if (deletes.any((key) => key.startsWith('progress.'))) {
-      // use update() so nested deletes work
       await _collection(uid).doc(id).update(payload);
     } else {
       await _collection(uid).doc(id).set(payload, SetOptions(merge: true));
     }
   }
 
-  // AppointmentRepository
   Future<void> updateStatus(String id, String newStatus) async {
     final uid = _uidOrThrow;
     await _collection(uid).doc(id).update({'status': newStatus.trim()});
@@ -215,7 +193,6 @@ class AppointmentRepository {
     });
   }
 
-  /// One **single** write to set the whole progress map on the parent appointment.
   Future<void> setAllChecklistProgress(
     String apptId,
     Map<String, Set<int>> progress,
@@ -259,18 +236,11 @@ class AppointmentRepository {
       q = q.where('status', isEqualTo: status);
     }
 
-    debugPrint(
-      '[countAppointments] uid=$uid start=$startInclusive end=$endInclusive status=$status',
-    );
-
     try {
       final agg = await q.count().get();
       final c = agg.count ?? 0;
-      debugPrint('[countAppointments] result=$c');
       return c;
-    } catch (e, st) {
-      // This will print the "requires index" link whether it's FirebaseException or PlatformException
-      debugPrint('[countAppointments] ERROR: $e\n$st');
+    } catch (e) {
       rethrow;
     }
   }
@@ -308,19 +278,13 @@ class AppointmentRepository {
 
     final aggregateQuery = query.aggregate(sum('price'));
 
-    // 🔎 Log BEFORE awaiting, so we know the function was called
-    debugPrint(
-      '[sumPaidInRange] uid=$uid start=$startInclusive end=$endInclusive',
-    );
-
     try {
       final agg = await aggregateQuery.get();
       final val = agg.getSum('price');
       debugPrint('[sumPaidInRange] result=$val');
       return (val ?? 0.0).toDouble();
-    } catch (e, st) {
-      debugPrint('[sumPaidInRange] ERROR: $e\n$st');
-      rethrow; // let UI show the error too
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -329,13 +293,10 @@ class AppointmentRepository {
     await _collection(uid).doc(id).delete();
   }
 
-  // Debug / devmode
-
   Future<int> deleteAllAppointments({int pageSize = 200}) async {
     final uid = _uidOrThrow;
     int total = 0;
 
-    // Keep pulling pages until empty
     while (true) {
       final page = await _collection(uid).limit(pageSize).get();
       if (page.docs.isEmpty) break;
@@ -347,7 +308,6 @@ class AppointmentRepository {
       await batch.commit();
       total += page.docs.length;
 
-      // Tiny yield to avoid hammering on slow networks
       await Future.delayed(const Duration(milliseconds: 30));
     }
     return total;
@@ -387,7 +347,6 @@ class AppointmentRepository {
     final uid = _uidOrThrow;
     Query<Map<String, dynamic>> q = _collection(uid);
 
-    // Optionally constrain by date range
     if (startInclusive != null) {
       q = q.where(
         'dateTime',
@@ -410,20 +369,17 @@ class AppointmentRepository {
       );
     }
 
-    // Order and limit the results
     q = q.orderBy('dateTime', descending: descending).limit(pageSize);
 
-    // If a cursor was provided, start after it
     if (startAfterDoc != null) {
       q = q.startAfterDocument(startAfterDoc);
     }
 
     final snap = await q.get();
-    // Map documents to models
+
     final items = snap.docs.map(_fromDoc).toList();
     final lastDoc = snap.docs.isNotEmpty ? snap.docs.last : null;
 
-    // Optionally count reads for bench (like getAppointmentsBetween)
     assert(() {
       if (!snap.metadata.isFromCache) {
         bench?.pagedReads += snap.docs.length;
@@ -433,10 +389,6 @@ class AppointmentRepository {
 
     return (items: items, lastDoc: lastDoc);
   }
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // Mapping
-  // ────────────────────────────────────────────────────────────────────────────
 
   AppointmentModel _fromDoc(DocumentSnapshot<Map<String, dynamic>> snap) {
     final data = snap.data() ?? const <String, dynamic>{};

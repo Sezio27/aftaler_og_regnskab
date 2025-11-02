@@ -4,11 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../data/user_repository.dart';
 
-/// ViewModel (ChangeNotifier) that the UI listens to.
-/// - Holds current [OnboardingModel] state
-/// - Exposes update methods per field
-/// - Performs save() via the repository
-
 enum NextStep { home, onboarding, loginNoAccount }
 
 class OnboardingViewModel extends ChangeNotifier {
@@ -25,7 +20,6 @@ class OnboardingViewModel extends ChangeNotifier {
 
   static final RegExp _emailRe = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
 
-  // --- Update methods (call these from onChanged/listeners in your screens) ---
   void setEmail(String v) => _set(_state.copyWith(email: v.trim()));
   void setFirstName(String v) => _set(_state.copyWith(firstName: v.trim()));
   void setLastName(String v) => _set(_state.copyWith(lastName: v.trim()));
@@ -39,7 +33,6 @@ class OnboardingViewModel extends ChangeNotifier {
   bool get attemptLogin => _attemptLogin;
   void setAttemptLogin(bool v) {
     _attemptLogin = v;
-    // no need to notify unless the UI shows different text immediately
   }
 
   void _set(OnboardingModel next) {
@@ -83,9 +76,8 @@ class OnboardingViewModel extends ChangeNotifier {
     required FirebaseAuthMethods auth,
     required Future<void> Function() goHome,
     required Future<void> Function() goOnboarding,
-    required Future<void> Function()
-    loginNoAccount, // will be called if attemptLogin && no profile
-    Future<void> Function(Object error)? onError, // optional UI error handler
+    required Future<void> Function() loginNoAccount,
+    Future<void> Function(Object error)? onError,
   }) async {
     try {
       await confirmCode(smsCode: smsCode, auth: auth);
@@ -109,7 +101,6 @@ class OnboardingViewModel extends ChangeNotifier {
 
   Future<void> signOut() => FirebaseAuth.instance.signOut();
 
-  // --- Verification session (VM-owned) ---
   String? _verificationId;
   int? _resendToken;
   String _fullPhoneForSession = '';
@@ -117,10 +108,7 @@ class OnboardingViewModel extends ChangeNotifier {
   String get fullPhoneForSession => _fullPhoneForSession;
   bool get hasVerificationSession => _verificationId != null;
 
-  /// Builds full phone (from state or dial+national) and starts verification.
-  /// Stores verificationId/resendToken in the VM for the next screen.
   Future<void> startPhoneVerification(FirebaseAuthMethods auth) async {
-    // Prefer state.phone; otherwise combine currentDial + national
     final full = _state.phone?.trim();
     final fullPhone = (full?.isNotEmpty == true)
         ? full!
@@ -130,11 +118,9 @@ class OnboardingViewModel extends ChangeNotifier {
     _fullPhoneForSession = fullPhone;
     _verificationId = vId;
     _resendToken = rTok;
-    // notify if your UI shows the phone subtitle immediately
     notifyListeners();
   }
 
-  /// Resend code; keep cooldown timer in the View.
   Future<({String verificationId, int? resendToken})> resendCode(
     FirebaseAuthMethods auth,
   ) async {
@@ -153,7 +139,6 @@ class OnboardingViewModel extends ChangeNotifier {
     return (verificationId: vId, resendToken: rTok);
   }
 
-  /// Confirm code then decide: existing user -> Home, otherwise -> onboarding.
   Future<void> confirmCode({
     required String smsCode,
     required FirebaseAuthMethods auth,
@@ -186,13 +171,10 @@ class OnboardingViewModel extends ChangeNotifier {
   String? get city => _state.city;
   String? get postal => _state.postal;
 
-  /// Saves to Firestore + updates Auth (as implemented in your repository).
-  /// Throws on error so the View can show a SnackBar.
   Future<void> save() async {
     await _repo.saveOnboarding(_state);
   }
 
-  /// Clears ephemeral state after successful save or if the user cancels.
   void clear() {
     _state = OnboardingModel.empty;
     notifyListeners();

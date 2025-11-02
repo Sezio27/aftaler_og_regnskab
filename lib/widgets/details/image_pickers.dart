@@ -1,7 +1,5 @@
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:aftaler_og_regnskab/widgets/pickers/image_picker_helper.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 
@@ -137,7 +135,6 @@ class AvatarImagePicker extends StatelessWidget {
   }
 }
 
-/// 16:9 banner (used for Service)
 class BannerImagePicker extends StatelessWidget {
   const BannerImagePicker({
     super.key,

@@ -33,7 +33,7 @@ class _ServiceListOverlayState extends State<ServiceListOverlay> {
   void initState() {
     super.initState();
     _searchCtrl = TextEditingController(text: widget.initialQuery);
-    _vm = context.read<ServiceViewModel>(); // <- read once here
+    _vm = context.read<ServiceViewModel>();
     _vm.initServiceFilters(initialQuery: widget.initialQuery);
     if (widget.initialQuery.isNotEmpty) {
       _vm.setServiceSearch(widget.initialQuery);
@@ -42,7 +42,7 @@ class _ServiceListOverlayState extends State<ServiceListOverlay> {
 
   @override
   void dispose() {
-    _vm.clearSearch(); // <- no BuildContext used
+    _vm.clearSearch();
     _searchCtrl.dispose();
     super.dispose();
   }

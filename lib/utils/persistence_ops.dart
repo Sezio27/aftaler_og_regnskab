@@ -44,11 +44,11 @@ Future<void> handleDelete({
 
 Future<void> handleSave({
   required BuildContext context,
-  String? Function()? validate, // <-- nullable return
+  String? Function()? validate,
   required Future<bool> Function() onSave,
   VoidCallback? onSuccess,
   String successMessage = 'Opdateret',
-  String? Function()? errorText, // (can be nullable too)
+  String? Function()? errorText,
 }) async {
   FocusScope.of(context).unfocus();
 

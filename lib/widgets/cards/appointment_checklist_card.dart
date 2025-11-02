@@ -6,19 +6,19 @@ class AppointmentChecklistCard extends StatefulWidget {
   const AppointmentChecklistCard({
     super.key,
     required this.checklist,
-    this.completed, // indices of done points
+    this.completed,
     this.onToggleItem,
     this.collapse = false,
-    this.editing = false, // << NEW
-    this.onRemove, // << NEW
+    this.editing = false,
+    this.onRemove,
   });
 
   final ChecklistModel checklist;
   final Set<int>? completed;
   final void Function(int index, bool nowChecked)? onToggleItem;
   final bool collapse;
-  final bool editing; // << NEW
-  final VoidCallback? onRemove; // << NEW
+  final bool editing;
+  final VoidCallback? onRemove;
 
   @override
   State<AppointmentChecklistCard> createState() =>
@@ -29,7 +29,7 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
   bool _expanded = false;
 
   void _toggleExpanded() {
-    if (widget.editing) return; // no expand in edit mode
+    if (widget.editing) return;
     setState(() => _expanded = !_expanded);
   }
 
@@ -45,12 +45,9 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final bool isEdit = widget.editing;
-
-    // Always cheap to read:
     final int total = widget.checklist.points.length;
     final Set<int> completed = widget.completed ?? const <int>{};
 
-    // Only compute when not editing:
     int? done, pct;
     if (!isEdit) {
       done = completed.length.clamp(0, total);
@@ -93,7 +90,6 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
                 ],
               ),
               const SizedBox(width: 8),
-              // Right: pill + Åbn/Luk
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -128,7 +124,6 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
             Divider(height: 1, color: cs.onSurface.withAlpha(100)),
             const SizedBox(height: 8),
 
-            // Points
             ...List.generate(total, (i) {
               final text = widget.checklist.points[i];
               final checked = widget.completed!.contains(i);

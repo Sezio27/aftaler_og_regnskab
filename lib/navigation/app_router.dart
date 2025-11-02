@@ -14,8 +14,6 @@ import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
 import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
 import 'package:aftaler_og_regnskab/screens/details/service_details_screen.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
-
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 

@@ -47,7 +47,6 @@ IconData statusIcon(String s) {
   }
 }
 
-// Simple color helpers (keep your old calls working)
 Color statusColor(String? status) {
   switch ((status ?? '').trim().toLowerCase()) {
     case 'betalt':

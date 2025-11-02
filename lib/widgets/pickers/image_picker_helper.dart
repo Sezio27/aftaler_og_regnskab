@@ -34,7 +34,6 @@ Future<ImageSource?> showImageSourceSheet(BuildContext context) {
   );
 }
 
-/// Convenience: opens the sheet and then the picker. Returns the picked photo (or null).
 Future<({Uint8List bytes, String name, String? mimeType})?> pickImageViaSheet(
   BuildContext context, {
   int? imageQuality = 85,
@@ -83,7 +82,6 @@ pickImagesViaSheet(
     return [(bytes: bytes, name: name, mimeType: one.mimeType ?? 'image/jpeg')];
   }
 
-  // Gallery: allow multiple
   final many = await picker.pickMultiImage(
     imageQuality: imageQuality,
     maxWidth: maxWidth,

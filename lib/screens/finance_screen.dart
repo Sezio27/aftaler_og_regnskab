@@ -1,4 +1,3 @@
-// lib/screens/finance_screen.dart
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
@@ -8,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/colors.dart';
@@ -89,7 +87,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             const SizedBox(height: 16),
 
-            // Summary cards (income + count) — only these rebuild when VM data changes.
             Selector<FinanceViewModel, ({int count, double income})>(
               selector: (_, vm) => vm.summaryNow(seg),
               builder: (_, summary, __) {
@@ -144,7 +141,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             const SizedBox(height: 16),
 
-            // Recent list (cached Future + per-row Stream so only changed row rebuilds)
             Column(
               children: [
                 Padding(
@@ -177,7 +173,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     return vm.cardsForRange(r.start, r.end);
                   },
                   shouldRebuild: (a, b) {
-                    // Optional: micro-optimization; compare lengths or ids
                     if (a.length != b.length) return true;
                     for (var i = 0; i < a.length; i++) {
                       if (a[i].id != b[i].id ||

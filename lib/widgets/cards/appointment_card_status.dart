@@ -46,12 +46,11 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
   }
 
   void _pick(PaymentStatus s) {
-    // Instant feedback (card repaint only)
     setState(() {
       _status = s;
       _expanded = false;
     });
-    // Trigger repo + VM; live snapshot will refresh the list later
+
     widget.onChangeStatus(s);
   }
 
@@ -107,7 +106,6 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
               ],
             ),
             const SizedBox(height: 4),
-            // "Ændr status" + "Se detaljer"
             Row(
               children: [
                 InkWell(
@@ -142,10 +140,7 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
               child: _expanded
                   ? Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: StatusChoice(
-                        value: _status, // sel is a PaymentStatus
-                        onChanged: _pick,
-                      ),
+                      child: StatusChoice(value: _status, onChanged: _pick),
                     )
                   : const SizedBox.shrink(),
             ),

@@ -173,7 +173,6 @@ class _AddClientPanelState extends State<AddClientPanel> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Fields
                 Expanded(
                   child: Column(
                     children: [

@@ -24,10 +24,9 @@ class FinanceSummaryRepository {
         .collection('users')
         .doc(uid)
         .collection('finance_summary')
-        .doc(segment.name); // e.g. "month", "year", "total"
+        .doc(segment.name);
   }
 
-  /// Fetch a summary document, returning a FinanceModel with default values if missing.
   Future<FinanceModel> fetchSummary(Segment segment) async {
     final snap = await _doc(segment).get();
     if (!snap.exists) return FinanceModel();
@@ -47,7 +46,6 @@ class FinanceSummaryRepository {
     );
   }
 
-  /// Helper to increment a summary based on an appointment being added.
   Future<void> updateOnAdd(PaymentStatus status, double price, DateTime date) {
     return _updateSummaries((totals) {
       totals['Aftaler'] = FieldValue.increment(1);
@@ -59,7 +57,6 @@ class FinanceSummaryRepository {
     }, date);
   }
 
-  /// Helper to update a summary when only the status changes.
   Future<void> updateOnStatusChange(
     PaymentStatus oldStatus,
     PaymentStatus newStatus,
@@ -79,7 +76,6 @@ class FinanceSummaryRepository {
     }, date);
   }
 
-  /// Helper to update a summary when fields change (status, price or date).
   Future<void> updateOnFields(
     PaymentStatus oldStatus,
     PaymentStatus newStatus,
@@ -95,21 +91,18 @@ class FinanceSummaryRepository {
         final isIn = _inSegment(seg, newDate);
         final updates = <String, Object?>{};
         if (wasIn && !isIn) {
-          // moved OUT of segment
           updates['Aftaler'] = FieldValue.increment(-1);
           updates[oldStatus.label] = FieldValue.increment(-1);
           if (oldStatus == PaymentStatus.paid) {
             updates['Total'] = FieldValue.increment(-oldPrice);
           }
         } else if (!wasIn && isIn) {
-          // moved INTO segment
           updates['Aftaler'] = FieldValue.increment(1);
           updates[newStatus.label] = FieldValue.increment(1);
           if (newStatus == PaymentStatus.paid) {
             updates['Total'] = FieldValue.increment(newPrice);
           }
         } else if (wasIn && isIn) {
-          // stayed within segment: adjust counts/sums
           if (oldStatus != newStatus) {
             updates[oldStatus.label] = FieldValue.increment(-1);
             updates[newStatus.label] = FieldValue.increment(1);
@@ -130,7 +123,6 @@ class FinanceSummaryRepository {
     });
   }
 
-  /// Helper to decrement a summary based on a deletion.
   Future<void> updateOnDelete(
     PaymentStatus status,
     double price,
@@ -146,7 +138,6 @@ class FinanceSummaryRepository {
     }, date);
   }
 
-  // Internal: apply updates to all relevant summaries (total, year, month)
   Future<void> _updateSummaries(
     Map<String, Object?> Function(Map<String, Object?>) build,
     DateTime date,

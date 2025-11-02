@@ -41,7 +41,6 @@ class _ChecklistDetailsScreenState extends State<ChecklistDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.read<ChecklistViewModel>();
     return Selector<ChecklistViewModel, ChecklistModel?>(
       selector: (_, vm) => vm.getChecklist(widget.checklistId),
       builder: (context, checklist, _) {

@@ -99,9 +99,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final ns = context.read<NotificationService>();
                 final vm = context.read<UserViewModel>();
 
-                // Always read the freshest value from the VM
                 final current = vm.notificationsOn;
-                final next = !current; // the next state we intend to apply
+                final next = !current;
 
                 if (next) {
                   var granted = await ns.areEnabled();
@@ -229,8 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () async {
                 final pending = await context
                     .read<NotificationService>()
-                    .pendingNotificationRequests(); // helper below
-                // log IDs for now
+                    .pendingNotificationRequests();
                 debugPrint('PENDING: ${pending.map((e) => e.id).toList()}');
               },
               child: const Text('List pending'),
@@ -243,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Colors.transparent,
                 child: Ink(
                   decoration: ShapeDecoration(
-                    color: Colors.transparent, // or a subtle bg if you want
+                    color: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -345,7 +343,6 @@ class _ThemeModeButton extends StatelessWidget {
             color: bg,
             shape: BoxShape.circle,
             boxShadow: [
-              // subtle lift in light mode only
               if (!isDark)
                 const BoxShadow(
                   color: Color.fromRGBO(0, 0, 0, 0.06),
@@ -355,11 +352,7 @@ class _ThemeModeButton extends StatelessWidget {
             ],
           ),
           alignment: Alignment.center,
-          child: Icon(
-            Icons.nightlight_round, // moon-ish
-            size: 16,
-            color: icon,
-          ),
+          child: Icon(Icons.nightlight_round, size: 16, color: icon),
         ),
       ),
     );
@@ -370,8 +363,8 @@ class _PeachToggleIcon extends StatelessWidget {
   final bool isOn;
   final IconData icon;
   final VoidCallback onTap;
-  final Color? onColor; // defaults to theme.primary
-  final Color? offColor; // defaults to AppColors.peachBackground
+  final Color? onColor;
+  final Color? offColor;
   final double size;
 
   const _PeachToggleIcon({

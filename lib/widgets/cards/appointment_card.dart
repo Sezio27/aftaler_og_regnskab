@@ -49,7 +49,7 @@ class AppointmentCard extends StatelessWidget {
       ],
 
       field: GestureDetector(
-        behavior: HitTestBehavior.opaque, // ✅ full card is tappable
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -64,7 +64,6 @@ class AppointmentCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    //Top row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -79,7 +78,6 @@ class AppointmentCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    //Bottom row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -112,7 +110,6 @@ class AppointmentCard extends StatelessWidget {
                                 SizedBox(width: 20),
                                 Row(
                                   children: const [
-                                    // phone (flex 1)
                                     Align(
                                       alignment: Alignment.centerLeft,
                                       child: Icon(
@@ -121,9 +118,9 @@ class AppointmentCard extends StatelessWidget {
                                         color: AppColors.peach,
                                       ),
                                     ),
-                                    // empty space (flex 1)
+
                                     SizedBox(width: 20),
-                                    // text (flex 1)
+
                                     Align(
                                       alignment: Alignment.centerRight,
                                       child: Icon(

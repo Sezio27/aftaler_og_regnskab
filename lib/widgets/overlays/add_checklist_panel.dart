@@ -85,7 +85,6 @@ class _AddChecklistPanelState extends State<AddChecklistPanel> {
           spacing: 14,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.only(top: 20),
               child: Stack(
@@ -133,7 +132,6 @@ class _AddChecklistPanelState extends State<AddChecklistPanel> {
               onTap: () => setState(() => _active = 1),
             ),
 
-            // Punkter
             Row(
               children: [
                 Expanded(
@@ -154,7 +152,6 @@ class _AddChecklistPanelState extends State<AddChecklistPanel> {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Number
                   Padding(
                     padding: const EdgeInsets.only(top: 10, right: 8),
                     child: Text(

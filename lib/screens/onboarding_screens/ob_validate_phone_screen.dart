@@ -144,7 +144,6 @@ class _ObValidatePhoneScreenState extends State<ObValidatePhoneScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Send igen
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(

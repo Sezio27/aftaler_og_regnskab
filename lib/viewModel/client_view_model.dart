@@ -87,7 +87,6 @@ class ClientViewModel extends ChangeNotifier {
     final fromCache = _cache.getClient(id);
     if (fromCache != null) return fromCache;
 
-    // manual search to allow returning null safely
     for (final c in _all) {
       if (c.id == id) return c;
     }
