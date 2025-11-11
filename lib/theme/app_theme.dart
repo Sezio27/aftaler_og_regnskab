@@ -11,7 +11,7 @@ class AppTheme {
       ).copyWith(
         primary: AppColors.peach,
         onPrimary: Colors.white,
-        surface: AppColors.backgroundLight,
+        surface: Colors.white,
         onSurface: Colors.black,
         secondary: AppColors.peach2,
         onSecondary: Colors.white,
@@ -25,8 +25,8 @@ class AppTheme {
         brightness: Brightness.dark,
       ).copyWith(
         primary: const Color(0xFFFF9C86),
-        onPrimary: AppColors.backgroundDark,
-        surface: Colors.black,
+        onPrimary: Colors.white,
+        surface: AppColors.backgroundDark,
         onSurface: Colors.white,
         secondary: AppColors.peach2,
         onSecondary: Colors.black,
@@ -92,6 +92,7 @@ class AppTheme {
     useMaterial3: true,
     colorScheme: _darkScheme,
     scaffoldBackgroundColor: Colors.black,
+    applyElevationOverlayColor: true,
     inputDecorationTheme: InputDecorationTheme(
       isDense: false,
       contentPadding: const EdgeInsets.symmetric(vertical: 16),

@@ -5,13 +5,14 @@ Future<T?> showOverlayPanel<T>({
   required BuildContext context,
   required Widget child,
   bool dismissOnTapOutside = true,
-  Color barrierColor = const Color(0xB3000000),
 }) {
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: dismissOnTapOutside,
     barrierLabel: 'overlay',
-    barrierColor: barrierColor,
+    barrierColor: Theme.of(context).brightness == Brightness.dark
+        ? const Color.fromARGB(179, 34, 34, 34)
+        : const Color(0xB3000000),
     transitionDuration: const Duration(milliseconds: 180),
     pageBuilder: (_, __, ___) => const SizedBox.shrink(),
     transitionBuilder: (ctx, anim, __, ___) {
@@ -32,7 +33,7 @@ Future<T?> showOverlayPanel<T>({
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Material(
-                      color: cs.onPrimary,
+                      color: cs.onSecondary,
                       elevation: 8,
                       borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,

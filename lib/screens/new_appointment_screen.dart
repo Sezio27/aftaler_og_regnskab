@@ -18,6 +18,7 @@ import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:aftaler_og_regnskab/widgets/lists/service_list.dart';
+import 'package:aftaler_og_regnskab/widgets/search_field.dart';
 import 'package:aftaler_og_regnskab/widgets/status.dart';
 import 'package:aftaler_og_regnskab/widgets/pickers/time_picker.dart';
 import 'package:flutter/cupertino.dart';
@@ -151,32 +152,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           child: Column(
                             children: [
                               if (_selectedClientId == null) ...[
-                                CupertinoSearchTextField(
+                                SearchField(
                                   controller: clientSearchCtrl,
-                                  placeholder: 'Søg',
                                   onChanged: clientVM.setClientSearch,
-                                  onSubmitted: (_) =>
-                                      FocusScope.of(context).unfocus(),
-                                  itemColor: cs.onSurface.withAlpha(180),
-                                  style: AppTypography.b2.copyWith(
-                                    color: cs.onSurface,
-                                  ),
-                                  placeholderStyle: AppTypography.b2.copyWith(
-                                    color: cs.onSurface.withAlpha(180),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: cs.onPrimary,
-                                    borderRadius: const BorderRadius.all(
-                                      Radius.circular(10),
-                                    ),
-                                  ),
+                                  ctx: context,
                                 ),
-
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 16),
                               ],
 
                               ClientList(
@@ -230,32 +211,12 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                             children: [
                               const SizedBox(height: 6),
                               if (_selectedServiceId == null) ...[
-                                CupertinoSearchTextField(
+                                SearchField(
                                   controller: serviceSearchCtrl,
-                                  placeholder: 'Søg',
                                   onChanged: serviceVM.setServiceSearch,
-                                  onSubmitted: (_) =>
-                                      FocusScope.of(context).unfocus(),
-                                  itemColor: cs.onSurface.withAlpha(180),
-                                  style: AppTypography.b2.copyWith(
-                                    color: cs.onSurface,
-                                  ),
-                                  placeholderStyle: AppTypography.b2.copyWith(
-                                    color: cs.onSurface.withAlpha(180),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: cs.onPrimary,
-                                    borderRadius: const BorderRadius.all(
-                                      Radius.circular(10),
-                                    ),
-                                  ),
+                                  ctx: context,
                                 ),
-
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 16),
                               ],
 
                               ServiceList(
@@ -317,32 +278,13 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           title: 'Tilknyt checklister',
                           child: Column(
                             children: [
-                              CupertinoSearchTextField(
+                              SearchField(
                                 controller: checklistSearchCtrl,
-                                placeholder: 'Søg',
                                 onChanged: checklistVM.setChecklistSearch,
-                                onSubmitted: (_) =>
-                                    FocusScope.of(context).unfocus(),
-                                itemColor: cs.onSurface.withAlpha(180),
-                                style: AppTypography.b2.copyWith(
-                                  color: cs.onSurface,
-                                ),
-                                placeholderStyle: AppTypography.b2.copyWith(
-                                  color: cs.onSurface.withAlpha(180),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: cs.onPrimary,
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(10),
-                                  ),
-                                ),
+                                ctx: context,
                               ),
 
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 16),
 
                               ChecklistList(
                                 selectedIds: _selectedChecklistIds,
@@ -413,7 +355,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                           child: SoftTextField(
                             hintText: "Indtast addresse",
                             controller: _locationCtrl,
-                            fill: cs.onPrimary,
+
                             strokeColor: _active != 0
                                 ? cs.onSurface.withAlpha(50)
                                 : cs.primary,
@@ -436,7 +378,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                     color: cs.onSurface.withAlpha(200),
                                   ),
                             controller: _customPriceCtrl,
-                            fill: cs.onPrimary,
+
                             strokeColor: _active != 1
                                 ? cs.onSurface.withAlpha(50)
                                 : cs.primary,
@@ -476,7 +418,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                             hintText: "Tilføj note til denne aftale",
                             controller: _noteCtrl,
                             maxLines: 3,
-                            fill: cs.onPrimary,
+
                             strokeColor: _active != 2
                                 ? cs.onSurface.withAlpha(50)
                                 : cs.primary,
@@ -494,7 +436,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                               Expanded(
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: cs.onPrimary,
+                                    color: cs.surface,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: cs.onSurface.withAlpha(80),
@@ -510,7 +452,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                     child: Text(
                                       'Annuller',
                                       style: AppTypography.button2.copyWith(
-                                        color: cs.primary,
+                                        color: cs.onSurface,
                                       ),
                                     ),
                                   ),
@@ -569,6 +511,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
                                       'Opret aftale',
                                       style: AppTypography.button2.copyWith(
                                         color: cs.onPrimary,
+                                        fontWeight: FontWeight.w800,
                                       ),
                                     ),
                                   ),

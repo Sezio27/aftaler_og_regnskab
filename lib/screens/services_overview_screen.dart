@@ -9,6 +9,7 @@ import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_checklist_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/add_service_panel.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/show_overlay_panel.dart';
+import 'package:aftaler_og_regnskab/widgets/search_field.dart';
 import 'package:aftaler_og_regnskab/widgets/seg_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -61,7 +62,7 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
               children: [
                 CupertinoSlidingSegmentedControl<Tabs>(
                   groupValue: _tab,
-                  backgroundColor: cs.onPrimary,
+                  backgroundColor: cs.surface,
                   thumbColor: cs.secondary,
                   onValueChanged: (v) {
                     if (v == null) return;
@@ -90,30 +91,14 @@ class _ServicesOverviewScreenState extends State<ServicesOverviewScreen> {
                 ),
 
                 const SizedBox(height: 16),
-
-                CupertinoSearchTextField(
+                SearchField(
                   controller: _searchCtrl,
-
-                  placeholder: 'Søg',
                   onChanged: (q) => setState(() {
                     _tab == Tabs.services
                         ? _serviceVM.setServiceSearch(q)
                         : _checklistVM.setChecklistSearch(q);
                   }),
-                  onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                  itemColor: cs.onSurface.withAlpha(150),
-                  style: AppTypography.b2.copyWith(color: cs.onSurface),
-                  placeholderStyle: AppTypography.b2.copyWith(
-                    color: cs.onSurface.withAlpha(180),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.onPrimary,
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                  ),
+                  ctx: context,
                 ),
 
                 const SizedBox(height: 24),
@@ -180,7 +165,7 @@ class _ServicesGrid extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (_, i) => Container(
         decoration: BoxDecoration(
-          color: cs.onPrimary,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(blurRadius: 3, color: cs.onSurface.withAlpha(70)),

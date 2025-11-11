@@ -884,7 +884,6 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                         keyboardType: TextInputType.number,
                         hintStyle: AppTypography.num6,
                         controller: _priceCtrl,
-                        fill: cs.onPrimary,
                         strokeColor: _active != 1
                             ? cs.onSurface.withAlpha(50)
                             : cs.primary,
@@ -1025,7 +1024,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                             : widget.appointment.location!,
                         hintStyle: AppTypography.num6.copyWith(),
                         controller: _locationCtrl,
-                        fill: cs.onPrimary,
+
                         strokeColor: _active != 2
                             ? cs.onSurface.withAlpha(50)
                             : cs.primary,
@@ -1278,7 +1277,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
                       hintText: "Tilføj note til denne aftale",
                       controller: _noteCtrl,
                       maxLines: 3,
-                      fill: cs.onPrimary,
+
                       strokeColor: _active != 3
                           ? cs.onSurface.withAlpha(50)
                           : cs.primary,

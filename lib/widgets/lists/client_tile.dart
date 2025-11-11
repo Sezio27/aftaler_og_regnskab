@@ -28,7 +28,7 @@ class ClientTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: cs.onPrimary,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(12),
           border: border
               ? Border.all(

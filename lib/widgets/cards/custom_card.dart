@@ -40,7 +40,7 @@ class CustomCard extends StatelessWidget {
       child: Material(
         elevation: elevation!,
         clipBehavior: Clip.antiAlias,
-        color: color ?? cs.onPrimary,
+        color: color ?? cs.surface,
         borderRadius: BorderRadius.all(Radius.circular(12)),
         child: field,
       ),

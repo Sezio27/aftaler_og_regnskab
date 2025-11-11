@@ -65,7 +65,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               child: CupertinoSlidingSegmentedControl<Tabs>(
                 padding: const EdgeInsets.all(0),
                 groupValue: _tab,
-                backgroundColor: cs.onPrimary,
+                backgroundColor: cs.surface,
                 thumbColor: cs.secondary,
                 onValueChanged: (v) {
                   if (v == null) return;
@@ -297,7 +297,7 @@ class StatusCountCard extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       child: CustomCard(
         field: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 12),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 10),
           child: Row(
             children: items
                 .map(

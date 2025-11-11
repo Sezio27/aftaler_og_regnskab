@@ -26,7 +26,7 @@ class ChecklistTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: cs.onPrimary,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? cs.primary : cs.onSurface.withAlpha(60),

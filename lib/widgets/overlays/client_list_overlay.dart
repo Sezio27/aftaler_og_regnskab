@@ -2,7 +2,7 @@ import 'package:aftaler_og_regnskab/model/client_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/lists/client_list.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
+import 'package:aftaler_og_regnskab/widgets/search_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -78,9 +78,10 @@ class _ClientListOverlayState extends State<ClientListOverlay> {
             ],
           ),
           const SizedBox(height: 30),
-          CustomSearchBar(
+          SearchField(
             controller: _searchCtrl,
             onChanged: context.read<ClientViewModel>().setClientSearch,
+            ctx: context,
           ),
           const SizedBox(height: 10),
           Expanded(

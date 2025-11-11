@@ -50,7 +50,7 @@ class DatePicker extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           side: BorderSide(color: cs.onSurface.withOpacity(0.25), width: 1),
-          backgroundColor: cs.onPrimary,
+          backgroundColor: cs.surface,
           foregroundColor: cs.onSurface,
         ),
         child: Text(label, style: AppTypography.num3),

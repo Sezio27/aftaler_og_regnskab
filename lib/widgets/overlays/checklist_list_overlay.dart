@@ -1,8 +1,9 @@
 import 'package:aftaler_og_regnskab/model/checklist_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
+import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
 import 'package:aftaler_og_regnskab/widgets/lists/checklist_list.dart';
-import 'package:aftaler_og_regnskab/widgets/custom_search_bar.dart';
+import 'package:aftaler_og_regnskab/widgets/search_field.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -79,9 +80,10 @@ class _ChecklistListOverlayState extends State<ChecklistListOverlay> {
             ],
           ),
           const SizedBox(height: 30),
-          CustomSearchBar(
+          SearchField(
             controller: _searchCtrl,
             onChanged: context.read<ChecklistViewModel>().setChecklistSearch,
+            ctx: context,
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -102,26 +104,14 @@ class _ChecklistListOverlayState extends State<ChecklistListOverlay> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Annuller'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    widget.onDone({..._selected});
-                    context.pop();
-                  },
-                  icon: const Icon(Icons.check),
-                  label: const Text('Færdig'),
-                ),
-              ),
-            ],
+          EditActionsRow(
+            confirmColor: cs.primary,
+            saving: _vm.saving,
+            onCancel: () => context.pop(),
+            onConfirm: () {
+              widget.onDone({..._selected});
+              context.pop();
+            },
           ),
         ],
       ),

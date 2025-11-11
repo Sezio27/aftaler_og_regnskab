@@ -87,7 +87,7 @@ class OnboardingStepPage extends StatelessWidget {
                           : Colors.white.withAlpha(180),
                     ),
                     gradient: enabled ? AppGradients.peach3 : null,
-                    color: enabled ? null : cs.onPrimary,
+                    color: enabled ? null : cs.onSecondary.withAlpha(120),
                     loading: isLoading,
                   ),
                 ),

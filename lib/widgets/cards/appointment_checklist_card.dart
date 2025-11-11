@@ -56,7 +56,7 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.onPrimary,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.onSurface.withAlpha(100), width: 0.8),
       ),

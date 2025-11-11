@@ -10,6 +10,7 @@ import 'package:aftaler_og_regnskab/widgets/cards/appointment_card_status.dart';
 import 'package:aftaler_og_regnskab/widgets/pickers/date_picker.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
+import 'package:aftaler_og_regnskab/widgets/search_field.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -134,7 +135,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
         itemBuilder: (context, index) {
           final cs = Theme.of(context).colorScheme;
 
-          // 0) FILTER CARD (scrolls away)
           if (index == 0) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -143,26 +143,12 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                   Material(
                     elevation: 1,
                     borderRadius: BorderRadius.all(Radius.circular(10)),
-                    child: CupertinoSearchTextField(
+
+                    child: SearchField(
+                      showBorder: false,
                       controller: _searchCtrl,
-                      placeholder: 'Søg',
                       onChanged: (q) => setState(() => _query = q.trim()),
-                      onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                      itemColor: cs.onSurface.withAlpha(180),
-                      style: AppTypography.b2.copyWith(color: cs.onSurface),
-                      placeholderStyle: AppTypography.b2.copyWith(
-                        color: cs.onSurface.withAlpha(180),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: cs.onPrimary,
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(10),
-                        ),
-                      ),
+                      ctx: context,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -553,7 +539,7 @@ class _FilterField extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: cs.onPrimary,
+                color: cs.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(

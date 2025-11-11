@@ -46,20 +46,21 @@ class PhotoCircle extends StatelessWidget {
     return Stack(
       alignment: Alignment.topRight,
       children: [
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(size / 2),
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: bg,
-              shape: BoxShape.circle,
-              border: border,
-            ),
-            child: inner,
+        Material(
+          color: bg,
+          elevation: 2,
+          shape: CircleBorder(
+            side: showStroke ? BorderSide(color: cs.primary) : BorderSide.none,
+          ),
+          clipBehavior: Clip.antiAlias,
+
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: SizedBox(width: size, height: size, child: inner),
           ),
         ),
+
         if (image != null)
           Positioned(
             right: 0,

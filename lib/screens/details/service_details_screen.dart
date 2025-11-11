@@ -7,7 +7,7 @@ import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/widgets/details/action_buttons.dart';
-import 'package:aftaler_og_regnskab/widgets/details/image_pickers.dart';
+import 'package:aftaler_og_regnskab/widgets/pickers/image_pickers.dart';
 import 'package:aftaler_og_regnskab/widgets/overlays/soft_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

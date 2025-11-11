@@ -34,7 +34,7 @@ class ReadActionsRow extends StatelessWidget {
                 Icons.edit_outlined,
                 color: cs.onSurface.withAlpha(200),
               ),
-              color: cs.onPrimary,
+              color: cs.surface,
               elevation: 2,
             ),
           ),
@@ -48,7 +48,7 @@ class ReadActionsRow extends StatelessWidget {
               onTap: onDelete,
               borderRadius: 12,
               icon: Icon(Icons.delete, color: cs.error.withAlpha(200)),
-              color: cs.onPrimary,
+              color: cs.surface,
               elevation: 2,
             ),
           ),
@@ -65,12 +65,14 @@ class EditActionsRow extends StatelessWidget {
     required this.onCancel,
     required this.onConfirm,
     this.horizontalPadding = 30,
+    this.confirmColor,
   });
 
   final bool saving;
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
   final double horizontalPadding;
+  final Color? confirmColor;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +86,7 @@ class EditActionsRow extends StatelessWidget {
               text: 'Annuller',
               onTap: saving ? () {} : onCancel,
               borderRadius: 12,
-              color: cs.onPrimary,
+              color: cs.surface,
               textStyle: AppTypography.button3.copyWith(color: cs.onSurface),
               elevation: 2,
             ),
@@ -96,8 +98,12 @@ class EditActionsRow extends StatelessWidget {
               onTap: saving ? () {} : onConfirm,
               loading: saving,
               borderRadius: 12,
-              gradient: AppGradients.peach3,
-              textStyle: AppTypography.button3.copyWith(color: Colors.white),
+              gradient: confirmColor == null ? AppGradients.peach3 : null,
+              color: confirmColor,
+              textStyle: AppTypography.button3.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
               elevation: 2,
             ),
           ),
@@ -128,8 +134,7 @@ class AddActionRow extends StatelessWidget {
         Expanded(
           child: CustomButton(
             text: "Annuller",
-            color: cs.onPrimary,
-            borderStroke: Border.all(color: cs.onSurface.withAlpha(200)),
+            color: cs.surface,
             elevation: 0,
             borderRadius: 14,
             textStyle: AppTypography.button3.copyWith(

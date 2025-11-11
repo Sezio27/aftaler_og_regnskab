@@ -14,7 +14,7 @@ class SoftTextField extends StatelessWidget {
     this.strokeWidth = 1.5,
     this.hintText,
     this.hintStyle,
-    this.borderRadius = 16,
+    this.borderRadius = 10,
     this.fill,
     this.suffixText,
     this.suffixStyle,
@@ -59,35 +59,39 @@ class SoftTextField extends StatelessWidget {
         hintStyle ??
         AppTypography.b4.copyWith(color: cs.onSurface.withAlpha(200));
 
-    final field = TextField(
-      controller: controller,
-      onTap: onTap,
-      keyboardType:
-          keyboardType ??
-          (isMultiline ? TextInputType.multiline : TextInputType.text),
-      maxLines: maxLines,
-      textAlign: textAlign,
-      style: AppTypography.input1.copyWith(color: cs.onSurface),
-      textInputAction: isMultiline
-          ? TextInputAction.newline
-          : TextInputAction.done,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: effectiveHintStyle,
-        filled: true,
-        fillColor: effectiveFill,
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: isMultiline ? 20 : 10,
+    final field = Material(
+      elevation: 1,
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: TextField(
+        controller: controller,
+        onTap: onTap,
+        keyboardType:
+            keyboardType ??
+            (isMultiline ? TextInputType.multiline : TextInputType.text),
+        maxLines: maxLines,
+        textAlign: textAlign,
+        style: AppTypography.input1.copyWith(color: cs.onSurface),
+        textInputAction: isMultiline
+            ? TextInputAction.newline
+            : TextInputAction.done,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: effectiveHintStyle,
+          filled: true,
+          fillColor: effectiveFill,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: isMultiline ? 20 : 10,
+          ),
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border,
+          suffixText: suffixText,
+          suffixStyle:
+              suffixStyle ??
+              AppTypography.b4.copyWith(color: cs.onSurface.withAlpha(200)),
         ),
-        border: border,
-        enabledBorder: border,
-        focusedBorder: border,
-        suffixText: suffixText,
-        suffixStyle:
-            suffixStyle ??
-            AppTypography.b4.copyWith(color: cs.onSurface.withAlpha(200)),
       ),
     );
 

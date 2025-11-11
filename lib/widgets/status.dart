@@ -65,7 +65,7 @@ class StatusPill extends StatelessWidget {
     return Expanded(
       child: Container(
         decoration: BoxDecoration(
-          color: selected ? statusColor(label) : cs.onPrimary,
+          color: selected ? statusColor(label) : cs.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? statusColor(label) : cs.onSurface.withAlpha(80),

@@ -154,7 +154,7 @@ class _WeekViewBody extends StatelessWidget {
                     child: CustomButton(
                       text: "Ny aftale",
                       icon: Icon(Icons.add, size: 18, color: cs.onSurface),
-                      color: cs.onSecondary,
+                      color: cs.surface,
                       width: 170,
                       borderRadius: 18,
                       textStyle: AppTypography.button2.copyWith(
@@ -170,7 +170,7 @@ class _WeekViewBody extends StatelessWidget {
                       elevation: 2.2,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
                 ],
               );
             },

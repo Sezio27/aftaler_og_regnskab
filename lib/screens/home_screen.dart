@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
             CustomButton(
               text: "Ny aftale",
               icon: Icon(Icons.add, size: 18, color: cs.onSurface),
-              color: cs.onSecondary,
+              color: cs.surface,
               width: 170,
               borderRadius: 18,
               textStyle: AppTypography.button2.copyWith(color: cs.onSurface),
