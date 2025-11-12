@@ -1,10 +1,10 @@
-import 'package:aftaler_og_regnskab/model/onboarding_model.dart';
-import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
+import 'package:aftaler_og_regnskab/domain/onboarding_model.dart';
+import 'package:aftaler_og_regnskab/data/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:aftaler_og_regnskab/data/user_repository.dart';
+import 'package:aftaler_og_regnskab/data/repositories/user_repository.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 

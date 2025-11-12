@@ -1,29 +1,29 @@
 import 'package:aftaler_og_regnskab/navigation/nav_shell.dart';
 
-import 'package:aftaler_og_regnskab/screens/all_appointments_screen.dart';
-import 'package:aftaler_og_regnskab/screens/details/appointment_details_screen.dart';
-import 'package:aftaler_og_regnskab/screens/details/checklist_details_screen.dart';
-import 'package:aftaler_og_regnskab/screens/details/client_details_screen.dart';
-import 'package:aftaler_og_regnskab/screens/clients_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/login_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_location_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_business_name_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_email_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_enter_phone_screen.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_name.dart';
-import 'package:aftaler_og_regnskab/screens/onboarding_screens/ob_validate_phone_screen.dart';
-import 'package:aftaler_og_regnskab/screens/details/service_details_screen.dart';
+import 'package:aftaler_og_regnskab/ui/appointment/all_appointments_screen.dart';
+import 'package:aftaler_og_regnskab/ui/appointment/appointment_details_screen.dart';
+import 'package:aftaler_og_regnskab/ui/details/checklist_details_screen.dart';
+import 'package:aftaler_og_regnskab/ui/details/client_details_screen.dart';
+import 'package:aftaler_og_regnskab/ui/settings/clients_screen.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/login_screen.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/ob_business_location_screen.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/ob_business_name_screen.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/ob_email_screen.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/ob_enter_phone_screen.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/ob_name.dart';
+import 'package:aftaler_og_regnskab/ui/onboarding_screens/ob_validate_phone_screen.dart';
+import 'package:aftaler_og_regnskab/ui/details/service_details_screen.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../auth_gate.dart';
-import '../screens/home_screen.dart';
-import '../screens/calendar/calendar_screen.dart';
-import '../screens/finance_screen.dart';
-import '../screens/services_overview_screen.dart';
-import '../screens/settings_screen.dart';
-import '../screens/new_appointment_screen.dart';
+import '../data/services/auth_gate.dart';
+import '../ui/home_screen.dart';
+import '../ui/calendar/calendar_screen.dart';
+import '../ui/finance_screen.dart';
+import '../ui/catalog/catalog_screen.dart';
+import '../ui/settings/settings_screen.dart';
+import '../ui/appointment/new_appointment_screen.dart';
 
 enum AppRoute {
   gate,
@@ -38,7 +38,7 @@ enum AppRoute {
   home,
   calendar,
   finance,
-  servicesOverview,
+  catalog,
   settings,
   newAppointment,
   allAppointments,
@@ -137,10 +137,10 @@ GoRouter createRouter() {
                 const NoTransitionPage(child: FinanceScreen()),
           ),
           GoRoute(
-            path: '/service/overview',
-            name: AppRoute.servicesOverview.name,
+            path: '/catalog',
+            name: AppRoute.catalog.name,
             pageBuilder: (_, state) =>
-                const NoTransitionPage(child: ServicesOverviewScreen()),
+                const NoTransitionPage(child: CatalogScreen()),
           ),
           GoRoute(
             path: '/settings',

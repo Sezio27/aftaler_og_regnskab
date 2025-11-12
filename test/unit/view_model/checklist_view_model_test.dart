@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:aftaler_og_regnskab/data/cache/checklist_cache.dart';
-import 'package:aftaler_og_regnskab/data/checklist_repository.dart';
-import 'package:aftaler_og_regnskab/model/checklist_model.dart';
+import 'package:aftaler_og_regnskab/domain/cache/checklist_cache.dart';
+import 'package:aftaler_og_regnskab/data/repositories/checklist_repository.dart';
+import 'package:aftaler_og_regnskab/domain/checklist_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

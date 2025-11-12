@@ -1,8 +1,8 @@
 // test/widgets/finance_screen_test.dart
 import 'dart:ui' as ui;
 
-import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
-import 'package:aftaler_og_regnskab/screens/finance_screen.dart';
+import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
+import 'package:aftaler_og_regnskab/ui/finance_screen.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';

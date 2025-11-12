@@ -1,8 +1,8 @@
-import 'package:aftaler_og_regnskab/model/onboarding_model.dart';
-import 'package:aftaler_og_regnskab/services/firebase_auth_methods.dart';
+import 'package:aftaler_og_regnskab/domain/onboarding_model.dart';
+import 'package:aftaler_og_regnskab/data/services/firebase_auth_methods.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import '../data/user_repository.dart';
+import '../data/repositories/user_repository.dart';
 
 enum NextStep { home, onboarding, loginNoAccount }
 

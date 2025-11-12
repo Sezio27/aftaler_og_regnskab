@@ -1,8 +1,8 @@
 // test/view_models/user_view_model_test.dart
 import 'dart:async';
 
-import 'package:aftaler_og_regnskab/data/user_repository.dart';
-import 'package:aftaler_og_regnskab/services/notification_service.dart';
+import 'package:aftaler_og_regnskab/data/repositories/user_repository.dart';
+import 'package:aftaler_og_regnskab/data/services/notification_service.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

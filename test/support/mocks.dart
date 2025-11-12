@@ -9,7 +9,7 @@ import 'package:mocktail/mocktail.dart';
 // Import your VMs and models
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
-import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
+import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
 
 class MockFinanceVM extends Mock
     with ChangeNotifier

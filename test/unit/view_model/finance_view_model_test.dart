@@ -1,5 +1,5 @@
-import 'package:aftaler_og_regnskab/data/finance_summary_repository.dart';
-import 'package:aftaler_og_regnskab/model/finance_model.dart';
+import 'package:aftaler_og_regnskab/data/repositories/finance_summary_repository.dart';
+import 'package:aftaler_og_regnskab/domain/finance_model.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:flutter_test/flutter_test.dart';

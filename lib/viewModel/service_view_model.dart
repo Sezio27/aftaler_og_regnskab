@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:aftaler_og_regnskab/data/cache/service_cache.dart';
-import 'package:aftaler_og_regnskab/data/service_repository.dart';
-import 'package:aftaler_og_regnskab/model/service_model.dart';
-import 'package:aftaler_og_regnskab/services/image_storage.dart';
+import 'package:aftaler_og_regnskab/domain/cache/service_cache.dart';
+import 'package:aftaler_og_regnskab/data/repositories/service_repository.dart';
+import 'package:aftaler_og_regnskab/domain/service_model.dart';
+import 'package:aftaler_og_regnskab/data/services/image_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 

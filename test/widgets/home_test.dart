@@ -1,7 +1,7 @@
-import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
+import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
-import 'package:aftaler_og_regnskab/screens/home_screen.dart';
+import 'package:aftaler_og_regnskab/ui/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

@@ -2,13 +2,13 @@ import 'package:aftaler_og_regnskab/utils/performance.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
-enum TabItem { home, calendar, finance, services, settings }
+enum TabItem { home, calendar, finance, catalog, settings }
 
 const _paths = {
   TabItem.home: '/home',
   TabItem.calendar: '/calendar',
   TabItem.finance: '/finance',
-  TabItem.services: '/service/overview',
+  TabItem.catalog: '/catalog',
   TabItem.settings: '/settings',
 };
 
@@ -20,7 +20,7 @@ int? tabIndexForRouteName(String? name) {
       return 1;
     case 'finance':
       return 2;
-    case 'services':
+    case 'catalog':
       return 3;
     case 'settings':
       return 4;
@@ -38,14 +38,13 @@ String? routeNameFromLocation(String loc) {
     if (loc == "/clients/all") return "allClients";
     return 'clientDetails';
   }
-  if (loc.startsWith('/service')) {
-    if (loc == "/service/overview") return 'servicesOverview';
-    return "serviceDetails";
-  }
+  if (loc.startsWith('/service')) return "serviceDetails";
+
   if (loc.startsWith('/checklists')) return "checklistDetails";
 
   if (loc.startsWith('/calendar')) return 'calendar';
   if (loc.startsWith('/finance')) return 'finance';
+  if (loc.startsWith('/catalog')) return 'catalog';
 
   if (loc.startsWith('/settings')) return 'settings';
   if (loc.startsWith('/home')) return 'home';
@@ -56,7 +55,7 @@ const List<String> tabRoutes = [
   '/home',
   '/calendar',
   '/finance',
-  '/service/overview',
+  '/catalog',
   '/settings',
 ];
 void goToTab(BuildContext context, int i) {
@@ -73,7 +72,7 @@ void goToTab(BuildContext context, int i) {
       context.go(_paths[TabItem.finance]!);
       break;
     case 3:
-      context.go(_paths[TabItem.services]!);
+      context.go(_paths[TabItem.catalog]!);
       break;
     case 4:
       context.go(_paths[TabItem.settings]!);

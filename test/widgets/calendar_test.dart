@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:aftaler_og_regnskab/model/appointment_card_model.dart';
-import 'package:aftaler_og_regnskab/screens/calendar/calendar_screen.dart';
-import 'package:aftaler_og_regnskab/screens/calendar/month_grid.dart';
-import 'package:aftaler_og_regnskab/screens/calendar/month_switcher.dart';
-import 'package:aftaler_og_regnskab/screens/calendar/week_switcher.dart';
+import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
+import 'package:aftaler_og_regnskab/ui/calendar/calendar_screen.dart';
+import 'package:aftaler_og_regnskab/ui/calendar/month_grid.dart';
+import 'package:aftaler_og_regnskab/ui/calendar/month_switcher.dart';
+import 'package:aftaler_og_regnskab/ui/calendar/week_switcher.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';

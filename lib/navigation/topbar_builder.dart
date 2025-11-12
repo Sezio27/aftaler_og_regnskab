@@ -1,5 +1,5 @@
-import 'package:aftaler_og_regnskab/screens/calendar/calendar_tab_switcher.dart';
-import 'package:aftaler_og_regnskab/widgets/layout/app_top_bar.dart';
+import 'package:aftaler_og_regnskab/ui/calendar/calendar_tab_switcher.dart';
+import 'package:aftaler_og_regnskab/ui/widgets/layout/app_top_bar.dart';
 import 'package:flutter/material.dart';
 
 PreferredSizeWidget buildTopBarForRouteName(
@@ -26,7 +26,7 @@ PreferredSizeWidget buildTopBarForRouteName(
         width: maxContentWidth,
         height: fixedHeight,
       );
-    case 'servicesOverview':
+    case 'catalog':
       return AppTopBar(
         title: 'Services og Checklister',
 

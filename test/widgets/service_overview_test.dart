@@ -1,7 +1,7 @@
 // test/widgets/services_overview_test.dart
-import 'package:aftaler_og_regnskab/screens/services_overview_screen.dart'; // adjust path if needed
-import 'package:aftaler_og_regnskab/model/service_model.dart';
-import 'package:aftaler_og_regnskab/model/checklist_model.dart';
+import 'package:aftaler_og_regnskab/ui/catalog/catalog_screen.dart'; // adjust path if needed
+import 'package:aftaler_og_regnskab/domain/service_model.dart';
+import 'package:aftaler_og_regnskab/domain/checklist_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:flutter/cupertino.dart';
@@ -63,7 +63,7 @@ void main() {
   Future<void> _pump(WidgetTester tester) async {
     await pumpWithShell(
       tester,
-      child: const ServicesOverviewScreen(),
+      child: const CatalogScreen(),
       providers: [
         ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
         ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
