@@ -141,7 +141,7 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime monthStart,
   ) {
     final monthEnd = endOfMonthInclusive(monthStart);
-
+    debugPrint(monthStart.toIso8601String());
     return _repo.watchAppointmentsBetween(monthStart, monthEnd).listen((
       fetched,
     ) async {
@@ -177,7 +177,11 @@ class AppointmentViewModel extends ChangeNotifier {
     _initialStart = start;
     _initialEnd = end;
 
-    _initialSubscription = _subscribeMonth(start);
+    _initialSubscription = _repo.watchAppointmentsBetween(start, end).listen((
+      fetched,
+    ) async {
+      await _handleSnapshot(fetched, start, end);
+    });
   }
 
   void setActiveWindow(DateTime visibleDate) {
@@ -191,9 +195,11 @@ class AppointmentViewModel extends ChangeNotifier {
     _activeMonthStart = newMonthStart;
 
     final windowMonthStarts = [
+      addMonths(newMonthStart, -2),
       addMonths(newMonthStart, -1),
       newMonthStart,
       addMonths(newMonthStart, 1),
+      addMonths(newMonthStart, 2),
     ];
 
     for (final m in windowMonthStarts) {

@@ -1,5 +1,5 @@
+import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
 import 'package:flutter/material.dart';
-import 'package:aftaler_og_regnskab/theme/colors.dart';
 
 enum PaymentStatus { all, paid, waiting, missing, uninvoiced }
 

@@ -87,13 +87,5 @@ DateTime toThursday(DateTime d) => DateTime(
 DateTime getMonth(DateTime dt) => DateTime(dt.year, dt.month, 1);
 
 DateTime addMonths(DateTime base, int delta) {
-  final m = base.month + delta;
-  final y = m == 0
-      ? base.year - 1
-      : m == 13
-      ? base.year + 1
-      : base.year;
-  final nm = ((m - 1) % 12) + 1;
-
-  return DateTime(y, nm, 1);
+  return DateTime(base.year, base.month + delta, 1);
 }
