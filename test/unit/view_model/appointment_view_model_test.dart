@@ -1010,51 +1010,6 @@ void main() {
     );
   });
 
-  group('subscribeToAppointment / unsubscribeFromAppointment', () {
-    test('subscribes once and caches incoming doc', () async {
-      final ctrl = StreamController<AppointmentModel?>();
-      when(() => repo.watchAppointment('S1')).thenAnswer((_) => ctrl.stream);
-
-      await viewModel.subscribeToAppointment('S1');
-
-      final doc = AppointmentModel(
-        id: 'S1',
-        clientId: 'c1',
-        serviceId: 's1',
-        dateTime: DateTime(2025, 1, 10, 10),
-      );
-      ctrl.add(doc);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-
-      final cached = viewModel.getAppointment('S1');
-      expect(cached, isNotNull);
-
-      await viewModel.subscribeToAppointment('S1');
-      verify(() => repo.watchAppointment('S1')).called(1);
-
-      viewModel.unsubscribeFromAppointment('S1');
-      await ctrl.close();
-    });
-
-    test('skips subscription when already covered and cached', () async {
-      when(
-        () => repo.watchAppointmentsBetween(any(), any()),
-      ).thenAnswer((_) => const Stream<List<AppointmentModel>>.empty());
-      await viewModel.setInitialRange();
-
-      final covered = AppointmentModel(
-        id: 'S2',
-        clientId: 'c1',
-        serviceId: 's1',
-        dateTime: DateTime.now(),
-      );
-      apptCache.cacheAppointment(covered);
-
-      await viewModel.subscribeToAppointment('S2');
-      verifyNever(() => repo.watchAppointment('S2'));
-    });
-  });
-
   group('resetOnAuthChange', () {
     test('clears cache and resets public flags', () async {
       apptCache.cacheAppointment(

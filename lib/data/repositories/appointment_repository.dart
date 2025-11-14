@@ -26,14 +26,6 @@ class AppointmentRepository {
     return _collection(uid).doc();
   }
 
-  Stream<AppointmentModel?> watchAppointment(String id) {
-    final uid = _uidOrThrow;
-    return _collection(uid).doc(id).snapshots().map((snap) {
-      if (!snap.exists) return null;
-      return _fromDoc(snap);
-    });
-  }
-
   Future<void> createAppointmentWithId(
     String id,
     AppointmentModel model,
@@ -76,13 +68,6 @@ class AppointmentRepository {
 
           return q.docs.map(_fromDoc).toList();
         });
-  }
-
-  Future<AppointmentModel?> getAppointmentOnce(String id) async {
-    final uid = _uidOrThrow;
-    final snap = await _collection(uid).doc(id).get();
-    if (!snap.exists) return null;
-    return _fromDoc(snap);
   }
 
   Future<Map<String, AppointmentModel?>> getAppointments(

@@ -237,10 +237,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
                             }
                             context.read<AppointmentViewModel>().updateStatus(
                               a.id,
-                              a.status,
-                              a.price,
                               newStatus.label,
-                              a.time,
+                            );
+                            context.read<FinanceViewModel>().onUpdateStatus(
+                              oldStatus: PaymentStatusX.fromString(a.status),
+                              newStatus: newStatus,
+                              price: a.price ?? 0.0,
+                              date: a.time,
                             );
                           },
                         );

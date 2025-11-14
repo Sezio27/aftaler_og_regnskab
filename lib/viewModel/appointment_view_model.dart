@@ -10,10 +10,7 @@ import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:aftaler_og_regnskab/data/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/data/services/notification_service.dart';
-import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
-import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -27,7 +24,6 @@ class AppointmentViewModel extends ChangeNotifier {
     required this.serviceCache,
     required this.checklistCache,
     required this.apptCache,
-    required this.financeVM,
     required this.notifications,
   });
 
@@ -37,7 +33,6 @@ class AppointmentViewModel extends ChangeNotifier {
   final ChecklistCache checklistCache;
   final AppointmentCache apptCache;
   final ImageStorage _imageStorage;
-  final FinanceViewModel financeVM;
   final AppointmentNotifications notifications;
 
   bool isReady = false;
@@ -81,34 +76,6 @@ class AppointmentViewModel extends ChangeNotifier {
     }
     _appointmentSubscriptions.clear();
     super.dispose();
-  }
-
-  Future<void> subscribeToAppointment(String id) async {
-    if (_appointmentSubscriptions.containsKey(id)) return;
-
-    final cached = apptCache.getAppointment(id);
-    if (cached != null && _isSubCovered(cached.dateTime)) {
-      return;
-    }
-
-    final sub = _repo.watchAppointment(id).listen((doc) {
-      if (doc != null) {
-        apptCache.cacheAppointment(doc);
-        if (_isSubCovered(doc.dateTime)) {
-          _appointmentSubscriptions.remove(id)?.cancel();
-          notifyListeners();
-          return;
-        }
-      } else {
-        apptCache.remove(id);
-      }
-      notifyListeners();
-    });
-    _appointmentSubscriptions[id] = sub;
-  }
-
-  void unsubscribeFromAppointment(String id) {
-    _appointmentSubscriptions.remove(id)?.cancel();
   }
 
   AppointmentModel? getAppointment(String id) => apptCache.getAppointment(id);
@@ -275,13 +242,6 @@ class AppointmentViewModel extends ChangeNotifier {
       apptCache.cacheAppointment(created);
 
       unawaited(notifications.onAppointmentChanged(created));
-
-      await financeVM.onAddAppointment(
-        status: PaymentStatusX.fromString(status),
-        price: price ?? 0.0,
-        dateTime: dateTime,
-      );
-      notifyListeners();
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke oprette aftale: $e';
@@ -292,25 +252,12 @@ class AppointmentViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateStatus(
-    String id,
-    String oldStatus,
-    double? price,
-    String newStatus,
-    DateTime date,
-  ) async {
+  Future<void> updateStatus(String id, String newStatus) async {
     await _repo.updateStatus(id, newStatus.trim());
     final a = apptCache.getAppointment(id);
     if (a != null) {
       apptCache.cacheAppointment(a.copyWith(status: newStatus.trim()));
     }
-    await financeVM.onUpdateStatus(
-      oldStatus: PaymentStatusX.fromString(oldStatus),
-      newStatus: PaymentStatusX.fromString(newStatus),
-      price: price ?? 0.0,
-      date: date,
-    );
-
     notifyListeners();
   }
 
@@ -407,31 +354,6 @@ class AppointmentViewModel extends ChangeNotifier {
     try {
       await _imageStorage.deleteAppointmentImagesByUrls(removedImageUrls);
     } catch (_) {}
-  }
-
-  Future<void> handleUpdateFinance(
-    AppointmentModel old,
-    String? status,
-    double? price,
-    DateTime? dateTime,
-  ) async {
-    final oldStatus = PaymentStatusX.fromString(old.status);
-    final newStatus = status != null
-        ? PaymentStatusX.fromString(status)
-        : oldStatus;
-    final oldPrice = old.price ?? 0.0;
-    final newPrice = price ?? 0.0;
-    final oldDate = old.dateTime;
-    final newDate = dateTime ?? oldDate;
-
-    await financeVM.onUpdateAppointmentFields(
-      oldStatus: oldStatus,
-      newStatus: newStatus,
-      oldPrice: oldPrice,
-      newPrice: newPrice,
-      oldDate: oldDate,
-      newDate: newDate,
-    );
   }
 
   Future<void> handleUpdate(
@@ -541,8 +463,6 @@ class AppointmentViewModel extends ChangeNotifier {
         await handleDeleteImage(removedImageUrls);
       }
 
-      await handleUpdateFinance(old, status, price, dateTime);
-
       return true;
     } catch (e) {
       _lastErrorMessage = 'Kunne ikke opdatere: $e';
@@ -566,11 +486,7 @@ class AppointmentViewModel extends ChangeNotifier {
     await _repo.deleteAppointment(id);
 
     apptCache.remove(id);
-    financeVM.onDeleteAppointment(
-      status: PaymentStatusX.fromString(status),
-      price: price ?? 0.0,
-      date: date,
-    );
+
     notifyListeners();
   }
 

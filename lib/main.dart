@@ -136,7 +136,6 @@ class MyApp extends StatelessWidget {
               serviceCache: ctx.read<ServiceCache>(),
               checklistCache: ctx.read<ChecklistCache>(),
               apptCache: ctx.read<AppointmentCache>(),
-              financeVM: ctx.read<FinanceViewModel>(),
               notifications: ctx.read<AppointmentNotifications>(),
             );
           },

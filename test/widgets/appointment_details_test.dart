@@ -78,12 +78,6 @@ void main() {
       ),
     );
 
-    // Subscription lifecycle (no-ops)
-    when(() => apptVM.subscribeToAppointment(any())).thenAnswer((_) async {});
-    when(
-      () => apptVM.unsubscribeFromAppointment(any()),
-    ).thenAnswer((_) async {});
-
     // Checklist progress stream defaults to an empty progress map
     when(
       () => apptVM.checklistProgressStream(any()),
@@ -106,33 +100,6 @@ void main() {
     when(() => clientVM.getClient(any())).thenReturn(null);
     when(() => serviceVM.getService(any())).thenReturn(null);
     when(() => checklistVM.getById(any())).thenReturn(null);
-  });
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // Lifecycle: subscribe/unsubscribe
-  // ────────────────────────────────────────────────────────────────────────────
-  testWidgets('subscribes on init and unsubscribes on dispose', (tester) async {
-    await pumpWithShell(
-      tester,
-      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
-      providers: [
-        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
-        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
-        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
-        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
-      ],
-      location: '/appointments/a1',
-      routeName: 'appointmentDetails',
-    );
-
-    await tester.pump();
-    verify(() => apptVM.subscribeToAppointment('a1')).called(1);
-
-    // Dispose by replacing the tree
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-
-    verify(() => apptVM.unsubscribeFromAppointment('a1')).called(1);
   });
 
   // ────────────────────────────────────────────────────────────────────────────

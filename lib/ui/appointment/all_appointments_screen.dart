@@ -11,6 +11,7 @@ import 'package:aftaler_og_regnskab/ui/widgets/pickers/date_picker.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/search_field.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -278,14 +279,19 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
                     pathParameters: {'id': a.id},
                   );
                 },
-                onChangeStatus: (newStatus) =>
-                    context.read<AppointmentViewModel>().updateStatus(
-                      a.id,
-                      a.status,
-                      a.price,
-                      newStatus.label,
-                      a.time,
-                    ),
+                onChangeStatus: (newStatus) {
+                  context.read<AppointmentViewModel>().updateStatus(
+                    a.id,
+                    newStatus.label,
+                  );
+
+                  context.read<FinanceViewModel>().onUpdateStatus(
+                    oldStatus: PaymentStatusX.fromString(a.status),
+                    newStatus: newStatus,
+                    price: a.price ?? 0.0,
+                    date: a.time,
+                  );
+                },
               ),
             );
           }

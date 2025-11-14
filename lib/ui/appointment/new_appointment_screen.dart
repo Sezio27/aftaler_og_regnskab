@@ -6,6 +6,7 @@ import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/lists/checklist_list.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/lists/client_list.dart';
@@ -102,7 +103,7 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
 
     final customPrice = parsePrice(_customPriceCtrl.text);
 
-    return await context.read<AppointmentViewModel>().addAppointment(
+    final success = await context.read<AppointmentViewModel>().addAppointment(
       clientId: _selectedClientId,
       serviceId: _selectedServiceId,
       dateTime: dateTime,
@@ -113,6 +114,15 @@ class _NewAppointmentScreenState extends State<NewAppointmentScreen> {
       images: _images,
       status: _status.label,
     );
+    if (!success) return false;
+
+    await context.read<FinanceViewModel>().onAddAppointment(
+      status: PaymentStatusX.fromString(_status.label),
+      price: customPrice ?? 0.0,
+      dateTime: dateTime,
+    );
+
+    return true;
   }
 
   @override

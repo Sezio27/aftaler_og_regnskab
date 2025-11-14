@@ -11,6 +11,7 @@ import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/cards/appointment_checklist_card.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/lists/client_tile.dart';
@@ -39,25 +40,6 @@ class AppointmentDetailsScreen extends StatefulWidget {
 }
 
 class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
-  late final AppointmentViewModel _vm;
-  bool _subscribed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _vm = context.read<AppointmentViewModel>();
-    _vm.subscribeToAppointment(widget.appointmentId);
-    _subscribed = true;
-  }
-
-  @override
-  void dispose() {
-    if (_subscribed) {
-      _vm.unsubscribeFromAppointment(widget.appointmentId);
-    }
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Selector<AppointmentViewModel, AppointmentModel?>(
@@ -123,13 +105,26 @@ class __AppointmentDetailsViewState extends State<_AppointmentDetailsView> {
                     await handleDelete(
                       context: context,
                       componentLabel: 'Aftale',
-                      onDelete: () =>
-                          context.read<AppointmentViewModel>().delete(
-                            widget.appointment.id!,
+                      onDelete: () async {
+                        final appointmentVm = context
+                            .read<AppointmentViewModel>();
+                        final financeVm = context.read<FinanceViewModel>();
+
+                        await appointmentVm.delete(
+                          widget.appointment.id!,
+                          widget.appointment.status!,
+                          widget.appointment.price,
+                          widget.appointment.dateTime!,
+                        );
+
+                        financeVm.onDeleteAppointment(
+                          date: widget.appointment.dateTime!,
+                          price: widget.appointment.price ?? 0.0,
+                          status: PaymentStatusX.fromString(
                             widget.appointment.status!,
-                            widget.appointment.price,
-                            widget.appointment.dateTime!,
                           ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -758,22 +753,48 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
         }
         return null;
       },
-      onSave: () =>
-          context.read<AppointmentViewModel>().updateAppointmentFields(
-            widget.appointment,
-            clientId: _selectedClientId,
-            serviceId: _selectedServiceId ?? '',
-            checklistIds: _selectedChecklistIds.toList(),
-            dateTime: _combinedDateTime(),
-            payDate: _payDate,
-            location: _locationCtrl.text,
-            note: _noteCtrl.text,
-            price: customPrice ?? 0.0,
-            status: _status.label,
-            currentImageUrls: _currentImages,
-            removedImageUrls: _removedImages,
-            newImages: _newImages,
-          ),
+      onSave: () async {
+        final appointmentVm = context.read<AppointmentViewModel>();
+        final financeVm = context.read<FinanceViewModel>();
+
+        final ok = await appointmentVm.updateAppointmentFields(
+          widget.appointment,
+          clientId: _selectedClientId,
+          serviceId: _selectedServiceId,
+          checklistIds: _selectedChecklistIds.toList(),
+          dateTime: _combinedDateTime(),
+          payDate: _payDate,
+          location: _locationCtrl.text,
+          note: _noteCtrl.text,
+          price: customPrice ?? 0.0,
+          status: _status.label,
+          currentImageUrls: _currentImages,
+          removedImageUrls: _removedImages,
+          newImages: _newImages,
+        );
+        if (!ok) {
+          return false;
+        }
+
+        final old = widget.appointment;
+
+        final oldStatus = PaymentStatusX.fromString(old.status);
+        final newStatus = _status;
+        final oldPrice = old.price ?? 0.0;
+        final newPrice = customPrice ?? 0.0;
+        final oldDate = old.dateTime;
+        final newDate = _combinedDateTime() ?? oldDate;
+
+        await financeVm.onUpdateAppointmentFields(
+          oldStatus: oldStatus,
+          newStatus: newStatus,
+          oldPrice: oldPrice,
+          newPrice: newPrice,
+          oldDate: oldDate,
+          newDate: newDate,
+        );
+        return true;
+      },
 
       errorText: () =>
           context.read<AppointmentViewModel>().error ?? 'Ukendt fejl',
