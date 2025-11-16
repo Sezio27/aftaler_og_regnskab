@@ -10,8 +10,6 @@ class ChecklistViewModel extends ChangeNotifier {
   final ChecklistCache _cache;
 
   StreamSubscription<List<ChecklistModel>>? _sub;
-  final Map<String, StreamSubscription<ChecklistModel?>>
-  _checklistSubscriptions = {};
 
   String _query = '';
   List<ChecklistModel> _all = const [];
@@ -27,27 +25,7 @@ class ChecklistViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
-    for (final s in _checklistSubscriptions.values) {
-      s.cancel();
-    }
-    _checklistSubscriptions.clear();
     super.dispose();
-  }
-
-  void subscribeToChecklist(String id) {
-    if (_checklistSubscriptions.containsKey(id)) return;
-    _checklistSubscriptions[id] = _repo.watchChecklist(id).listen((doc) {
-      if (doc != null) {
-        _cache.cacheChecklist(doc);
-      } else {
-        _cache.remove(id);
-      }
-      notifyListeners();
-    });
-  }
-
-  void unsubscribeFromChecklist(String id) {
-    _checklistSubscriptions.remove(id)?.cancel();
   }
 
   void initChecklistFilters({String initialQuery = ''}) {

@@ -20,25 +20,6 @@ class ChecklistDetailsScreen extends StatefulWidget {
 }
 
 class _ChecklistDetailsScreenState extends State<ChecklistDetailsScreen> {
-  late final ChecklistViewModel _vm;
-  bool _subscribed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _vm = context.read<ChecklistViewModel>();
-    _vm.subscribeToChecklist(widget.checklistId);
-    _subscribed = true;
-  }
-
-  @override
-  void dispose() {
-    if (_subscribed) {
-      _vm.unsubscribeFromChecklist(widget.checklistId);
-    }
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Selector<ChecklistViewModel, ChecklistModel?>(

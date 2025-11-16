@@ -19,27 +19,12 @@ class ChecklistRepository {
   CollectionReference<Map<String, dynamic>> _collection(String uid) =>
       _db.collection('users').doc(uid).collection('checklists');
 
-  Stream<ChecklistModel?> watchChecklist(String id) {
-    final uid = _uidOrThrow;
-    return _collection(uid).doc(id).snapshots().map((d) {
-      if (!d.exists) return null;
-      return _fromDoc(d);
-    });
-  }
-
   Stream<List<ChecklistModel>> watchChecklists() {
     final uid = _uidOrThrow;
     return _collection(uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((q) => q.docs.map(_fromDoc).toList());
-  }
-
-  Future<ChecklistModel?> getChecklist(String id) async {
-    final uid = _uidOrThrow;
-    final snap = await _collection(uid).doc(id).get();
-    if (!snap.exists) return null;
-    return _fromDoc(snap);
   }
 
   Future<Map<String, ChecklistModel?>> getChecklists(Set<String> ids) async {
