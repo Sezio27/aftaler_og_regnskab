@@ -1,8 +1,8 @@
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/data/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/data/services/notification_service.dart';
-import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/user_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/cards/custom_card.dart';

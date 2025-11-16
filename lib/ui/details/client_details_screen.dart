@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/domain/client_model.dart';
-import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
 import 'package:aftaler_og_regnskab/utils/phone_format.dart';
@@ -23,25 +23,6 @@ class ClientDetailsScreen extends StatefulWidget {
 }
 
 class _ClientDetailsScreenState extends State<ClientDetailsScreen> {
-  late final ClientViewModel _vm;
-  bool _subscribed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _vm = context.read<ClientViewModel>();
-    _vm.subscribeToClient(widget.clientId);
-    _subscribed = true;
-  }
-
-  @override
-  void dispose() {
-    if (_subscribed) {
-      _vm.unsubscribeFromClient(widget.clientId);
-    }
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Selector<ClientViewModel, ClientModel?>(

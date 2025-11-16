@@ -1,5 +1,5 @@
 ﻿import 'dart:typed_data';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/pickers/image/image_picker_helper.dart';
 

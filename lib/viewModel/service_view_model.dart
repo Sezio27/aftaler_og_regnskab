@@ -14,8 +14,6 @@ class ServiceViewModel extends ChangeNotifier {
   final ServiceCache _cache;
 
   StreamSubscription<List<ServiceModel>>? _sub;
-  final Map<String, StreamSubscription<ServiceModel?>> _serviceSubscriptions =
-      {};
 
   String _query = '';
   List<ServiceModel> _all = const [];
@@ -31,27 +29,7 @@ class ServiceViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
-    for (final s in _serviceSubscriptions.values) {
-      s.cancel();
-    }
-    _serviceSubscriptions.clear();
     super.dispose();
-  }
-
-  void subscribeToService(String id) {
-    if (_serviceSubscriptions.containsKey(id)) return;
-    _serviceSubscriptions[id] = _repo.watchService(id).listen((doc) {
-      if (doc != null) {
-        _cache.cacheService(doc);
-      } else {
-        _cache.remove(id);
-      }
-      notifyListeners();
-    });
-  }
-
-  void unsubscribeFromService(String id) {
-    _serviceSubscriptions.remove(id)?.cancel();
   }
 
   ServiceModel? getService(String id) {

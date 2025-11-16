@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/pickers/image/image_picker_helper.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 
 class AvatarImagePicker extends StatelessWidget {
   const AvatarImagePicker({

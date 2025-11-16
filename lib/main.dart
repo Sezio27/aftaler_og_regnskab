@@ -16,7 +16,7 @@ import 'package:aftaler_og_regnskab/data/services/firebase_options.dart';
 import 'package:aftaler_og_regnskab/data/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/data/services/image_storage.dart';
 import 'package:aftaler_og_regnskab/data/services/notification_service.dart';
-import 'package:aftaler_og_regnskab/ui/theme/app_theme.dart';
+import 'package:aftaler_og_regnskab/theme/app_theme.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';

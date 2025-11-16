@@ -4,7 +4,7 @@ import 'package:aftaler_og_regnskab/ui/calendar/month_grid.dart';
 import 'package:aftaler_og_regnskab/ui/calendar/month_switcher.dart';
 import 'package:aftaler_og_regnskab/ui/calendar/week_switcher.dart';
 import 'package:aftaler_og_regnskab/ui/calendar/week_day_header.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';

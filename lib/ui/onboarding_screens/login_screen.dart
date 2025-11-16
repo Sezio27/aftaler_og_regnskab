@@ -1,6 +1,6 @@
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
-import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/buttons/custom_button.dart';
 import 'package:flutter/material.dart';

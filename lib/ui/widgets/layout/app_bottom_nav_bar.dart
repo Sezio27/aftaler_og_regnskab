@@ -1,7 +1,7 @@
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:flutter/material.dart';
-import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
 
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({

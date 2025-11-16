@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/string_extensions.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:flutter/material.dart';

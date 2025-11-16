@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:aftaler_og_regnskab/domain/service_model.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/persistence_ops.dart';
@@ -22,25 +22,6 @@ class ServiceDetailsScreen extends StatefulWidget {
 }
 
 class _ServiceDetailsScreenState extends State<ServiceDetailsScreen> {
-  late final ServiceViewModel _vm;
-  bool _subscribed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _vm = context.read<ServiceViewModel>();
-    _vm.subscribeToService(widget.serviceId);
-    _subscribed = true;
-  }
-
-  @override
-  void dispose() {
-    if (_subscribed) {
-      _vm.unsubscribeFromService(widget.serviceId);
-    }
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Selector<ServiceViewModel, ServiceModel?>(

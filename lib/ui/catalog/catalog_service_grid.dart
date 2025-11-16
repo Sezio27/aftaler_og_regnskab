@@ -1,5 +1,5 @@
 import 'package:aftaler_og_regnskab/domain/service_model.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/images/service_image.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';

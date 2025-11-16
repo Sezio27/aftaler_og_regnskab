@@ -3,7 +3,7 @@ import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:aftaler_og_regnskab/domain/checklist_model.dart';
 import 'package:aftaler_og_regnskab/domain/client_model.dart';
 import 'package:aftaler_og_regnskab/domain/service_model.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/date_time_format.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';

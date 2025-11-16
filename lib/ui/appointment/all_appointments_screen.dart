@@ -3,7 +3,7 @@ import 'package:aftaler_og_regnskab/data/repositories/appointment_repository.dar
 import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/cards/appointment_card_status.dart';

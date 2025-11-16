@@ -27,7 +27,6 @@ class ChecklistRepository {
     });
   }
 
-  // All checklists, latest first
   Stream<List<ChecklistModel>> watchChecklists() {
     final uid = _uidOrThrow;
     return _collection(uid)

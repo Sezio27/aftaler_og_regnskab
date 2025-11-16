@@ -1,4 +1,4 @@
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/lists/client_list.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/overlays/add_client_panel.dart';

@@ -15,7 +15,6 @@ class ClientViewModel extends ChangeNotifier {
   final ClientCache _cache;
 
   StreamSubscription<List<ClientModel>>? _sub;
-  final Map<String, StreamSubscription<ClientModel?>> _clientSubscriptions = {};
 
   String _query = '';
   List<ClientModel> _all = const [];
@@ -39,27 +38,7 @@ class ClientViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
-    for (final s in _clientSubscriptions.values) {
-      s.cancel();
-    }
-    _clientSubscriptions.clear();
     super.dispose();
-  }
-
-  void subscribeToClient(String id) {
-    if (_clientSubscriptions.containsKey(id)) return;
-    _clientSubscriptions[id] = _repo.watchClient(id).listen((doc) {
-      if (doc != null) {
-        _cache.cacheClient(doc);
-      } else {
-        _cache.remove(id);
-      }
-      notifyListeners();
-    });
-  }
-
-  void unsubscribeFromClient(String id) {
-    _clientSubscriptions.remove(id)?.cancel();
   }
 
   Future<ClientModel?> prefetchClient(String id) async {

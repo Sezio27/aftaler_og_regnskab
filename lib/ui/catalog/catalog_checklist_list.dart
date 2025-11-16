@@ -1,5 +1,5 @@
 import 'package:aftaler_og_regnskab/domain/checklist_model.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/cards/custom_card.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:flutter/material.dart';

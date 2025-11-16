@@ -1,7 +1,7 @@
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/data/services/firebase_auth_methods.dart';
 
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/viewModel/onboarding_view_model.dart';
 
 import 'package:aftaler_og_regnskab/ui/widgets/onboarding/onboarding_step_page.dart';

@@ -1,5 +1,5 @@
-import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/images/avatar.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/cards/custom_card.dart';

@@ -1,5 +1,5 @@
-import 'package:aftaler_og_regnskab/ui/theme/colors.dart';
-import 'package:aftaler_og_regnskab/ui/theme/typography.dart';
+import 'package:aftaler_og_regnskab/theme/colors.dart';
+import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/buttons/custom_button.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/onboarding/step__bar.dart';
 import 'package:flutter/material.dart';
