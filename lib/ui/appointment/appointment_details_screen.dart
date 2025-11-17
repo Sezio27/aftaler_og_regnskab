@@ -756,6 +756,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
       onSave: () async {
         final appointmentVm = context.read<AppointmentViewModel>();
         final financeVm = context.read<FinanceViewModel>();
+        final old = widget.appointment;
 
         final ok = await appointmentVm.updateAppointmentFields(
           widget.appointment,
@@ -775,8 +776,6 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
         if (!ok) {
           return false;
         }
-
-        final old = widget.appointment;
 
         final oldStatus = PaymentStatusX.fromString(old.status);
         final newStatus = _status;
