@@ -19,27 +19,12 @@ class ClientRepository {
   CollectionReference<Map<String, dynamic>> _collection(String uid) =>
       _db.collection('users').doc(uid).collection('clients');
 
-  Stream<ClientModel?> watchClient(String id) {
-    final uid = _uidOrThrow;
-    return _collection(uid).doc(id).snapshots().map((d) {
-      if (!d.exists) return null;
-      return _fromDoc(d);
-    });
-  }
-
   Stream<List<ClientModel>> watchClients() {
     final uid = _uidOrThrow;
     return _collection(uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((q) => q.docs.map(_fromDoc).toList());
-  }
-
-  Future<ClientModel?> getClient(String id) async {
-    final uid = _uidOrThrow;
-    final snap = await _collection(uid).doc(id).get();
-    if (!snap.exists) return null;
-    return _fromDoc(snap);
   }
 
   Future<Map<String, ClientModel?>> getClients(Set<String> ids) async {
@@ -63,14 +48,6 @@ class ClientRepository {
       }
     }
     return result;
-  }
-
-  Future<ClientModel> addClient(ClientModel model) async {
-    final uid = _uidOrThrow;
-    final doc = _collection(uid).doc();
-    final payload = _toFirestore(model.copyWith(id: doc.id), isCreate: true);
-    await doc.set(payload);
-    return model.copyWith(id: doc.id);
   }
 
   DocumentReference<Map<String, dynamic>> newClientRef() {

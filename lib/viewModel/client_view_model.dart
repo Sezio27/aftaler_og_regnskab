@@ -17,7 +17,7 @@ class ClientViewModel extends ChangeNotifier {
   StreamSubscription<List<ClientModel>>? _sub;
 
   String _query = '';
-  List<ClientModel> _all = const [];
+
   List<ClientModel> _allFiltered = const [];
   List<ClientModel> _private = const [];
   List<ClientModel> _business = const [];
@@ -56,21 +56,12 @@ class ClientViewModel extends ChangeNotifier {
     _query = initialQuery.trim();
 
     _sub = _repo.watchClients().listen((items) {
-      _all = items;
       _cache.cacheClients(items);
       _recompute();
     });
   }
 
-  ClientModel? getClient(String id) {
-    final fromCache = _cache.getClient(id);
-    if (fromCache != null) return fromCache;
-
-    for (final c in _all) {
-      if (c.id == id) return c;
-    }
-    return null;
-  }
+  ClientModel? getClient(String id) => _cache.getClient(id);
 
   void setClientSearch(String q) {
     final nq = q.trim();
@@ -89,9 +80,11 @@ class ClientViewModel extends ChangeNotifier {
     final q = _query.toLowerCase();
     bool matches(String? v) => (v ?? '').toLowerCase().contains(q);
 
+    final clients = _cache.allCachedClients;
+
     final searched = q.isEmpty
-        ? _all
-        : _all
+        ? clients
+        : clients
               .where(
                 (c) => matches(c.name) || matches(c.phone) || matches(c.email),
               )
@@ -160,7 +153,6 @@ class ClientViewModel extends ChangeNotifier {
   ) {
     final created = model.copyWith(id: docRef.id);
     _cache.cacheClient(created);
-    _all = [..._all, created];
     _recompute();
   }
 
@@ -263,7 +255,6 @@ class ClientViewModel extends ChangeNotifier {
       );
 
       _cache.cacheClient(updated);
-      _all = [for (final c in _all) (c.id == id) ? updated : c];
       _recompute();
     }
   }
@@ -321,7 +312,6 @@ class ClientViewModel extends ChangeNotifier {
     } catch (_) {}
 
     await _repo.deleteClient(id);
-    _all = _all.where((c) => c.id != id).toList();
     _cache.remove(id);
     _recompute();
   }
@@ -330,7 +320,6 @@ class ClientViewModel extends ChangeNotifier {
     _sub?.cancel();
     _sub = null;
     _query = '';
-    _all = const [];
     _allFiltered = const [];
     _private = const [];
     _business = const [];

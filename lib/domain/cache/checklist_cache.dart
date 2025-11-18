@@ -31,6 +31,8 @@ class ChecklistCache {
   }
 
   ChecklistModel? getChecklist(String id) => _cache[id];
+  List<ChecklistModel> get allCachedChecklists =>
+      _cache.values.whereType<ChecklistModel>().toList(growable: false);
   void remove(String id) => _cache.remove(id);
   void clear() => _cache.clear();
 }

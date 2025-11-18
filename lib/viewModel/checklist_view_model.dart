@@ -12,7 +12,6 @@ class ChecklistViewModel extends ChangeNotifier {
   StreamSubscription<List<ChecklistModel>>? _sub;
 
   String _query = '';
-  List<ChecklistModel> _all = const [];
   List<ChecklistModel> _allFiltered = const [];
   List<ChecklistModel> get allChecklists => _allFiltered;
 
@@ -32,7 +31,6 @@ class ChecklistViewModel extends ChangeNotifier {
     if (_sub != null) return;
     _query = initialQuery.trim();
     _sub = _repo.watchChecklists().listen((items) {
-      _all = items;
       _cache.cacheChecklists(items);
       _recompute();
     });
@@ -45,15 +43,7 @@ class ChecklistViewModel extends ChangeNotifier {
     _recompute();
   }
 
-  ChecklistModel? getChecklist(String id) {
-    final fromCache = _cache.getChecklist(id);
-    if (fromCache != null) return fromCache;
-
-    for (final c in _all) {
-      if (c.id == id) return c;
-    }
-    return null;
-  }
+  ChecklistModel? getChecklist(String id) => _cache.getChecklist(id);
 
   void clearSearch() {
     if (_query.isEmpty) return;
@@ -64,16 +54,14 @@ class ChecklistViewModel extends ChangeNotifier {
   void _recompute() {
     final q = _query.toLowerCase();
     bool matches(String? v) => (v ?? '').toLowerCase().contains(q);
+    final checklists = _cache.allCachedChecklists;
     final searched = q.isEmpty
-        ? _all
-        : _all.where((c) => matches(c.name) || matches(c.description)).toList();
+        ? checklists
+        : checklists
+              .where((c) => matches(c.name) || matches(c.description))
+              .toList();
     _allFiltered = searched;
     notifyListeners();
-  }
-
-  ChecklistModel? getById(String? id) {
-    if (id == null || id.isEmpty) return null;
-    return _cache.getChecklist(id);
   }
 
   Future<void> prefetchChecklists(Iterable<String> ids) async {
@@ -117,7 +105,6 @@ class ChecklistViewModel extends ChangeNotifier {
 
       if (created.id != null) {
         _cache.cacheChecklist(created);
-        _all = [..._all, created];
         _recompute();
       }
       return true;
@@ -185,7 +172,6 @@ class ChecklistViewModel extends ChangeNotifier {
             : cached.points,
       );
       _cache.cacheChecklist(updated);
-      _all = [for (final c in _all) (c.id == id) ? updated : c];
       _recompute();
     }
   }
@@ -218,7 +204,6 @@ class ChecklistViewModel extends ChangeNotifier {
 
   Future<void> delete(String id) async {
     await _repo.deleteChecklist(id);
-    _all = _all.where((c) => c.id != id).toList();
     _cache.remove(id);
     _recompute();
   }
@@ -227,7 +212,6 @@ class ChecklistViewModel extends ChangeNotifier {
     _sub?.cancel();
     _sub = null;
     _query = '';
-    _all = const [];
     _allFiltered = const [];
     notifyListeners();
   }

@@ -20,8 +20,6 @@ import 'package:aftaler_og_regnskab/ui/widgets/seg_item.dart';
 
 enum Tabs { month, year, lifetime }
 
-typedef DateRange = ({DateTime? start, DateTime? end});
-
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
   @override

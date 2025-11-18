@@ -252,7 +252,7 @@ class __AppointmentReadPaneState extends State<_AppointmentReadPane> {
     final checklists = context.select<ChecklistViewModel, List<ChecklistModel>>(
       (vm) => [
         for (final id in checklistIds)
-          if (vm.getById(id) != null) vm.getById(id)!,
+          if (vm.getChecklist(id) != null) vm.getChecklist(id)!,
       ],
     );
 
@@ -819,7 +819,7 @@ class __AppointmentEditPaneState extends State<_AppointmentEditPane> {
     final checklists = context.select<ChecklistViewModel, List<ChecklistModel>>(
       (vm) => [
         for (final id in _selectedChecklistIds)
-          if (vm.getById(id) != null) vm.getById(id)!,
+          if (vm.getChecklist(id) != null) vm.getChecklist(id)!,
       ],
     );
 

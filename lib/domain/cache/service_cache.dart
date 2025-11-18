@@ -31,6 +31,8 @@ class ServiceCache {
   }
 
   ServiceModel? getService(String id) => _serviceCache[id];
+  List<ServiceModel> get allCachedServices =>
+      _serviceCache.values.whereType<ServiceModel>().toList(growable: false);
 
   void remove(String id) => _serviceCache.remove(id);
   void clear() => _serviceCache.clear();

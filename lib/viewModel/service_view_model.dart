@@ -16,7 +16,6 @@ class ServiceViewModel extends ChangeNotifier {
   StreamSubscription<List<ServiceModel>>? _sub;
 
   String _query = '';
-  List<ServiceModel> _all = const [];
   List<ServiceModel> _allFiltered = const [];
   List<ServiceModel> get allServices => _allFiltered;
 
@@ -32,30 +31,15 @@ class ServiceViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  ServiceModel? getService(String id) {
-    final cached = _cache.getService(id);
-    if (cached != null) return cached;
-    for (final s in _all) {
-      if (s.id == id) {
-        return s;
-      }
-    }
-    return null;
-  }
+  ServiceModel? getService(String id) => _cache.getService(id);
 
   void initServiceFilters({String initialQuery = ''}) {
     if (_sub != null) return;
     _query = initialQuery.trim();
     _sub = _repo.watchServices().listen((items) {
-      _all = items;
       _cache.cacheServices(items);
       _recompute();
     });
-  }
-
-  ServiceModel? getById(String? id) {
-    if (id == null || id.isEmpty) return null;
-    return _cache.getService(id);
   }
 
   Future<ServiceModel?> prefetchService(String id) async {
@@ -84,10 +68,10 @@ class ServiceViewModel extends ChangeNotifier {
   void _recompute() {
     final q = _query.toLowerCase();
     bool matches(String? v) => (v ?? '').toLowerCase().contains(q);
-
+    final services = _cache.allCachedServices;
     final searched = q.isEmpty
-        ? _all
-        : _all.where((c) => matches(c.name)).toList();
+        ? services
+        : services.where((s) => matches(s.name)).toList();
 
     _allFiltered = searched;
     notifyListeners();
@@ -145,7 +129,6 @@ class ServiceViewModel extends ChangeNotifier {
   ) {
     final created = model.copyWith(id: docRef.id);
     _cache.cacheService(created);
-    _all = [..._all, created];
     _recompute();
   }
 
@@ -232,7 +215,6 @@ class ServiceViewModel extends ChangeNotifier {
             : (deletes.contains('image') ? null : cached.image),
       );
       _cache.cacheService(updated);
-      _all = [for (final s in _all) (s.id == id) ? updated : s];
       _recompute();
     }
   }
@@ -297,7 +279,6 @@ class ServiceViewModel extends ChangeNotifier {
   }
 
   void cacheDelete(String id) {
-    _all = _all.where((s) => s.id != id).toList();
     _cache.remove(id);
     _recompute();
   }
@@ -306,7 +287,6 @@ class ServiceViewModel extends ChangeNotifier {
     _sub?.cancel();
     _sub = null;
     _query = '';
-    _all = const [];
     _allFiltered = const [];
     notifyListeners();
   }
