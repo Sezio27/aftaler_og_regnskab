@@ -35,7 +35,6 @@ class AppointmentViewModel extends ChangeNotifier {
   final ImageStorage _imageStorage;
   final AppointmentNotifications notifications;
 
-  bool isReady = false;
   bool _isSaving = false;
   String? _lastErrorMessage;
 
@@ -43,14 +42,12 @@ class AppointmentViewModel extends ChangeNotifier {
   String? get error => _lastErrorMessage;
 
   StreamSubscription<List<AppointmentModel>>? _initialSubscription;
-  final Map<DateTime, StreamSubscription<List<AppointmentModel>>>
-  _windowSubscriptions = {};
-  final Map<String, StreamSubscription<AppointmentModel?>>
-  _appointmentSubscriptions = {};
+  final Set<DateTime> _loadedMonths = {};
 
+  bool _hasLoadedInitialWindow = false;
+  bool get hasLoadedInitialWindow => _hasLoadedInitialWindow;
   DateTime? _initialStart;
   DateTime? _initialEnd;
-  DateTime? _activeMonthStart;
 
   DateTime? _listStart, _listEnd;
   bool _listLoading = false;
@@ -67,75 +64,34 @@ class AppointmentViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _initialSubscription?.cancel();
-    for (final sub in _windowSubscriptions.values) {
-      sub.cancel();
-    }
-    _windowSubscriptions.clear();
-    for (final sub in _appointmentSubscriptions.values) {
-      sub.cancel();
-    }
-    _appointmentSubscriptions.clear();
     super.dispose();
   }
 
   AppointmentModel? getAppointment(String id) => apptCache.getAppointment(id);
 
   Future<void> _handleSnapshot(
-    List<AppointmentModel> fetched,
-    DateTime start,
-    DateTime end,
-  ) async {
+    List<AppointmentModel> fetched, {
+    bool markInitialLoaded = false,
+  }) async {
+    if (fetched.isEmpty) {
+      if (markInitialLoaded && !_hasLoadedInitialWindow) {
+        _hasLoadedInitialWindow = true;
+        notifyListeners();
+      }
+      return;
+    }
+
     apptCache.cacheAppointments(fetched);
 
-    final becameReady = !isReady;
-    if (becameReady) isReady = true;
-
-    final changed = await _prefetchClientsAndServices(
-      apptCache.getAppointmentsBetween(start, end),
-    );
-    for (final a in fetched) {
-      final id = a.id;
-      if (id != null &&
-          _appointmentSubscriptions.containsKey(id) &&
-          _isSubCovered(a.dateTime)) {
-        _appointmentSubscriptions.remove(id)?.cancel();
-      }
-    }
-    if (becameReady || changed) notifyListeners();
-  }
-
-  StreamSubscription<List<AppointmentModel>> _subscribeMonth(
-    DateTime monthStart,
-  ) {
-    final monthEnd = endOfMonthInclusive(monthStart);
-    debugPrint(monthStart.toIso8601String());
-    return _repo.watchAppointmentsBetween(monthStart, monthEnd).listen((
-      fetched,
-    ) async {
-      await _handleSnapshot(fetched, monthStart, monthEnd);
-    });
-  }
-
-  bool _isMonthCoveredByInitial(DateTime monthStart) {
-    final monthEnd = endOfMonthInclusive(monthStart);
-    return !monthStart.isBefore(_initialStart!) &&
-        !monthEnd.isAfter(_initialEnd!);
-  }
-
-  bool _isSubCovered(DateTime? dt) {
-    if (dt == null) return false;
-
-    if (_initialStart != null && _initialEnd != null) {
-      final inInitial =
-          !dt.isBefore(_initialStart!) && !dt.isAfter(_initialEnd!);
-      if (inInitial) return true;
+    await _prefetchClientsAndServices(fetched);
+    if (markInitialLoaded && !_hasLoadedInitialWindow) {
+      _hasLoadedInitialWindow = true;
     }
 
-    final month = startOfMonth(dt);
-    return _windowSubscriptions.containsKey(month);
+    notifyListeners();
   }
 
-  Future<void> setInitialRange() async {
+  void setInitialRange() {
     if (_initialSubscription != null) return;
 
     final now = DateTime.now();
@@ -144,43 +100,32 @@ class AppointmentViewModel extends ChangeNotifier {
     _initialStart = start;
     _initialEnd = end;
 
-    _initialSubscription = _repo.watchAppointmentsBetween(start, end).listen((
-      fetched,
-    ) async {
-      await _handleSnapshot(fetched, start, end);
-    });
+    _initialSubscription = _repo
+        .watchAppointmentsBetween(start, end)
+        .listen((fetched) => _handleSnapshot(fetched, markInitialLoaded: true));
   }
 
-  void setActiveWindow(DateTime visibleDate) {
-    if (_initialStart == null || _initialEnd == null) return;
-
-    if (_isMonthCoveredByInitial(visibleDate)) return;
-    final newMonthStart = startOfMonth(visibleDate);
-
-    if (_activeMonthStart == newMonthStart) return;
-
-    _activeMonthStart = newMonthStart;
-
-    final windowMonthStarts = [
-      addMonths(newMonthStart, -2),
-      addMonths(newMonthStart, -1),
-      newMonthStart,
-      addMonths(newMonthStart, 1),
-      addMonths(newMonthStart, 2),
-    ];
-
-    for (final m in windowMonthStarts) {
-      if (!_isMonthCoveredByInitial(m)) {
-        _windowSubscriptions.putIfAbsent(m, () => _subscribeMonth(m));
-      }
+  Future<void> ensureMonthLoaded(DateTime visibleDate) async {
+    if (_initialStart == null || _initialEnd == null) {
+      setInitialRange();
     }
 
-    final keep = windowMonthStarts.toSet();
-    for (final m
-        in _windowSubscriptions.keys.where((k) => !keep.contains(k)).toList()) {
-      _windowSubscriptions[m]?.cancel();
-      _windowSubscriptions.remove(m);
-    }
+    final monthStart = startOfMonth(visibleDate);
+    final monthEnd = endOfMonthInclusive(monthStart);
+
+    final inInitial =
+        !monthStart.isBefore(_initialStart!) && !monthEnd.isAfter(_initialEnd!);
+    if (inInitial) return;
+
+    if (_loadedMonths.contains(monthStart)) return;
+
+    final fetched = await _repo.getAppointmentsBetween(monthStart, monthEnd);
+
+    apptCache.cacheAppointments(fetched);
+    await _prefetchClientsAndServices(fetched);
+
+    _loadedMonths.add(monthStart);
+    notifyListeners();
   }
 
   Future<bool> addAppointment({
@@ -715,26 +660,17 @@ class AppointmentViewModel extends ChangeNotifier {
   void resetOnAuthChange() {
     _initialSubscription?.cancel();
     _initialSubscription = null;
-
-    for (final sub in _windowSubscriptions.values) {
-      sub.cancel();
-    }
-    _windowSubscriptions.clear();
     _initialStart = null;
     _initialEnd = null;
-    _activeMonthStart = null;
-    for (final sub in _appointmentSubscriptions.values) {
-      sub.cancel();
-    }
-    _appointmentSubscriptions.clear();
     _listStart = null;
     _listEnd = null;
     _listLoading = false;
     _listHasMore = false;
     _listLastDoc = null;
-    isReady = false;
     _isSaving = false;
     _lastErrorMessage = null;
+    _hasLoadedInitialWindow = false;
+    _loadedMonths.clear();
     apptCache.clear();
     notifyListeners();
   }

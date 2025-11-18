@@ -77,15 +77,17 @@ class _WeekViewBody extends StatelessWidget {
       (vm) => vm.selectedDay,
     );
 
-    final calVm = context.watch<CalendarViewModel>();
+    final visibleWeek = context.select<CalendarViewModel, DateTime>(
+      (vm) => vm.visibleWeek,
+    );
 
-    final apptVm = context.watch<AppointmentViewModel>();
+    //final apptVm = context.watch<AppointmentViewModel>();
 
-    final weekStart = mondayOf(calVm.visibleWeek);
+    final weekStart = mondayOf(visibleWeek);
     final weekEnd = weekStart.add(const Duration(days: 6));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      apptVm.setActiveWindow(weekEnd);
+      context.read<AppointmentViewModel>().ensureMonthLoaded(weekEnd);
     });
 
     return Column(
@@ -100,7 +102,9 @@ class _WeekViewBody extends StatelessWidget {
             key: ValueKey(
               '${selectedDay.year}-${selectedDay.month}-${selectedDay.day}',
             ),
-            future: apptVm.cardsForDate(selectedDay),
+            future: context.read<AppointmentViewModel>().cardsForDate(
+              selectedDay,
+            ),
             builder: (context, snap) {
               final waiting = snap.connectionState == ConnectionState.waiting;
               final items = snap.data ?? const [];

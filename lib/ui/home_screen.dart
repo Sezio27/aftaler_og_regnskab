@@ -121,14 +121,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
             Selector<
               AppointmentViewModel,
-              ({bool ready, List<AppointmentCardModel> items})
+              ({bool loaded, List<AppointmentCardModel> items})
             >(
               selector: (_, vm) => (
-                ready: vm.isReady,
+                loaded: vm.hasLoadedInitialWindow,
                 items: vm.cardsForRange(twoWeek.start, twoWeek.end),
               ),
               builder: (context, data, _) {
-                if (!data.ready) {
+                if (!data.loaded) {
                   return const Padding(
                     padding: EdgeInsets.all(24),
                     child: Center(child: CircularProgressIndicator()),

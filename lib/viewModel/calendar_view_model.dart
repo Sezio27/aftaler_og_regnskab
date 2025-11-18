@@ -42,8 +42,7 @@ class CalendarViewModel extends ChangeNotifier {
   DateTime _visibleWeek;
   DateTime get visibleWeek => _visibleWeek;
 
-  String get weekTitle =>
-      'Uge ${isoWeekNumber(_visibleWeek)}, ${weekYear(_visibleWeek)}';
+  String get weekTitle => 'Uge ${isoWeekNumber(_visibleWeek)}';
 
   String get weekSubTitle {
     final anchor = toThursday(_visibleWeek);
