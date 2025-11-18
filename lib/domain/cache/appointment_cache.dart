@@ -1,10 +1,7 @@
-import 'package:aftaler_og_regnskab/data/repositories/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 
 class AppointmentCache {
-  AppointmentCache(this._appointmentRepo);
-
-  final AppointmentRepository _appointmentRepo;
+  AppointmentCache();
 
   final Map<String, AppointmentModel?> _cache = {};
   void cacheAppointment(AppointmentModel model) {
@@ -17,18 +14,6 @@ class AppointmentCache {
       final id = a.id;
       if (id != null) _cache[id] = a;
     }
-  }
-
-  Future<Map<String, AppointmentModel?>> fetchAppointments(
-    Set<String> ids,
-  ) async {
-    if (ids.isEmpty) return {};
-    final missing = ids.where((id) => !_cache.containsKey(id)).toSet();
-    if (missing.isNotEmpty) {
-      final batched = await _appointmentRepo.getAppointments(missing);
-      _cache.addAll(batched);
-    }
-    return {for (final id in ids) id: _cache[id]};
   }
 
   AppointmentModel? getAppointment(String id) => _cache[id];

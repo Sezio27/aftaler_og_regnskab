@@ -31,8 +31,10 @@ class ClientCache {
   }
 
   ClientModel? getClient(String id) => _clientCache[id];
+
   List<ClientModel> get allCachedClients =>
       _clientCache.values.whereType<ClientModel>().toList(growable: false);
+
   void remove(String id) => _clientCache.remove(id);
   void clear() => _clientCache.clear();
 }

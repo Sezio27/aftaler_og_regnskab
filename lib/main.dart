@@ -93,9 +93,7 @@ class MyApp extends StatelessWidget {
         Provider<ChecklistCache>(
           create: (ctx) => ChecklistCache(ctx.read<ChecklistRepository>()),
         ),
-        Provider<AppointmentCache>(
-          create: (ctx) => AppointmentCache(ctx.read<AppointmentRepository>()),
-        ),
+        Provider<AppointmentCache>(create: (_) => AppointmentCache()),
         Provider<FinanceSummaryRepository>(
           create: (ctx) => FinanceSummaryRepository(
             auth: ctx.read<FirebaseAuth>(),
