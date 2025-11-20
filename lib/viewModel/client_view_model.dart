@@ -226,37 +226,38 @@ class ClientViewModel extends ChangeNotifier {
     Set<String> deletes,
   ) {
     final cached = _cache.getClient(id);
-    if (cached != null) {
-      final updated = cached.copyWith(
-        name: fields.containsKey('name')
-            ? fields['name'] as String?
-            : (deletes.contains('name') ? null : cached.name),
-        phone: fields.containsKey('phone')
-            ? fields['phone'] as String?
-            : (deletes.contains('phone') ? null : cached.phone),
-        email: fields.containsKey('email')
-            ? fields['email'] as String?
-            : (deletes.contains('email') ? null : cached.email),
-        address: fields.containsKey('address')
-            ? fields['address'] as String?
-            : (deletes.contains('address') ? null : cached.address),
-        city: fields.containsKey('city')
-            ? fields['city'] as String?
-            : (deletes.contains('city') ? null : cached.city),
-        postal: fields.containsKey('postal')
-            ? fields['postal'] as String?
-            : (deletes.contains('postal') ? null : cached.postal),
-        cvr: fields.containsKey('cvr')
-            ? fields['cvr'] as String?
-            : (deletes.contains('cvr') ? null : cached.cvr),
-        image: fields.containsKey('image')
-            ? fields['image'] as String?
-            : (deletes.contains('image') ? null : cached.image),
-      );
+    if (cached == null) return;
 
-      _cache.cacheClient(updated);
-      _recompute();
-    }
+    final updated = ClientModel(
+      id: cached.id,
+      name: fields.containsKey('name')
+          ? fields['name'] as String?
+          : (deletes.contains('name') ? null : cached.name),
+      phone: fields.containsKey('phone')
+          ? fields['phone'] as String?
+          : (deletes.contains('phone') ? null : cached.phone),
+      email: fields.containsKey('email')
+          ? fields['email'] as String?
+          : (deletes.contains('email') ? null : cached.email),
+      address: fields.containsKey('address')
+          ? fields['address'] as String?
+          : (deletes.contains('address') ? null : cached.address),
+      city: fields.containsKey('city')
+          ? fields['city'] as String?
+          : (deletes.contains('city') ? null : cached.city),
+      postal: fields.containsKey('postal')
+          ? fields['postal'] as String?
+          : (deletes.contains('postal') ? null : cached.postal),
+      cvr: fields.containsKey('cvr')
+          ? fields['cvr'] as String?
+          : (deletes.contains('cvr') ? null : cached.cvr),
+      image: fields.containsKey('image')
+          ? fields['image'] as String?
+          : (deletes.contains('image') ? null : cached.image),
+    );
+
+    _cache.cacheClient(updated);
+    _recompute();
   }
 
   Future<void> handleUpdateFields(
@@ -323,6 +324,7 @@ class ClientViewModel extends ChangeNotifier {
     _allFiltered = const [];
     _private = const [];
     _business = const [];
+    _cache.clear();
     notifyListeners();
   }
 }

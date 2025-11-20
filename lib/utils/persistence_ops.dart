@@ -17,11 +17,11 @@ Future<void> handleDelete({
           content: const Text('Dette kan ikke fortrydes.'),
           actions: [
             TextButton(
-              onPressed: () => ctx.pop(false),
+              onPressed: () => Navigator.of(ctx).pop(false),
               child: const Text('Annuller'),
             ),
             TextButton(
-              onPressed: () => ctx.pop(true),
+              onPressed: () => Navigator.of(ctx).pop(true),
               child: const Text('Slet'),
             ),
           ],

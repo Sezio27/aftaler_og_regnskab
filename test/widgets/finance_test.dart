@@ -1,6 +1,4 @@
 // test/widgets/finance_screen_test.dart
-import 'dart:ui' as ui;
-
 import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/ui/finance_screen.dart';
 import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
@@ -22,6 +20,7 @@ void main() {
     // Fallbacks for mocktail
     registerFallbackValue(Segment.month);
     registerFallbackValue(DateTime(2000, 1, 1));
+    registerFallbackValue(PaymentStatus.paid);
   });
 
   late MockFinanceVM financeVM;
@@ -49,16 +48,22 @@ void main() {
     when(() => financeVM.statusNow(Segment.month)).thenReturn(status);
     when(() => financeVM.statusNow(Segment.year)).thenReturn(status);
     when(() => financeVM.statusNow(Segment.total)).thenReturn(status);
-
+    // 🔹 Stub onUpdateStatus so it returns a Future<void>
+    when(
+      () => financeVM.onUpdateStatus(
+        oldStatus: any(named: 'oldStatus'),
+        newStatus: any(named: 'newStatus'),
+        price: any(named: 'price'),
+        date: any(named: 'date'),
+      ),
+    ).thenAnswer((_) async {});
     // Default recent list: empty
     when(
       () => apptVM.cardsForRange(any(), any()),
     ).thenReturn(const <AppointmentCardModel>[]);
 
-    // IMPORTANT: updateStatus returns Future<void>; stub it!
-    when(
-      () => apptVM.updateStatus(any(), any(), any(), any(), any()),
-    ).thenAnswer((_) async {});
+    // New updateStatus signature: (id, newStatus)
+    when(() => apptVM.updateStatus(any(), any())).thenAnswer((_) async {});
   });
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -99,6 +104,11 @@ void main() {
     );
 
     await tester.pump(const Duration(milliseconds: 1));
+
+    // Segmented control labels
+    expect(find.text('Måned'), findsOneWidget);
+    expect(find.text('År'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
 
     // Month is default
     expect(find.byKey(const ValueKey('sum-1-111')), findsOneWidget);
@@ -180,7 +190,7 @@ void main() {
         clientName: 'Anna',
         serviceName: 'Makeup',
         duration: '45',
-        price: 50.0, // keep strings short to avoid overflow noise
+        price: 50.0,
         status: 'Afventer',
         time: now,
         imageUrl: null,
@@ -221,10 +231,10 @@ void main() {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Status change callback → AppointmentViewModel.updateStatus
+  // Status change callback → updateStatus + FinanceViewModel.onUpdateStatus
   // ───────────────────────────────────────────────────────────────────────────
   testWidgets(
-    'changing status calls updateStatus when status actually changes',
+    'changing status calls updateStatus and onUpdateStatus when status changes',
     (tester) async {
       final now = DateTime(2025, 6, 1, 10, 0);
       final row = AppointmentCardModel(
@@ -261,21 +271,24 @@ void main() {
       onChange(PaymentStatus.paid); // Afventer -> Betalt
       await tester.pump();
 
+      // Appointment status updated with new label
       verify(
-        () => apptVM.updateStatus(
-          'x1',
-          'Afventer',
-          100.0,
-          PaymentStatus.paid.label, // "Betalt"
-          now,
+        () => apptVM.updateStatus('x1', PaymentStatus.paid.label),
+      ).called(1);
+
+      // Finance VM notified with old/new status, price and date
+      verify(
+        () => financeVM.onUpdateStatus(
+          oldStatus: PaymentStatus.waiting,
+          newStatus: PaymentStatus.paid,
+          price: 100.0,
+          date: now,
         ),
       ).called(1);
     },
   );
 
-  testWidgets('no updateStatus call when status stays the same', (
-    tester,
-  ) async {
+  testWidgets('no update when status stays the same', (tester) async {
     final now = DateTime(2025, 6, 1, 10, 0);
     final row = AppointmentCardModel(
       id: 'x2',
@@ -307,10 +320,18 @@ void main() {
     final void Function(PaymentStatus) onChange =
         card.onChangeStatus as void Function(PaymentStatus);
 
-    // Same status: no call
+    // Same status: callback should early-return inside the widget.
     onChange(PaymentStatus.paid);
     await tester.pump();
 
-    verifyNever(() => apptVM.updateStatus(any(), any(), any(), any(), any()));
+    verifyNever(() => apptVM.updateStatus(any(), any()));
+    verifyNever(
+      () => financeVM.onUpdateStatus(
+        oldStatus: any(named: 'oldStatus'),
+        newStatus: any(named: 'newStatus'),
+        price: any(named: 'price'),
+        date: any(named: 'date'),
+      ),
+    );
   });
 }

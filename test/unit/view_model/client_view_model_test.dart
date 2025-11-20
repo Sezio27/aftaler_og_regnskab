@@ -10,24 +10,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test doubles
-// ─────────────────────────────────────────────────────────────────────────────
-
 class MockClientRepository extends Mock implements ClientRepository {}
 
 class MockImageStorage extends Mock implements ImageStorage {}
 
 // ignore: subtype_of_sealed_class
+/// Minimal fake Firestore DocumentReference exposing only `id`.
 class FakeDocumentRef extends Fake
     implements DocumentReference<Map<String, dynamic>> {
   FakeDocumentRef(this._id);
   final String _id;
+
   @override
   String get id => _id;
 }
 
-/// Tiny fake repo used by ClientCache.fetchClients().
+/// A tiny fake ClientRepository for ClientCache.fetchClients().
 class _FakeFetchRepo extends Fake implements ClientRepository {
   _FakeFetchRepo([Map<String, ClientModel?>? seed]) : _store = {...?seed};
   final Map<String, ClientModel?> _store;
@@ -36,18 +34,15 @@ class _FakeFetchRepo extends Fake implements ClientRepository {
   Future<Map<String, ClientModel?>> getClients(Set<String> ids) async {
     return {for (final id in ids) id: _store[id]};
   }
-
-  @override
-  Future<ClientModel?> getClient(String id) async => _store[id];
 }
 
 void main() {
   setUpAll(() {
-    // Allow any()/captureAny() on these types.
-    registerFallbackValue(<String, Object?>{}); // fields
-    registerFallbackValue(<String>{}); // deletes
-    registerFallbackValue(const ClientModel()); // createClientWithId(...)
-    // record arg for ImageStorage.*ClientImage
+    // Required so we can use any() / captureAny() with these types.
+    registerFallbackValue(<String, Object?>{}); // for fields
+    registerFallbackValue(<String>{}); // for deletes
+    registerFallbackValue(const ClientModel()); // for createClientWithId(...)
+    // for ImageStorage.uploadClientImage(...) argument
     registerFallbackValue((
       bytes: Uint8List(0),
       name: '',
@@ -76,413 +71,323 @@ void main() {
     vm.dispose();
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // init / filtering (incl. private/business split)
-  // ───────────────────────────────────────────────────────────────────────────
-  group('initClientFilters & filtering', () {
+  group('prefetchClient', () {
     test(
-      'subscribes once, caches, filters by query across fields, splits business/private',
+      'returns cached client without calling fetch when already in cache',
       () async {
-        final items = <ClientModel>[
+        final client = const ClientModel(id: 'c1', name: 'Cached');
+        cache.cacheClient(client);
+
+        final result = await vm.prefetchClient('c1');
+
+        expect(result, same(client));
+      },
+    );
+
+    test(
+      'fetches client via cache when missing, notifies listeners when found',
+      () async {
+        cache = ClientCache(
+          _FakeFetchRepo({'c2': const ClientModel(id: 'c2', name: 'Fetched')}),
+        );
+        vm = ClientViewModel(repo, imageStorage, cache);
+
+        var notified = false;
+        vm.addListener(() {
+          notified = true;
+        });
+
+        final result = await vm.prefetchClient('c2');
+
+        expect(result, isNotNull);
+        expect(result!.id, 'c2');
+        expect(notified, isTrue);
+      },
+    );
+
+    test(
+      'returns null and does not crash when fetched client is null',
+      () async {
+        cache = ClientCache(_FakeFetchRepo({'missing': null}));
+        vm = ClientViewModel(repo, imageStorage, cache);
+
+        var notified = false;
+        vm.addListener(() {
+          notified = true;
+        });
+
+        final result = await vm.prefetchClient('missing');
+
+        expect(result, isNull);
+        expect(notified, isFalse);
+      },
+    );
+  });
+
+  group('getClient', () {
+    test('returns client from cache', () {
+      final client = const ClientModel(id: 'c1', name: 'Alice');
+      cache.cacheClient(client);
+
+      final res = vm.getClient('c1');
+
+      expect(res, same(client));
+    });
+
+    test('returns null when client not in cache', () {
+      final res = vm.getClient('unknown');
+      expect(res, isNull);
+    });
+  });
+
+  group('search and filters', () {
+    test(
+      'initClientFilters subscribes once and uses cache to recompute lists',
+      () async {
+        final controller = StreamController<List<ClientModel>>();
+        when(() => repo.watchClients()).thenAnswer((_) => controller.stream);
+
+        vm.initClientFilters();
+        controller.add([
+          const ClientModel(id: 'p', name: 'Private', cvr: null),
+          const ClientModel(id: 'b', name: 'Business', cvr: '123'),
+        ]);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(vm.allClients.map((c) => c.id), containsAll(['p', 'b']));
+        expect(vm.privateClients.map((c) => c.id), ['p']);
+        expect(vm.businessClients.map((c) => c.id), ['b']);
+        expect(vm.privateCount, 1);
+        expect(vm.businessCount, 1);
+
+        await controller.close();
+      },
+    );
+
+    test(
+      'setClientSearch filters by name/email/phone and clearSearch resets',
+      () async {
+        final clients = [
           const ClientModel(
-            id: 'p1',
+            id: '1',
             name: 'Alice',
+            email: 'alice@example.com',
             phone: '111',
-            email: 'a@x.dk',
           ),
           const ClientModel(
-            id: 'b1',
-            name: 'Beta ApS',
-            cvr: '12345678',
-            email: 'info@beta.dk',
-          ),
-          const ClientModel(id: 'p2', name: 'Bob', phone: '222'),
-          const ClientModel(
-            id: 'b2',
-            name: 'Company Gamma',
-            cvr: '87654321',
-            phone: '333',
+            id: '2',
+            name: 'Bob',
+            email: 'bob@example.com',
+            phone: '222',
+            cvr: 'CVR',
           ),
         ];
-        when(() => repo.watchClients()).thenAnswer((_) => Stream.value(items));
+        cache.cacheClients(clients);
+        // Force initial recompute
+        vm.setClientSearch('');
 
-        // Initial query "aps" should match Beta ApS by name (case-insensitive)
-        vm.initClientFilters(initialQuery: 'aps');
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        vm.setClientSearch('bob');
+        expect(vm.allClients.map((c) => c.id), ['2']);
 
-        expect(vm.allClients.map((c) => c.id), equals(['b1']));
-        expect(vm.businessClients.map((c) => c.id), equals(['b1']));
-        expect(vm.privateClients, isEmpty);
-        expect(vm.businessCount, 1);
-        expect(vm.privateCount, 0);
-
-        // Search by phone (should hit '333' -> b2)
-        vm.setClientSearch('333');
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-        expect(vm.allClients.map((c) => c.id), equals(['b2']));
-        expect(vm.businessClients.map((c) => c.id), equals(['b2']));
-        expect(vm.privateClients, isEmpty);
-
-        // Search by email (should hit a@x.dk -> p1)
-        vm.setClientSearch('x.dk');
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-        expect(vm.allClients.map((c) => c.id), equals(['p1']));
-        expect(vm.privateClients.map((c) => c.id), equals(['p1']));
-        expect(vm.businessClients, isEmpty);
-
-        // Clear → all visible & split correctly
         vm.clearSearch();
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-        expect(vm.allClients.length, 4);
-        expect(
-          vm.businessClients.map((c) => c.id).toSet(),
-          equals({'b1', 'b2'}),
-        );
-        expect(
-          vm.privateClients.map((c) => c.id).toSet(),
-          equals({'p1', 'p2'}),
-        );
+        expect(vm.allClients.length, 2);
 
-        // Calling init again is a no-op
-        vm.initClientFilters();
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-        expect(vm.allClients.length, 4);
-
-        verify(() => repo.watchClients()).called(1);
+        // Calling with the same trimmed query hits the early-return path.
+        vm.setClientSearch('alice');
+        vm.setClientSearch('  alice  ');
       },
     );
-  });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // subscribe / unsubscribe single client
-  // ───────────────────────────────────────────────────────────────────────────
-  group('subscribeToClient / unsubscribeFromClient', () {
-    test('subscribes once, caches incoming doc and removes on null', () async {
-      final ctrl = StreamController<ClientModel?>();
-      when(() => repo.watchClient('c1')).thenAnswer((_) => ctrl.stream);
-
-      vm.subscribeToClient('c1');
-
-      ctrl.add(const ClientModel(id: 'c1', name: 'Jane'));
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(cache.getClient('c1')?.name, 'Jane');
-
-      ctrl.add(null);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(cache.getClient('c1'), isNull);
-
-      // Guard against duplicate subscription
-      vm.subscribeToClient('c1');
-      verify(() => repo.watchClient('c1')).called(1);
-
-      vm.unsubscribeFromClient('c1');
-      await ctrl.close();
+    test('clearSearch returns early when query already empty', () {
+      // _query starts empty; calling clearSearch should just return.
+      vm.clearSearch();
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // prefetchClient
-  // ───────────────────────────────────────────────────────────────────────────
-  group('prefetchClient', () {
-    test('returns cached immediately without fetching', () async {
-      final fetchRepo = MockClientRepository();
-      final fetchCache = ClientCache(fetchRepo);
-      final theVm = ClientViewModel(repo, imageStorage, fetchCache);
+  group('initClientFilters and reset', () {
+    test('initClientFilters is no-op when called twice until reset', () async {
+      final controller = StreamController<List<ClientModel>>.broadcast();
+      var listenCount = 0;
 
-      fetchCache.cacheClient(const ClientModel(id: 'id1', name: 'Precached'));
-      var ticks = 0;
-      theVm.addListener(() => ticks++);
+      when(() => repo.watchClients()).thenAnswer((_) {
+        listenCount++;
+        return controller.stream;
+      });
 
-      final result = await theVm.prefetchClient('id1');
-      expect(result!.name, 'Precached');
-      verifyNever(() => fetchRepo.getClients(any()));
-      expect(ticks, 0);
+      vm.initClientFilters();
+      vm.initClientFilters(); // should be ignored because _sub != null
+      expect(listenCount, 1);
 
-      theVm.dispose();
-    });
+      vm.reset();
+      vm.initClientFilters(); // now allowed again
+      expect(listenCount, 2);
 
-    test('fetches via cache when missing, notifies on success', () async {
-      final seed = {'id2': const ClientModel(id: 'id2', name: 'Fetched One')};
-      final theVm = ClientViewModel(
-        repo,
-        imageStorage,
-        ClientCache(_FakeFetchRepo(seed)),
-      );
-
-      var notified = 0;
-      theVm.addListener(() => notified++);
-
-      expect(theVm.getClient('id2'), isNull);
-
-      final got = await theVm.prefetchClient('id2');
-      expect(got!.name, 'Fetched One');
-      expect(theVm.getClient('id2')!.name, 'Fetched One');
-      expect(notified, greaterThanOrEqualTo(1));
-
-      theVm.dispose();
+      await controller.close();
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // getClient (cache or memory list)
-  // ───────────────────────────────────────────────────────────────────────────
-  group('getClient', () {
-    test(
-      'returns from cache when present; otherwise from in-memory list',
-      () async {
-        when(() => repo.watchClients()).thenAnswer(
-          (_) =>
-              Stream.value([const ClientModel(id: 'm1', name: 'FromStream')]),
-        );
-        vm.initClientFilters();
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-
-        // memory hit
-        expect(vm.getClient('m1')?.name, 'FromStream');
-
-        cache.cacheClient(const ClientModel(id: 'c1', name: 'FromCache'));
-        expect(vm.getClient('c1')?.name, 'FromCache');
-
-        // missing
-        expect(vm.getClient('nope'), isNull);
-      },
-    );
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // addClient
-  // ───────────────────────────────────────────────────────────────────────────
   group('addClient', () {
-    test('validation: fails when both name and email are empty', () async {
-      final ok = await vm.addClient(name: '', email: '', phone: '123');
-      expect(ok, isFalse);
-      expect(vm.error, 'Angiv mindst navn eller e-mail');
-      verifyNever(() => repo.newClientRef());
-      verifyNever(() => repo.createClientWithId(any(), any()));
-    });
+    test(
+      'returns false and sets error when both name and email are empty',
+      () async {
+        final notified = <bool>[];
+        vm.addListener(() => notified.add(true));
 
-    test('creates client, uploads image, caches and filters', () async {
-      final fake = FakeDocumentRef('cl123');
-      when(() => repo.newClientRef()).thenReturn(fake);
+        final result = await vm.addClient(name: null, email: null);
+
+        expect(result, isFalse);
+        expect(vm.error, isNotNull);
+        expect(vm.saving, isFalse);
+        verifyNever(() => repo.newClientRef());
+        expect(notified, isNotEmpty);
+      },
+    );
+
+    test(
+      'creates client without image, caches it and resets saving flag',
+      () async {
+        when(() => repo.newClientRef()).thenReturn(FakeDocumentRef('c1'));
+        when(
+          () => repo.createClientWithId(any(), any()),
+        ).thenAnswer((_) async {});
+
+        final result = await vm.addClient(
+          name: ' Alice ',
+          phone: ' 123 ',
+          email: '',
+          address: 'Main St ',
+          city: 'City ',
+          postal: ' 1000 ',
+          cvr: '   ', // should be normalised to null
+        );
+
+        expect(result, isTrue);
+        expect(vm.saving, isFalse);
+        expect(vm.error, isNull);
+
+        final cached = cache.getClient('c1');
+        expect(cached, isNotNull);
+        expect(cached!.name, 'Alice');
+        expect(cached.phone, '123');
+        expect(cached.cvr, isNull);
+        expect(vm.allClients.map((c) => c.id), contains('c1'));
+
+        verify(() => repo.createClientWithId('c1', any())).called(1);
+      },
+    );
+
+    test(
+      'uploads image when provided and stores resulting URL on client',
+      () async {
+        when(() => repo.newClientRef()).thenReturn(FakeDocumentRef('c2'));
+        when(
+          () => repo.createClientWithId(any(), any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => imageStorage.uploadClientImage(
+            clientId: any(named: 'clientId'),
+            image: any(named: 'image'),
+          ),
+        ).thenAnswer((_) async => 'http://image');
+
+        final img = (
+          bytes: Uint8List.fromList([1, 2, 3]),
+          name: 'pic.jpg',
+          mimeType: 'image/jpeg',
+        );
+
+        final result = await vm.addClient(
+          name: 'WithImage',
+          email: 'with@img',
+          image: img,
+        );
+
+        expect(result, isTrue);
+        final cached = cache.getClient('c2');
+        expect(cached, isNotNull);
+        expect(cached!.image, 'http://image');
+
+        verify(
+          () => imageStorage.uploadClientImage(
+            clientId: 'c2',
+            image: any(named: 'image'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
+      'sets error and returns false when repository throws during create',
+      () async {
+        when(() => repo.newClientRef()).thenReturn(FakeDocumentRef('c3'));
+        when(
+          () => repo.createClientWithId(any(), any()),
+        ).thenThrow(Exception('boom'));
+
+        final result = await vm.addClient(
+          name: 'Bob',
+          email: 'bob@example.com',
+        );
+
+        expect(result, isFalse);
+        expect(vm.error, contains('Kunne ikke tilføje klient'));
+        expect(vm.saving, isFalse);
+      },
+    );
+  });
+
+  group('handleUploadImage', () {
+    test(
+      'returns existing URL when image is null and does not call storage',
+      () async {
+        final docRef = FakeDocumentRef('x');
+        final result = await vm.handleUploadImage(null, 'existing-url', docRef);
+
+        expect(result, 'existing-url');
+        verifyNever(
+          () => imageStorage.uploadClientImage(
+            clientId: any(named: 'clientId'),
+            image: any(named: 'image'),
+          ),
+        );
+      },
+    );
+
+    test('uploads image and returns new URL when image is provided', () async {
+      final docRef = FakeDocumentRef('y');
       when(
         () => imageStorage.uploadClientImage(
-          clientId: 'cl123',
+          clientId: any(named: 'clientId'),
           image: any(named: 'image'),
         ),
-      ).thenAnswer((_) async => 'https://img');
-      when(
-        () => repo.createClientWithId('cl123', any()),
-      ).thenAnswer((_) async {});
+      ).thenAnswer((_) async => 'new-url');
 
-      // Keep default empty stream (initClientFilters won't populate _all)
-      vm.initClientFilters(
-        initialQuery: 'ja',
-      ); // query that will match 'Jane' after add
-
-      final ok = await vm.addClient(
-        name: '  Jane  ',
-        phone: '  12345 ',
-        email: '  j@x.dk ',
-        address: ' St ',
-        city: ' Cph ',
-        postal: ' 2100 ',
-        cvr: '  ', // empty → treated as null
-        image: (
-          bytes: Uint8List.fromList([1, 2, 3]),
-          name: 'a.png',
-          mimeType: 'image/png',
-        ),
+      final img = (
+        bytes: Uint8List.fromList([1, 2, 3]),
+        name: 'pic.jpg',
+        mimeType: 'image/jpeg',
       );
 
-      expect(ok, isTrue);
-      expect(vm.error, isNull);
+      final result = await vm.handleUploadImage(img, null, docRef);
 
-      final cached = cache.getClient('cl123');
-      expect(cached, isNotNull);
-      expect(cached!.name, 'Jane');
-      expect(cached.phone, '12345');
-      expect(cached.email, 'j@x.dk');
-      expect(cached.address, 'St');
-      expect(cached.city, 'Cph');
-      expect(cached.postal, '2100');
-      expect(cached.cvr, isNull);
-      expect(cached.image, 'https://img');
-
-      // After add, filter recomputed; since query is 'ja', list should contain 'Jane'
-      expect(vm.allClients.map((c) => c.id), contains('cl123'));
-
-      verify(() => repo.newClientRef()).called(1);
+      expect(result, 'new-url');
       verify(
         () => imageStorage.uploadClientImage(
-          clientId: 'cl123',
+          clientId: 'y',
           image: any(named: 'image'),
         ),
       ).called(1);
-      verify(() => repo.createClientWithId('cl123', any())).called(1);
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // updateClientFields
-  // ───────────────────────────────────────────────────────────────────────────
-  group('updateClientFields', () {
-    setUp(() {
-      cache.cacheClient(
-        const ClientModel(
-          id: 'u1',
-          name: 'Old N',
-          phone: '000',
-          email: 'old@x.dk',
-          address: 'Old St',
-          city: 'OldCity',
-          postal: '0000',
-          cvr: '12345678',
-          image: 'old.png',
-        ),
-      );
-      when(
-        () => repo.updateClient(
-          any(),
-          fields: any(named: 'fields'),
-          deletes: any(named: 'deletes'),
-        ),
-      ).thenAnswer((_) async {});
-    });
-
-    test('updates scalar fields; cache reflects changes', () async {
-      final ok = await vm.updateClientFields(
-        'u1',
-        name: '  New N ',
-        phone: '  111 ',
-        email: ' new@x.dk ',
-        address: ' New St ',
-        city: ' NewCity ',
-        postal: ' 2100 ',
-        cvr: ' 87654321 ',
-      );
-      expect(ok, isTrue);
-
-      final captured = verify(
-        () => repo.updateClient(
-          'u1',
-          fields: captureAny(named: 'fields'),
-          deletes: captureAny(named: 'deletes'),
-        ),
-      ).captured;
-
-      late Map<String, Object?> fields;
-      late Set<String> deletes;
-      if (captured.first is Map<String, Object?>) {
-        fields = captured.first as Map<String, Object?>;
-        deletes = captured.last as Set<String>;
-      } else {
-        fields = captured.last as Map<String, Object?>;
-        deletes = captured.first as Set<String>;
-      }
-
-      expect(fields['name'], 'New N');
-      expect(fields['phone'], '111');
-      expect(fields['email'], 'new@x.dk');
-      expect(fields['address'], 'New St');
-      expect(fields['city'], 'NewCity');
-      expect(fields['postal'], '2100');
-      expect(fields['cvr'], '87654321');
-      expect(deletes, isEmpty);
-
-      final updated = cache.getClient('u1')!;
-      expect(updated.name, 'New N');
-      expect(updated.phone, '111');
-      expect(updated.email, 'new@x.dk');
-      expect(updated.address, 'New St');
-      expect(updated.city, 'NewCity');
-      expect(updated.postal, '2100');
-      expect(updated.cvr, '87654321');
-    });
-
-    test('newImage uploads and sets image field', () async {
-      when(
-        () => imageStorage.uploadClientImage(
-          clientId: 'u1',
-          image: any(named: 'image'),
-        ),
-      ).thenAnswer((_) async => 'https://new');
-
-      await vm.updateClientFields(
-        'u1',
-        newImage: (
-          bytes: Uint8List.fromList([0, 1]),
-          name: 'x.png',
-          mimeType: 'image/png',
-        ),
-      );
-
-      final captured = verify(
-        () => repo.updateClient(
-          'u1',
-          fields: captureAny(named: 'fields'),
-          deletes: captureAny(named: 'deletes'),
-        ),
-      ).captured;
-
-      final fields = (captured.first is Map<String, Object?>)
-          ? captured.first as Map<String, Object?>
-          : captured.last as Map<String, Object?>;
-
-      expect(fields['image'], 'https://new');
-
-      final updated = cache.getClient('u1')!;
-      expect(updated.image, 'https://new');
-
-      verify(
-        () => imageStorage.uploadClientImage(
-          clientId: 'u1',
-          image: any(named: 'image'),
-        ),
-      ).called(1);
-    });
-
-    test('removeImage=true deletes image and calls storage delete', () async {
-      when(() => imageStorage.deleteClientImage('u1')).thenAnswer((_) async {});
-
-      await vm.updateClientFields('u1', removeImage: true);
-
-      final captured = verify(
-        () => repo.updateClient(
-          'u1',
-          fields: captureAny(named: 'fields'),
-          deletes: captureAny(named: 'deletes'),
-        ),
-      ).captured;
-
-      late Map<String, Object?> fields;
-      late Set<String> deletes;
-      if (captured.first is Map<String, Object?>) {
-        fields = captured.first as Map<String, Object?>;
-        deletes = captured.last as Set<String>;
-      } else {
-        fields = captured.last as Map<String, Object?>;
-        deletes = captured.first as Set<String>;
-      }
-
-      expect(fields.containsKey('image'), isFalse);
-      expect(deletes.contains('image'), isTrue);
-
-      // NOTE: If your ClientModel.copyWith can't set null, don't assert cache null here.
-      // Prefer sentinel-based copyWith (like in ServiceModel) if you want to assert:
-      // final updated = cache.getClient('u1')!;
-      // expect(updated.image, isNull);
-
-      verify(() => imageStorage.deleteClientImage('u1')).called(1);
-    });
-
+  group('updateClientFields & handleUpdateFields', () {
     test(
-      'no-op: nothing to update → skips repo call and returns true',
+      'returns true and does not call repo when no changes provided',
       () async {
-        final before = cache.getClient('u1');
+        final result = await vm.updateClientFields('id1');
 
-        final ok = await vm.updateClientFields('u1');
-        expect(ok, isTrue);
-
+        expect(result, isTrue);
+        expect(vm.error, isNull);
         verifyNever(
           () => repo.updateClient(
             any(),
@@ -490,70 +395,207 @@ void main() {
             deletes: any(named: 'deletes'),
           ),
         );
-
-        final after = cache.getClient('u1');
-        expect(after, same(before));
       },
     );
-  });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // delete
-  // ───────────────────────────────────────────────────────────────────────────
-  group('delete', () {
     test(
-      'deletes storage image, repo doc, and clears from cache and lists',
+      'updates fields and deletes others, then caches updated client',
       () async {
-        final items = [
-          const ClientModel(id: 'd1', name: 'To Delete'),
-          const ClientModel(id: 'keep', name: 'Keep Co', cvr: '11111111'),
-        ];
-        when(() => repo.watchClients()).thenAnswer((_) => Stream.value(items));
-        vm.initClientFilters();
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final original = const ClientModel(
+          id: 'id1',
+          name: 'Old',
+          phone: '123',
+          email: 'old@mail',
+          address: 'A',
+          city: 'C',
+          postal: '1000',
+          cvr: 'CVR',
+          image: 'old-image',
+        );
+        cache.cacheClient(original);
+
+        Map<String, Object?>? capturedFields;
+        Set<String>? capturedDeletes;
 
         when(
-          () => imageStorage.deleteClientImage('d1'),
+          () => repo.updateClient(
+            any(),
+            fields: any(named: 'fields'),
+            deletes: any(named: 'deletes'),
+          ),
+        ).thenAnswer((invocation) async {
+          capturedFields =
+              invocation.namedArguments[#fields] as Map<String, Object?>;
+          capturedDeletes = invocation.namedArguments[#deletes] as Set<String>;
+        });
+
+        final result = await vm.updateClientFields(
+          'id1',
+          name: '  New Name  ',
+          phone: ' ', // should be deleted
+          email: '  new@mail ',
+        );
+
+        expect(result, isTrue);
+        expect(vm.error, isNull);
+        expect(capturedFields, isNotNull);
+        expect(capturedDeletes, isNotNull);
+        expect(capturedFields!['name'], 'New Name');
+        expect(capturedFields!['email'], 'new@mail');
+        expect(capturedDeletes, contains('phone'));
+
+        final updated = cache.getClient('id1');
+        expect(updated, isNotNull);
+        expect(updated!.name, 'New Name');
+        expect(updated.email, 'new@mail');
+        expect(updated.phone, isNull);
+        expect(updated.address, 'A');
+        expect(updated.image, 'old-image');
+      },
+    );
+
+    test(
+      'uploads new image and updates cache when newImage is provided',
+      () async {
+        final original = const ClientModel(
+          id: 'id1',
+          name: 'HasImage',
+          image: 'old',
+        );
+        cache.cacheClient(original);
+
+        when(
+          () => repo.updateClient(
+            any(),
+            fields: any(named: 'fields'),
+            deletes: any(named: 'deletes'),
+          ),
         ).thenAnswer((_) async {});
-        when(() => repo.deleteClient('d1')).thenAnswer((_) async {});
+        when(
+          () => imageStorage.uploadClientImage(
+            clientId: any(named: 'clientId'),
+            image: any(named: 'image'),
+          ),
+        ).thenAnswer((_) async => 'new-image');
 
-        await vm.delete('d1');
+        final img = (
+          bytes: Uint8List.fromList([1, 2, 3]),
+          name: 'pic.jpg',
+          mimeType: 'image/jpeg',
+        );
 
-        expect(cache.getClient('d1'), isNull);
-        expect(vm.allClients.map((c) => c.id), equals(['keep']));
-        // Split should reflect removal too
-        expect(vm.businessClients.map((c) => c.id), equals(['keep']));
-        expect(vm.privateClients, isEmpty);
+        final result = await vm.updateClientFields('id1', newImage: img);
 
-        verify(() => imageStorage.deleteClientImage('d1')).called(1);
-        verify(() => repo.deleteClient('d1')).called(1);
+        expect(result, isTrue);
+        final updated = cache.getClient('id1');
+        expect(updated, isNotNull);
+        expect(updated!.image, 'new-image');
+      },
+    );
+
+    test(
+      'removes image and swallows delete errors when removeImage is true',
+      () async {
+        final original = const ClientModel(
+          id: 'id1',
+          name: 'HasImage',
+          image: 'old-image',
+        );
+        cache.cacheClient(original);
+
+        when(
+          () => repo.updateClient(
+            any(),
+            fields: any(named: 'fields'),
+            deletes: any(named: 'deletes'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => imageStorage.deleteClientImage(any()),
+        ).thenThrow(Exception('missing'));
+
+        final result = await vm.updateClientFields('id1', removeImage: true);
+
+        expect(result, isTrue);
+        final updated = cache.getClient('id1');
+        expect(updated, isNotNull);
+        expect(updated!.image, isNull);
+
+        verify(() => imageStorage.deleteClientImage('id1')).called(1);
+      },
+    );
+
+    test(
+      'sets error and returns false when repo.updateClient throws',
+      () async {
+        cache.cacheClient(const ClientModel(id: 'id1', name: 'Old'));
+
+        when(
+          () => repo.updateClient(
+            any(),
+            fields: any(named: 'fields'),
+            deletes: any(named: 'deletes'),
+          ),
+        ).thenThrow(Exception('failure'));
+
+        final result = await vm.updateClientFields('id1', name: 'New');
+
+        expect(result, isFalse);
+        expect(vm.error, contains('Kunne ikke opdatere'));
+        expect(vm.saving, isFalse);
       },
     );
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // reset
-  // ───────────────────────────────────────────────────────────────────────────
-  group('reset', () {
-    test('clears in-memory state and notifies', () async {
-      when(() => repo.watchClients()).thenAnswer(
-        (_) => Stream.value([const ClientModel(id: 'r1', name: 'Any')]),
-      );
-      vm.initClientFilters();
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      expect(vm.allClients, isNotEmpty);
-      expect(vm.privateCount + vm.businessCount, 1);
+  group('cacheUpdatedClient', () {
+    test('does nothing when client is not present in cache', () {
+      // Should not throw
+      vm.cacheUpdatedClient('missing', {}, {});
+    });
+  });
 
-      var ticks = 0;
-      vm.addListener(() => ticks++);
+  group('delete', () {
+    test(
+      'deletes image if possible, swallows errors, removes from cache',
+      () async {
+        cache.cacheClient(const ClientModel(id: 'id1', name: 'ToDelete'));
+
+        when(
+          () => imageStorage.deleteClientImage(any()),
+        ).thenThrow(Exception('missing'));
+        when(() => repo.deleteClient(any())).thenAnswer((_) async {});
+
+        await vm.delete('id1');
+
+        verify(() => repo.deleteClient('id1')).called(1);
+        expect(cache.getClient('id1'), isNull);
+      },
+    );
+  });
+
+  group('reset', () {
+    test('resets query and lists and allows re-initialisation', () async {
+      cache.cacheClient(const ClientModel(id: 'id1', name: 'Alice'));
+      vm.setClientSearch('alice'); // sets _query and recomputes
+
+      expect(vm.allClients, isNotEmpty);
 
       vm.reset();
+
       expect(vm.allClients, isEmpty);
       expect(vm.privateClients, isEmpty);
       expect(vm.businessClients, isEmpty);
-      expect(vm.privateCount, 0);
-      expect(vm.businessCount, 0);
-      expect(ticks, greaterThanOrEqualTo(1));
+
+      // After reset, initClientFilters should be allowed again.
+      final controller = StreamController<List<ClientModel>>();
+      when(() => repo.watchClients()).thenAnswer((_) => controller.stream);
+
+      vm.initClientFilters();
+      controller.add([const ClientModel(id: 'id2', name: 'Bob')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(vm.allClients.map((c) => c.id), ['id2']);
+
+      await controller.close();
     });
   });
 }

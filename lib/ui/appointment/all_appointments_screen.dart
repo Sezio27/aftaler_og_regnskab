@@ -1,7 +1,5 @@
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
-import 'package:aftaler_og_regnskab/data/repositories/appointment_repository.dart';
 import 'package:aftaler_og_regnskab/debug/bench.dart';
-import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -13,7 +11,6 @@ import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/ui/widgets/search_field.dart';
 import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -118,7 +115,7 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
           _queryMatches(_query, a.clientName, a.serviceName);
     }).toList();
 
-    final listbody = Padding(
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         hPad / 2,
         6,
@@ -308,165 +305,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
         },
       ),
     );
-
-    return Stack(
-      children: [
-        listbody,
-        if (kDebugMode)
-          Positioned(
-            right: 12,
-            bottom: 12,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: 'fab-reset',
-                  tooltip: 'Reset counters',
-                  onPressed: _resetBench,
-                  child: const Icon(Icons.restart_alt),
-                ),
-                const SizedBox(height: 8),
-
-                FloatingActionButton.small(
-                  heroTag: 'fab-seed',
-                  tooltip: 'Seed demo data',
-                  onPressed: _seedDemoData,
-                  child: const Icon(Icons.dataset),
-                ),
-                const SizedBox(height: 8),
-
-                FloatingActionButton.small(
-                  heroTag: 'fab-log',
-                  tooltip: 'Log BENCH',
-                  onPressed: () => bench?.log('AllAppointments snapshot'),
-                  child: const Icon(Icons.bug_report),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  heroTag: 'fab-delete-all',
-                  tooltip: 'Slet alle aftaler (DEV)',
-                  onPressed: _deleteAllAppointments,
-                  child: const Icon(Icons.delete_forever),
-                ),
-                const SizedBox(height: 80),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _resetBench() {
-    if (bench == null) return;
-    bench!
-      ..pagedReads = 0
-      ..liveFirstReads = 0
-      ..liveUpdateReads = 0
-      ..allAppointmentsBuilds = 0;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('BENCH counters reset')));
-  }
-
-  Future<void> _seedDemoData() async {
-    try {
-      final repo = context.read<AppointmentRepository>();
-      DateTime mStart(DateTime d) => DateTime(d.year, d.month, 1);
-      DateTime addMonths(DateTime d, int delta) =>
-          DateTime(d.year, d.month + delta, 1);
-
-      final now = DateTime.now();
-      final months = [
-        mStart(now),
-        mStart(addMonths(now, 1)),
-        mStart(addMonths(now, 2)),
-        mStart(addMonths(now, 3)),
-      ];
-
-      List<AppointmentModel> monthDocs(DateTime start) {
-        const days = [3, 10, 17, 24, 27];
-        return List.generate(5, (i) {
-          final dt = DateTime(start.year, start.month, days[i], 10 + i);
-          return AppointmentModel(
-            dateTime: dt,
-
-            status: 'uninvoiced',
-            checklistIds: const [],
-            imageUrls: const [],
-          );
-        });
-      }
-
-      for (final m in months) {
-        await repo.createAppointmentsBatch(monthDocs(m));
-      }
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Seeded 20 appointments (5 per month x 4)'),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Seed error: $e')));
-    }
-  }
-
-  Future<void> _deleteAllAppointments() async {
-    final cs = Theme.of(context).colorScheme;
-
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Slet alle aftaler?'),
-        content: const Text(
-          'Dette vil fjerne ALLE aftaler for denne bruger. '
-          'Denne handling kan ikke fortrydes.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuller'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: cs.error),
-            child: const Text('Slet alt'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      final repo = context.read<AppointmentRepository>();
-      final vm = context.read<AppointmentViewModel>();
-
-      final deleted = await repo.deleteAllAppointments();
-
-      vm.beginListRange(_from, _to);
-
-      bench
-        ?..pagedReads = 0
-        ..liveFirstReads = 0
-        ..liveUpdateReads = 0
-        ..allAppointmentsBuilds = 0;
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Slettede $deleted aftaler')));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Fejl ved sletning: $e')));
-    }
   }
 
   Future<void> _pickType() async {

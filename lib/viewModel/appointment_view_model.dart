@@ -245,7 +245,7 @@ class AppointmentViewModel extends ChangeNotifier {
         : <String>{};
   }
 
-  void handleFields(
+  void handleUpdateFields(
     Map<String, Object?> fields,
     List<String> finalImageUrls,
     Set<String> deletes,
@@ -301,7 +301,7 @@ class AppointmentViewModel extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> handleUpdate(
+  Future<void> cacheUpdatedAppointment(
     AppointmentModel old,
     Map<String, Object?> fields,
     Set<String> deletes,
@@ -312,30 +312,43 @@ class AppointmentViewModel extends ChangeNotifier {
     DateTime? payDate,
     List<String> finalImageUrls,
   ) async {
-    await _repo.updateAppointment(old.id!, fields: fields, deletes: deletes);
+    String? resolveString(String key, String? oldValue) {
+      if (fields.containsKey(key)) {
+        return fields[key] as String?;
+      }
+      if (deletes.contains(key)) {
+        return null;
+      }
+      return oldValue;
+    }
 
-    final updated = old.copyWith(
+    double? resolvePrice() {
+      if (fields.containsKey('price')) {
+        return (fields['price'] as num?)?.toDouble();
+      }
+      if (deletes.contains('price')) {
+        return null;
+      }
+      return old.price;
+    }
+
+    final updated = AppointmentModel(
+      id: old.id,
       clientId: clientId ?? old.clientId,
       serviceId: serviceId ?? old.serviceId,
       checklistIds: newChecklistSelection?.toList() ?? old.checklistIds,
       dateTime: dateTime ?? old.dateTime,
       payDate: payDate ?? old.payDate,
-      location: fields.containsKey('location')
-          ? fields['location'] as String?
-          : (deletes.contains('location') ? null : old.location),
-      note: fields.containsKey('note')
-          ? fields['note'] as String?
-          : (deletes.contains('note') ? null : old.note),
-      status: fields.containsKey('status')
-          ? fields['status'] as String?
-          : (deletes.contains('status') ? null : old.status),
-      price: fields.containsKey('price')
-          ? (fields['price'] as num?)?.toDouble()
-          : (deletes.contains('price') ? null : old.price),
+      location: resolveString('location', old.location),
+      note: resolveString('note', old.note),
+      status: resolveString('status', old.status),
+      price: resolvePrice(),
       imageUrls: finalImageUrls,
     );
     apptCache.cacheAppointment(updated);
-    unawaited(notifications.onAppointmentChanged(updated));
+    if (old.dateTime != updated.dateTime) {
+      unawaited(notifications.onAppointmentChanged(updated));
+    }
   }
 
   Future<bool> updateAppointmentFields(
@@ -374,7 +387,7 @@ class AppointmentViewModel extends ChangeNotifier {
       final fields = <String, Object?>{};
       final deletes = <String>{};
 
-      handleFields(
+      handleUpdateFields(
         fields,
         finalImageUrls,
         deletes,
@@ -391,7 +404,12 @@ class AppointmentViewModel extends ChangeNotifier {
       );
 
       if (fields.isNotEmpty || deletes.isNotEmpty) {
-        await handleUpdate(
+        await _repo.updateAppointment(
+          old.id!,
+          fields: fields,
+          deletes: deletes,
+        );
+        await cacheUpdatedAppointment(
           old,
           fields,
           deletes,

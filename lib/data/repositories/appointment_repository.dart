@@ -278,44 +278,6 @@ class AppointmentRepository {
     await _collection(uid).doc(id).delete();
   }
 
-  Future<int> deleteAllAppointments({int pageSize = 200}) async {
-    final uid = _uidOrThrow;
-    int total = 0;
-
-    while (true) {
-      final page = await _collection(uid).limit(pageSize).get();
-      if (page.docs.isEmpty) break;
-
-      final batch = _db.batch();
-      for (final d in page.docs) {
-        batch.delete(d.reference);
-      }
-      await batch.commit();
-      total += page.docs.length;
-
-      await Future.delayed(const Duration(milliseconds: 30));
-    }
-    return total;
-  }
-
-  Future<List<String>> createAppointmentsBatch(
-    List<AppointmentModel> models,
-  ) async {
-    final uid = _uidOrThrow;
-    final batch = _db.batch();
-    final ids = <String>[];
-
-    for (final m in models) {
-      final doc = _collection(uid).doc();
-      ids.add(doc.id);
-      final payload = _toFirestore(m.copyWith(id: doc.id), isCreate: true);
-      batch.set(doc, payload);
-    }
-
-    await batch.commit();
-    return ids;
-  }
-
   Future<
     ({
       List<AppointmentModel> items,

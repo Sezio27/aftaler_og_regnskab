@@ -5,14 +5,15 @@ import 'package:aftaler_og_regnskab/ui/calendar/calendar_screen.dart';
 import 'package:aftaler_og_regnskab/ui/calendar/month_grid.dart';
 import 'package:aftaler_og_regnskab/ui/calendar/month_switcher.dart';
 import 'package:aftaler_og_regnskab/ui/calendar/week_switcher.dart';
+import 'package:aftaler_og_regnskab/ui/calendar/week_day_header.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/calendar_view_model.dart';
 import 'package:aftaler_og_regnskab/utils/range.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/date_symbol_data_local.dart';
 
 import '../support/mocks.dart';
 import '../support/test_wrappers.dart';
@@ -32,74 +33,53 @@ void main() {
     apptVM = MockAppointmentVM();
     calVM = MockCalendarVM();
 
+    // Default tab: month view.
     when(() => calVM.tab).thenReturn(Tabs.month);
 
+    // Month state.
     when(() => calVM.monthTitle).thenReturn('Juni 2025');
     when(() => calVM.visibleMonth).thenReturn(DateTime(2025, 6, 1));
 
+    // Week state.
     when(() => calVM.visibleWeek).thenReturn(DateTime(2025, 6, 2));
     when(() => calVM.selectedDay).thenReturn(DateTime(2025, 6, 3));
-
-    when(() => calVM.setTab(any())).thenAnswer((inv) {
-      final next = inv.positionalArguments[0] as Tabs;
-      when(() => calVM.tab).thenReturn(next);
-      calVM.notifyListeners();
-    });
-
-    when(() => calVM.nextMonth()).thenAnswer((_) {
-      when(() => calVM.visibleMonth).thenReturn(DateTime(2025, 7, 1));
-      when(() => calVM.monthTitle).thenReturn('Juli 2025');
-      calVM.notifyListeners();
-    });
-    when(() => calVM.prevMonth()).thenAnswer((_) {
-      when(() => calVM.visibleMonth).thenReturn(DateTime(2025, 5, 1));
-      when(() => calVM.monthTitle).thenReturn('Maj 2025');
-      calVM.notifyListeners();
-    });
-
     when(() => calVM.weekTitle).thenReturn('Uge 23');
     when(() => calVM.weekSubTitle).thenReturn('2–8 juni 2025');
     when(() => calVM.weekDays).thenReturn(
       List.generate(7, (i) => DateTime(2025, 6, 2 + i)), // Mon..Sun
     );
 
+    // Switching tabs mutates calVM.tab and notifies listeners.
+    when(() => calVM.setTab(any())).thenAnswer((inv) {
+      final next = inv.positionalArguments[0] as Tabs;
+      when(() => calVM.tab).thenReturn(next);
+      calVM.notifyListeners();
+    });
+
+    // We do not need prev/next week/month behaviour for these tests, so they
+    // can just be no-ops if called.
+    when(() => calVM.prevMonth()).thenAnswer((_) {});
+    when(() => calVM.nextMonth()).thenAnswer((_) {});
+    when(() => calVM.prevWeek()).thenAnswer((_) {});
+    when(() => calVM.nextWeek()).thenAnswer((_) {});
+    when(() => calVM.jumpToCurrentMonth()).thenAnswer((_) {});
+    when(() => calVM.jumpToCurrentWeek()).thenAnswer((_) {});
+    when(() => calVM.selectDay(any())).thenAnswer((_) {});
+
+    // Appointment VM: default no events / cards, no-op loading.
     when(() => apptVM.monthChipsOn(any())).thenReturn(const <MonthChip>[]);
     when(() => apptVM.hasEventsOn(any())).thenReturn(false);
-
     when(
       () => apptVM.cardsForDate(any()),
     ).thenAnswer((_) async => const <AppointmentCardModel>[]);
-    when(() => apptVM.setActiveWindow(any())).thenAnswer((_) {});
+    when(() => apptVM.ensureMonthLoaded(any())).thenAnswer((_) async {});
   });
 
   // ───────────────────────────────────────────────────────────────────────────
   // Month vs Week body
   // ───────────────────────────────────────────────────────────────────────────
-  testWidgets('renders Month body by default (MonthSwitcher + MonthGrid)', (
-    tester,
-  ) async {
-    await pumpWithShell(
-      tester,
-      child: const CalendarScreen(),
-      providers: [
-        ChangeNotifierProvider<CalendarViewModel>.value(value: calVM),
-        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
-      ],
-      location: '/calendar',
-      routeName: 'calendar',
-    );
-
-    await tester.pump(const Duration(milliseconds: 1));
-
-    expect(find.byType(MonthSwitcher), findsOneWidget);
-    expect(find.byType(MonthGrid), findsOneWidget);
-    expect(find.byType(WeekSwitcher), findsNothing);
-    // AnimatedSwitcher shows the month body keyed as 'month'
-    expect(find.byKey(const ValueKey('month')), findsOneWidget);
-  });
-
   testWidgets(
-    'switching to Week tab shows Week body and calls setActiveWindow',
+    'renders Month body by default (MonthSwitcher + WeekdayHeader + MonthGrid)',
     (tester) async {
       await pumpWithShell(
         tester,
@@ -112,21 +92,61 @@ void main() {
         routeName: 'calendar',
       );
 
-      // Flip to week
-      calVM.setTab(Tabs.week);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 1));
 
+      // Month UI pieces
+      expect(find.byType(MonthSwitcher), findsOneWidget);
+      expect(find.byType(WeekdayHeader), findsOneWidget);
+      expect(find.byType(MonthGrid), findsOneWidget);
+
+      // Week-only pieces are not shown.
+      expect(find.byType(WeekSwitcher), findsNothing);
+
+      // AnimatedSwitcher shows the month body keyed as 'month'
+      expect(find.byKey(const ValueKey('month')), findsOneWidget);
+      expect(find.byKey(const ValueKey('week')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'switching to Week tab shows Week body and calls ensureMonthLoaded for week end',
+    (tester) async {
+      await pumpWithShell(
+        tester,
+        child: const CalendarScreen(),
+        providers: [
+          ChangeNotifierProvider<CalendarViewModel>.value(value: calVM),
+          ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ],
+        location: '/calendar',
+        routeName: 'calendar',
+      );
+
+      // Switch to week tab through the mocked VM.
+      calVM.setTab(Tabs.week);
+
+      // Let AnimatedSwitcher build the week body.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
+
+      // Week UI pieces visible.
       expect(find.byType(WeekSwitcher), findsOneWidget);
+
+      // Because AnimatedSwitcher keeps old+new children during the transition,
+      // we may briefly have 2 WeekdayHeader widgets in the tree. Just assert
+      // that at least one exists.
+      expect(find.byType(WeekdayHeader), findsAtLeastNWidgets(1));
+
       expect(find.byKey(const ValueKey('week')), findsOneWidget);
 
-      // Post-frame callback should call setActiveWindow(weekEnd)
+      // Week range [mondayOf(visibleWeek) .. +6 days] is passed to ensureMonthLoaded.
       final weekStart = mondayOf(calVM.visibleWeek);
       final expectedEnd = weekStart.add(const Duration(days: 6));
 
-      // Let the post-frame callback run
+      // Run the post-frame callback that calls ensureMonthLoaded.
       await tester.pump();
 
-      verify(() => apptVM.setActiveWindow(expectedEnd)).called(1);
+      verify(() => apptVM.ensureMonthLoaded(expectedEnd)).called(1);
     },
   );
 
@@ -136,7 +156,7 @@ void main() {
   testWidgets('Week view shows loader while cardsForDate is pending', (
     tester,
   ) async {
-    // Make the future pending via Completer
+    // Make the future pending via Completer to force the loading state.
     final completer = Completer<List<AppointmentCardModel>>();
     when(() => apptVM.cardsForDate(any())).thenAnswer((_) => completer.future);
 
@@ -148,15 +168,16 @@ void main() {
         ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
       ],
       location: '/calendar',
-      routeName: 'calendar', // avoids tab_config lookups
+      routeName: 'calendar',
     );
+
     calVM.setTab(Tabs.week);
     await tester.pump(); // build Week body
     await tester.pump(); // trigger FutureBuilder waiting
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    // Complete to avoid dangling async work
+    // Complete to avoid dangling async work and let the tree settle.
     completer.complete(const <AppointmentCardModel>[]);
     await tester.pumpAndSettle();
   });
@@ -174,13 +195,14 @@ void main() {
         ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
       ],
       location: '/calendar',
-      routeName: 'calendar', // avoids tab_config lookups
+      routeName: 'calendar',
     );
+
     calVM.setTab(Tabs.week);
     await tester.pumpAndSettle();
 
     expect(find.text('Ingen aftaler denne dag'), findsOneWidget);
-    expect(find.text('Ny aftale'), findsOneWidget); // CTA is visible under list
+    expect(find.text('Ny aftale'), findsOneWidget); // CTA under list
   });
 
   testWidgets('Week view renders items when data exists', (tester) async {
@@ -217,18 +239,19 @@ void main() {
         ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
       ],
       location: '/calendar',
-      routeName: 'calendar', // avoids tab_config lookups
+      routeName: 'calendar',
     );
+
     calVM.setTab(Tabs.week);
     await tester.pumpAndSettle();
 
-    // List items rendered via AppointmentCard (we assert by visible text)
+    // Items are rendered via AppointmentCard; assert by visible text.
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('Bob'), findsOneWidget);
     expect(find.text('Makeup'), findsOneWidget);
     expect(find.text('Hår'), findsOneWidget);
 
-    // CTA present
+    // CTA present.
     expect(find.text('Ny aftale'), findsOneWidget);
   });
 }

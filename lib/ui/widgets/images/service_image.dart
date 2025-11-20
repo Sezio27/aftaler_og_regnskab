@@ -9,7 +9,6 @@ class ServiceImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // Fills all available space
     final Widget placeholder = Container(
       width: double.infinity,
       height: double.infinity,

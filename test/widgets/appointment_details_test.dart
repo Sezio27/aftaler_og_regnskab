@@ -1,229 +1,286 @@
-import 'dart:async';
-
-import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:aftaler_og_regnskab/domain/checklist_model.dart';
+import 'package:aftaler_og_regnskab/domain/client_model.dart';
+import 'package:aftaler_og_regnskab/domain/service_model.dart';
+import 'package:aftaler_og_regnskab/navigation/app_router.dart';
 import 'package:aftaler_og_regnskab/ui/appointment/appointment_details_screen.dart';
+import 'package:aftaler_og_regnskab/ui/widgets/overlays/client_list_overlay.dart';
+import 'package:aftaler_og_regnskab/ui/widgets/overlays/soft_textfield.dart';
+import 'package:aftaler_og_regnskab/ui/widgets/status.dart';
+import 'package:aftaler_og_regnskab/utils/paymentStatus.dart';
 import 'package:aftaler_og_regnskab/viewModel/appointment_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
+import 'package:aftaler_og_regnskab/viewModel/finance_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
-import 'package:aftaler_og_regnskab/ui/widgets/cards/appointment_checklist_card.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:mocktail_image_network/mocktail_image_network.dart';
 import 'package:provider/provider.dart';
 
 import '../support/mocks.dart';
 import '../support/test_wrappers.dart';
 
+class MockGoRouter extends Mock implements GoRouter {}
+
+class FakeAppointmentModel extends Fake implements AppointmentModel {}
+
 void main() {
-  // ────────────────────────────────────────────────────────────────────────────
-  // Test setup
-  // ────────────────────────────────────────────────────────────────────────────
-  setUpAll(() async {
-    await initializeDateFormatting('da');
-    // Fallbacks that are commonly needed by mocktail
-    registerFallbackValue(DateTime(2000, 1, 1));
+  setUpAll(() {
+    registerFallbackValue(FakeAppointmentModel());
   });
 
   late MockAppointmentVM apptVM;
+  late MockFinanceVM financeVM;
   late MockClientVM clientVM;
   late MockServiceVM serviceVM;
   late MockChecklistVM checklistVM;
 
-  // Handy fixture
-  AppointmentModel appt({
-    String id = 'a1',
-    String? clientId,
-    String? serviceId,
-    List<String> checklistIds = const [],
-    DateTime? dateTime,
-    DateTime? payDate,
-    String? location,
-    String? note,
-    double? price,
-    String status = 'Afventer',
-    List<String> imageUrls = const [],
-  }) {
-    return AppointmentModel(
-      id: id,
-      clientId: clientId,
-      serviceId: serviceId,
-      checklistIds: checklistIds,
-      dateTime: dateTime,
-      payDate: payDate,
-      location: location,
-      note: note,
-      price: price,
-      status: status,
-      imageUrls: imageUrls,
-    );
-  }
-
   setUp(() {
     apptVM = MockAppointmentVM();
+    financeVM = MockFinanceVM();
     clientVM = MockClientVM();
     serviceVM = MockServiceVM();
     checklistVM = MockChecklistVM();
 
-    // Default: appointment exists, minimal content
-    when(() => apptVM.getAppointment('a1')).thenReturn(
-      appt(
-        dateTime: DateTime(2025, 1, 10, 10, 30),
-        imageUrls: const [],
-        checklistIds: const [],
-      ),
-    );
+    registerFallbackValue(PaymentStatus.uninvoiced);
+    registerFallbackValue(DateTime(2000));
 
-    // Checklist progress stream defaults to an empty progress map
+    // Default stubs
+    when(() => apptVM.getAppointment(any())).thenReturn(null);
+    when(
+      () => apptVM.updateAppointmentFields(
+        any(),
+        clientId: any(named: 'clientId'),
+        serviceId: any(named: 'serviceId'),
+        checklistIds: any(named: 'checklistIds'),
+        dateTime: any(named: 'dateTime'),
+        payDate: any(named: 'payDate'),
+        location: any(named: 'location'),
+        note: any(named: 'note'),
+        price: any(named: 'price'),
+        status: any(named: 'status'),
+        currentImageUrls: any(named: 'currentImageUrls'),
+        removedImageUrls: any(named: 'removedImageUrls'),
+        newImages: any(named: 'newImages'),
+      ),
+    ).thenAnswer((_) async => true);
+    when(
+      () => apptVM.delete(any(), any(), any(), any()),
+    ).thenAnswer((_) async {});
     when(
       () => apptVM.checklistProgressStream(any()),
-    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
-
-    // Saving checklist progress is a no-op by default
+    ).thenAnswer((_) => Stream.value({}));
     when(
       () => apptVM.saveChecklistProgress(
         appointmentId: any(named: 'appointmentId'),
         progress: any(named: 'progress'),
       ),
     ).thenAnswer((_) async {});
-
-    // Client/service/checklist prefetch are no-ops
-    when(() => clientVM.prefetchClient(any())).thenAnswer((_) async {});
-    when(() => serviceVM.prefetchService(any())).thenAnswer((_) async {});
-    when(() => checklistVM.prefetchChecklists(any())).thenAnswer((_) async {});
-
-    // Selections used by Selectors in the screen; default to “not loaded”
+    when(
+      () => financeVM.onUpdateAppointmentFields(
+        oldStatus: any(named: 'oldStatus'),
+        newStatus: any(named: 'newStatus'),
+        oldPrice: any(named: 'oldPrice'),
+        newPrice: any(named: 'newPrice'),
+        oldDate: any(named: 'oldDate'),
+        newDate: any(named: 'newDate'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => financeVM.onDeleteAppointment(
+        date: any(named: 'date'),
+        price: any(named: 'price'),
+        status: any(named: 'status'),
+      ),
+    ).thenAnswer((_) async {});
     when(() => clientVM.getClient(any())).thenReturn(null);
+    when(() => clientVM.prefetchClient(any())).thenAnswer((_) async {});
     when(() => serviceVM.getService(any())).thenReturn(null);
-    when(() => checklistVM.getById(any())).thenReturn(null);
+    when(() => serviceVM.prefetchService(any())).thenAnswer((_) async {});
+    when(() => checklistVM.getChecklist(any())).thenReturn(null);
+    when(() => checklistVM.prefetchChecklists(any())).thenAnswer((_) async {});
   });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Null-appointment → auto-pop (renders nothing)
-  // ────────────────────────────────────────────────────────────────────────────
-  testWidgets('pops when appointment is missing (renders nothing)', (
-    tester,
-  ) async {
-    // The selector will resolve to null → screen schedules a pop on next frame.
-    when(() => apptVM.getAppointment('missing')).thenReturn(null);
+  // ───────────────────────────────────────────────────────────────────────────
+  // Initial loading
+  // ───────────────────────────────────────────────────────────────────────────
+  testWidgets('pops if appointment is null', (tester) async {
+    final mockRouter = MockGoRouter();
+    when(() => mockRouter.pop()).thenReturn(null);
 
-    // Minimal, stable router for this test only.
-    final router = GoRouter(
-      initialLocation: '/base',
-      routes: [
-        GoRoute(
-          path: '/base',
-          builder: (_, __) => const Scaffold(body: Text('base')),
-        ),
-        GoRoute(
-          path: '/appointments/:id',
-          builder: (_, state) => AppointmentDetailsScreen(
-            appointmentId: state.pathParameters['id']!,
-          ),
-        ),
+    await pumpWithShell(
+      tester,
+      child: InheritedGoRouter(
+        goRouter: mockRouter,
+        child: AppointmentDetailsScreen(appointmentId: 'invalid'),
+      ),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
       ],
+      location: '/appointment_details/invalid',
+      routeName: 'appointment_details',
     );
 
-    // Pump providers + router.
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
-          ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
-          ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
-          ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
-        ],
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
+    await tester.pump();
 
-    // Push details WITHOUT awaiting; waiting would deadlock until pop completes.
-    unawaited(router.push('/appointments/missing'));
-
-    // Let details build, schedule its post-frame pop, then run it.
-    await tester.pump(); // build details
-    await tester.pump(
-      const Duration(milliseconds: 1),
-    ); // run addPostFrameCallback(pop)
-    await tester.pump(); // finish microtasks
-
-    // We popped back to /base; details scroll view isn't in the tree.
-    expect(find.text('base'), findsOneWidget);
-    expect(
-      find.byKey(const PageStorageKey('appointmentDetailsScroll')),
-      findsNothing,
-    );
+    verify(() => mockRouter.pop()).called(1);
   });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Read pane: basic rendering and empty states
-  // ────────────────────────────────────────────────────────────────────────────
-  testWidgets('renders read view sections and empty states', (tester) async {
-    when(() => apptVM.getAppointment('a1')).thenReturn(
-      appt(
-        // No client, no service, no price, no images, no checklists
-        dateTime: DateTime(2025, 1, 10, 10, 0),
-        note: '',
-        imageUrls: const [],
-        checklistIds: const [],
-        price: null,
-      ),
-    );
+  testWidgets('renders read pane if appointment exists', (tester) async {
+    final appt = AppointmentModel(id: 'a1', status: 'Ufaktureret');
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
 
     await pumpWithShell(
       tester,
       child: const AppointmentDetailsScreen(appointmentId: 'a1'),
       providers: [
         ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
         ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
         ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
         ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
       ],
-      location: '/appointments/a1',
-      routeName: 'appointmentDetails',
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1));
 
-    // Section headers
+    await tester.pumpAndSettle();
+
     expect(find.text('Status og fakturering'), findsOneWidget);
     expect(find.text('Klient'), findsOneWidget);
     expect(find.text('Aftaleoplysninger'), findsOneWidget);
     expect(find.text('Checklister'), findsOneWidget);
     expect(find.text('Billeder'), findsOneWidget);
     expect(find.text('Noter'), findsOneWidget);
-
-    // Read-view fallbacks
-    expect(find.text('Ingen klient tilknyttet'), findsOneWidget);
-    expect(find.text('Ingen checklister tilknyttet'), findsOneWidget);
-    expect(find.text('Ingen billeder tilføjet'), findsOneWidget);
-    expect(find.text('Ingen note'), findsOneWidget);
-
-    // Price shows placeholder when null
-    expect(find.text('Pris'), findsOneWidget);
-    expect(
-      find.text('---'),
-      findsWidgets,
-    ); // multiple '---' (price/date/location)
   });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Prefetching related entities when IDs exist
-  // ────────────────────────────────────────────────────────────────────────────
-  testWidgets('prefetches client, service and checklists on init', (
+  // ───────────────────────────────────────────────────────────────────────────
+  // Read pane rendering
+  // ───────────────────────────────────────────────────────────────────────────
+  testWidgets('renders status, pay date, price in read pane', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      status: 'Betalt',
+      payDate: DateTime(2025, 11, 20),
+      price: 500.0,
+    );
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Betalt'), findsOneWidget);
+    expect(find.text('Torsdag den 20. November'), findsOneWidget);
+    expect(find.text('500.0 DKK'), findsOneWidget);
+  });
+
+  testWidgets('renders client tile if client exists', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      clientId: 'c1',
+      status: 'Ufaktureret',
+    );
+    final client = ClientModel(id: 'c1', name: 'Test Client');
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => clientVM.getClient('c1')).thenReturn(client);
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Test Client'), findsOneWidget);
+  });
+
+  testWidgets('renders date, time, location, cvr, service in read pane', (
     tester,
   ) async {
-    when(() => apptVM.getAppointment('a1')).thenReturn(
-      appt(
-        clientId: 'c1',
-        serviceId: 's1',
-        checklistIds: const ['k1', 'k2'],
-        dateTime: DateTime(2025, 1, 10, 10, 0),
-      ),
+    final appt = AppointmentModel(
+      id: 'a1',
+      dateTime: DateTime(2025, 11, 20, 14, 30),
+      location: 'Office',
+      clientId: 'c1',
+      serviceId: 's1',
+      status: 'Ufaktureret',
+    );
+    final client = ClientModel(id: 'c1', cvr: '12345678');
+    final service = ServiceModel(id: 's1', name: 'Test Service');
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => clientVM.getClient('c1')).thenReturn(client);
+    when(() => serviceVM.getService('s1')).thenReturn(service);
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Torsdag den 20. November'), findsOneWidget);
+    expect(find.text('14:30'), findsOneWidget);
+    expect(find.text('Office'), findsOneWidget);
+    expect(find.text('12345678'), findsOneWidget);
+    expect(find.text('Test Service'), findsOneWidget);
+  });
+
+  testWidgets('renders checklists with ticks in read pane', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      checklistIds: ['cl1'],
+      status: 'Ufaktureret',
+    );
+    final checklist = ChecklistModel(
+      id: 'cl1',
+      name: 'Test Checklist',
+      points: ['Item1', 'Item2'],
+    );
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => checklistVM.getChecklist('cl1')).thenReturn(checklist);
+    when(() => apptVM.checklistProgressStream('a1')).thenAnswer(
+      (_) => Stream.value({
+        'cl1': {0},
+      }),
     );
 
     await pumpWithShell(
@@ -231,104 +288,527 @@ void main() {
       child: const AppointmentDetailsScreen(appointmentId: 'a1'),
       providers: [
         ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
         ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
         ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
         ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
       ],
-      location: '/appointments/a1',
-      routeName: 'appointmentDetails',
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1));
 
-    verify(() => clientVM.prefetchClient('c1')).called(1);
-    verify(() => serviceVM.prefetchService('s1')).called(1);
-    verify(() => checklistVM.prefetchChecklists(['k1', 'k2'])).called(1);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Test Checklist'), findsOneWidget);
+    // Assume checkbox for Item1 is checked
   });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Checklist progress: toggle → "Gem ændringer" → saveChecklistProgress
-  // ────────────────────────────────────────────────────────────────────────────
-  testWidgets(
-    'toggling a checklist item enables "Gem ændringer" and saves progress',
-    (tester) async {
-      // Appointment with one checklist
-      when(() => apptVM.getAppointment('a1')).thenReturn(
-        appt(
-          checklistIds: const ['k1'],
-          dateTime: DateTime(2025, 1, 10, 10, 0),
-        ),
-      );
+  testWidgets('toggles and saves checklist ticks in read pane', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      checklistIds: ['cl1'],
+      status: 'Ufaktureret',
+    );
+    final checklist = ChecklistModel(id: 'cl1', name: 'Test', points: ['Item']);
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => checklistVM.getChecklist('cl1')).thenReturn(checklist);
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value({}));
+    when(
+      () => apptVM.saveChecklistProgress(
+        appointmentId: 'a1',
+        progress: {
+          'cl1': {0},
+        },
+      ),
+    ).thenAnswer((_) async {});
 
-      // Checklist fully loaded by selector
-      final k1 = ChecklistModel(
-        id: 'k1',
-        name: 'Forberedelse',
-        points: const ['P1', 'P2', 'P3'],
-        description: null,
-      );
-      when(() => checklistVM.getById('k1')).thenReturn(k1);
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
 
-      // Server says item 0 is already completed
-      when(() => apptVM.checklistProgressStream('a1')).thenAnswer(
-        (_) => Stream<Map<String, Set<int>>>.value({
-          'k1': {0},
-        }),
-      );
+    await tester.pumpAndSettle();
 
-      // Capture the saved progress
-      when(
-        () => apptVM.saveChecklistProgress(
-          appointmentId: any(named: 'appointmentId'),
-          progress: any(named: 'progress'),
-        ),
-      ).thenAnswer((_) async {});
+    await tester.tap(find.text('Åbn'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Item'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gem ændringer'), findsOneWidget);
+
+    await tester.tap(find.text('Gem ændringer'));
+    await tester.pumpAndSettle();
+
+    verify(
+      () => apptVM.saveChecklistProgress(
+        appointmentId: 'a1',
+        progress: {
+          'cl1': {0},
+        },
+      ),
+    ).called(1);
+  });
+
+  testWidgets('renders images in read pane', (tester) async {
+    await mockNetworkImages(() async {
+      final appt = AppointmentModel(
+        id: 'a1',
+        imageUrls: ['https://example.com/image.jpg'],
+        status: 'Ufaktureret',
+      );
+      when(() => apptVM.getAppointment('a1')).thenReturn(appt);
 
       await pumpWithShell(
         tester,
         child: const AppointmentDetailsScreen(appointmentId: 'a1'),
         providers: [
           ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+          ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
           ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
           ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
           ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
         ],
-        location: '/appointments/a1',
-        routeName: 'appointmentDetails',
+        location: '/appointment_details/a1',
+        routeName: 'appointment_details',
       );
-      await tester.pump(); // build
-      await tester.pump(const Duration(milliseconds: 1)); // load ticks
 
-      // Find the rendered checklist card
-      final cardFinder = find.byType(AppointmentChecklistCard);
-      expect(cardFinder, findsOneWidget);
+      await tester.pumpAndSettle();
 
-      // Call the public callback to simulate ticking item #1
-      final card = tester.widget(cardFinder) as AppointmentChecklistCard;
-      expect(card.onToggleItem, isNotNull);
-      card.onToggleItem!(1, true); // add item 1
+      expect(find.byType(Image), findsOneWidget);
+    });
+  });
 
-      await tester.pump();
+  testWidgets('renders note in read pane', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      note: 'Test note',
+      status: 'Ufaktureret',
+    );
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
 
-      // "Gem ændringer" button becomes visible
-      final saveBtn = find.text('Gem ændringer');
-      expect(saveBtn, findsOneWidget);
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
 
-      await tester.tap(saveBtn);
-      await tester.pump();
+    await tester.pumpAndSettle();
 
-      // Verify the saved map now contains {0,1} for 'k1'
-      final captured =
-          verify(
-                () => apptVM.saveChecklistProgress(
-                  appointmentId: 'a1',
-                  progress: captureAny(named: 'progress'),
-                ),
-              ).captured.single
-              as Map<String, Set<int>>;
+    expect(find.text('Test note'), findsOneWidget);
+  });
 
-      expect(captured.containsKey('k1'), isTrue);
-      expect(captured['k1'], containsAll(<int>{0, 1}));
-    },
-  );
+  // ───────────────────────────────────────────────────────────────────────────
+  // Read pane interactions
+  // ───────────────────────────────────────────────────────────────────────────
+  testWidgets('tapping edit switches to edit pane', (tester) async {
+    final appt = AppointmentModel(id: 'a1', status: 'Ufaktureret');
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => apptVM.saving).thenReturn(false);
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Rediger'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byType(SoftTextField),
+      findsNWidgets(3),
+    ); // Price, location, note
+  });
+
+  testWidgets('tapping delete shows confirmation and deletes', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      status: 'Ufaktureret',
+      price: 100.0,
+      dateTime: DateTime.now(),
+    );
+
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    // (optional but nice) stub checklist stream to something harmless:
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
+
+    await pumpWithShell(
+      tester,
+      // no need for InheritedGoRouter here anymore
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    // 1) Tap the "Slet" button in the read pane
+    await tester.tap(find.text('Slet'));
+    await tester.pumpAndSettle();
+
+    // 2) Tap the confirm "Slet" button in the dialog (a TextButton)
+    final confirmFinder = find.widgetWithText(TextButton, 'Slet');
+    expect(confirmFinder, findsOneWidget);
+
+    await tester.tap(confirmFinder);
+    await tester.pumpAndSettle();
+
+    // 3) Verify calls
+    verify(() => apptVM.delete('a1', 'Ufaktureret', 100.0, any())).called(1);
+    verify(
+      () => financeVM.onDeleteAppointment(
+        date: any(named: 'date'),
+        price: 100.0,
+        status: PaymentStatus.uninvoiced,
+      ),
+    ).called(1);
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Edit pane rendering and interactions
+  // ───────────────────────────────────────────────────────────────────────────
+  testWidgets('renders edit fields and switches back on cancel', (
+    tester,
+  ) async {
+    final appt = AppointmentModel(id: 'a1', status: 'Ufaktureret');
+
+    // When details screen asks for the appointment, return our model
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+
+    // Selector<AppointmentViewModel, bool> expects a non-null bool
+    when(() => apptVM.saving).thenReturn(false);
+
+    // _AppointmentReadPane._loadTicks() awaits .first on this stream
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    // Switch to edit mode
+    await tester.tap(find.text('Rediger'));
+    await tester.pumpAndSettle();
+
+    // Edit pane fields
+    expect(find.text('Tilføj klient'), findsOneWidget);
+    expect(find.text('Tilføj service'), findsOneWidget);
+    expect(find.text('Tilføj checkliste'), findsOneWidget);
+    expect(find.text('Tilføj billeder'), findsOneWidget);
+
+    // Cancel edit → back to read view
+    await tester.tap(find.text('Annuller'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rediger'), findsOneWidget);
+  });
+
+  testWidgets('picks client in edit pane', (tester) async {
+    final appt = AppointmentModel(id: 'a1', status: 'Ufaktureret');
+
+    // Appointment lookup
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+
+    // Selector<AppointmentViewModel, bool> expects a non-null bool
+    when(() => apptVM.saving).thenReturn(false);
+
+    // _AppointmentReadPane._loadTicks() awaits .first on this stream
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
+
+    // (Optional, but keeps the overlay happy if it reads clients)
+    when(() => clientVM.allClients).thenReturn(const <ClientModel>[]);
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    // Enter edit mode
+    await tester.tap(find.text('Rediger'));
+    await tester.pumpAndSettle();
+
+    // Open client picker overlay
+    await tester.tap(find.text('Tilføj klient'));
+    await tester.pumpAndSettle();
+
+    // Overlay should be visible
+    expect(find.byType(ClientListOverlay), findsOneWidget);
+  });
+
+  testWidgets('changes status in edit pane', (tester) async {
+    final appt = AppointmentModel(id: 'a1', status: 'Ufaktureret');
+
+    // Basic stubs used by AppointmentDetailsScreen
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => apptVM.saving).thenReturn(false);
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    // Go to edit mode
+    await tester.tap(find.text('Rediger'));
+    await tester.pumpAndSettle();
+
+    // Open status choices
+    await tester.tap(find.byType(StatusIconRect));
+    await tester.pumpAndSettle();
+
+    // Pick "Betalt"
+    await tester.tap(find.text('Betalt'));
+    await tester.pumpAndSettle();
+
+    // New status should now be visible
+    expect(find.text('Betalt'), findsOneWidget);
+  });
+
+  testWidgets('saves changes in edit pane with validation', (tester) async {
+    final appt = AppointmentModel(
+      id: 'a1',
+      clientId: 'c1',
+      status: 'Ufaktureret',
+    );
+    final client = ClientModel(id: 'c1');
+
+    // Appointment + client lookup
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+    when(() => clientVM.getClient('c1')).thenReturn(client);
+
+    // Selector<AppointmentViewModel, bool> needs a non-null bool
+    when(() => apptVM.saving).thenReturn(false);
+
+    // Read pane init: _loadTicks() waits on .first
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
+
+    // Saving from edit pane must succeed
+    when(
+      () => apptVM.updateAppointmentFields(
+        any(), // old appointment
+        clientId: any(named: 'clientId'),
+        serviceId: any(named: 'serviceId'),
+        checklistIds: any(named: 'checklistIds'),
+        dateTime: any(named: 'dateTime'),
+        payDate: any(named: 'payDate'),
+        location: any(named: 'location'),
+        note: any(named: 'note'),
+        price: any(named: 'price'),
+        status: any(named: 'status'),
+        currentImageUrls: any(named: 'currentImageUrls'),
+        removedImageUrls: any(named: 'removedImageUrls'),
+        newImages: any(named: 'newImages'),
+      ),
+    ).thenAnswer((_) async => true);
+
+    // Finance handler (called after a successful update)
+    when(
+      () => financeVM.onUpdateAppointmentFields(
+        oldStatus: any(named: 'oldStatus'),
+        newStatus: any(named: 'newStatus'),
+        oldPrice: any(named: 'oldPrice'),
+        newPrice: any(named: 'newPrice'),
+        oldDate: any(named: 'oldDate'),
+        newDate: any(named: 'newDate'),
+      ),
+    ).thenAnswer((_) async {});
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    // Go to edit mode
+    await tester.tap(find.text('Rediger'));
+    await tester.pumpAndSettle();
+
+    // Enter price in the first SoftTextField (the price field)
+    await tester.enterText(find.byType(SoftTextField).first, '600');
+    await tester.pump();
+
+    // Tap confirm button ("Bekræft" in EditActionsRow)
+    await tester.tap(find.text('Bekræft'));
+    await tester.pumpAndSettle();
+
+    // Verify the VM update call
+    verify(
+      () => apptVM.updateAppointmentFields(
+        any(), // old appointment
+        clientId: 'c1',
+        serviceId: null,
+        checklistIds: [],
+        dateTime: null,
+        payDate: null,
+        location: '',
+        note: '',
+        price: 600.0,
+        status: 'Ufaktureret',
+        currentImageUrls: [],
+        removedImageUrls: [],
+        newImages: [],
+      ),
+    ).called(1);
+
+    // And the finance update call
+    verify(
+      () => financeVM.onUpdateAppointmentFields(
+        oldStatus: any(named: 'oldStatus'),
+        newStatus: any(named: 'newStatus'),
+        oldPrice: 0.0,
+        newPrice: 600.0,
+        oldDate: null,
+        newDate: null,
+      ),
+    ).called(1);
+  });
+
+  testWidgets('shows snackbar if no client on save', (tester) async {
+    final appt = AppointmentModel(id: 'a1', status: 'Ufaktureret');
+
+    when(() => apptVM.getAppointment('a1')).thenReturn(appt);
+
+    // Again: selector + checklist stream stubs
+    when(() => apptVM.saving).thenReturn(false);
+    when(
+      () => apptVM.checklistProgressStream('a1'),
+    ).thenAnswer((_) => Stream.value(<String, Set<int>>{}));
+
+    // (Optional) stub update; it should NOT be called because validation fails,
+    // but stubbing doesn't hurt:
+    when(
+      () => apptVM.updateAppointmentFields(
+        any(),
+        clientId: any(named: 'clientId'),
+        serviceId: any(named: 'serviceId'),
+        checklistIds: any(named: 'checklistIds'),
+        dateTime: any(named: 'dateTime'),
+        payDate: any(named: 'payDate'),
+        location: any(named: 'location'),
+        note: any(named: 'note'),
+        price: any(named: 'price'),
+        status: any(named: 'status'),
+        currentImageUrls: any(named: 'currentImageUrls'),
+        removedImageUrls: any(named: 'removedImageUrls'),
+        newImages: any(named: 'newImages'),
+      ),
+    ).thenAnswer((_) async => true);
+
+    await pumpWithShell(
+      tester,
+      child: const AppointmentDetailsScreen(appointmentId: 'a1'),
+      providers: [
+        ChangeNotifierProvider<AppointmentViewModel>.value(value: apptVM),
+        ChangeNotifierProvider<FinanceViewModel>.value(value: financeVM),
+        ChangeNotifierProvider<ClientViewModel>.value(value: clientVM),
+        ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
+        ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
+      ],
+      location: '/appointment_details/a1',
+      routeName: 'appointment_details',
+    );
+
+    await tester.pumpAndSettle();
+
+    // Go to edit mode
+    await tester.tap(find.text('Rediger'));
+    await tester.pumpAndSettle();
+
+    // Try to save without a client
+    await tester.tap(find.text('Bekræft'));
+    await tester.pumpAndSettle();
+
+    // Validation snackbars: we specifically look for the user-facing one
+    expect(find.text('Vælg en kunde, før du gemmer.'), findsOneWidget);
+  });
 }

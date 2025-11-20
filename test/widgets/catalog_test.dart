@@ -1,9 +1,10 @@
-// test/widgets/services_overview_test.dart
-import 'package:aftaler_og_regnskab/ui/catalog/catalog_screen.dart'; // adjust path if needed
+// test/widgets/catalog_screen_test.dart
+import 'package:aftaler_og_regnskab/ui/catalog/catalog_screen.dart';
 import 'package:aftaler_og_regnskab/domain/service_model.dart';
 import 'package:aftaler_og_regnskab/domain/checklist_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:aftaler_og_regnskab/viewModel/checklist_view_model.dart';
+import 'package:aftaler_og_regnskab/ui/widgets/search_field.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,14 +12,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 
 import '../support/mocks.dart';
-import '../support/test_wrappers.dart'; // contains pumpWithShell + setTestViewSize
+import '../support/test_wrappers.dart'; // pumpWithShell + setTestViewSize
 
 void main() {
   late MockServiceVM serviceVM;
   late MockChecklistVM checklistVM;
 
   setUpAll(() {
-    // Mocktail doesn’t need extra fallbacks here (no custom enums in when/any).
+    // No special mocktail fallbacks needed here.
   });
 
   setUp(() {
@@ -68,8 +69,8 @@ void main() {
         ChangeNotifierProvider<ServiceViewModel>.value(value: serviceVM),
         ChangeNotifierProvider<ChecklistViewModel>.value(value: checklistVM),
       ],
-      location: '/service/overview',
-      routeName: 'servicesOverview',
+      location: '/catalog',
+      routeName: 'catalog',
       width: 1280,
       height: 2856,
       devicePixelRatio: 1.0,
@@ -90,6 +91,7 @@ void main() {
     tester,
   ) async {
     await _pump(tester);
+
     final seg = find.byType(CupertinoSlidingSegmentedControl<Tabs>);
     expect(seg, findsOneWidget);
     expect(
@@ -105,7 +107,7 @@ void main() {
     expect(find.text('Makeup'), findsOneWidget);
     expect(find.text('Hår'), findsOneWidget);
 
-    // GridView present (body is a GridView)
+    // GridView present (services body)
     expect(find.byType(GridView), findsOneWidget);
   });
 
@@ -122,7 +124,7 @@ void main() {
     expect(find.text('Bryllup'), findsOneWidget);
     expect(find.text('Fotoshoot'), findsOneWidget);
 
-    // ListView present (body is a ListView)
+    // ListView present (checklists body)
     expect(find.byType(ListView), findsOneWidget);
   });
 
@@ -132,17 +134,19 @@ void main() {
     await _pump(tester);
 
     // On Services tab by default → should call setServiceSearch
-    final searchField = find.byType(CupertinoSearchTextField);
+    final searchField = find.byType(SearchField);
     expect(searchField, findsOneWidget);
 
     await tester.enterText(searchField, 'mak');
     await tester.pump();
     verify(() => serviceVM.setServiceSearch('mak')).called(1);
 
-    // Switch to Checklists and type again → should call setChecklistSearch
+    // Switch to Checklists tab
     await tester.tap(find.text('Checklister'));
     await tester.pumpAndSettle();
 
+    // After switching, SearchField is still the same widget; typing now
+    // should call setChecklistSearch.
     await tester.enterText(searchField, 'bryl');
     await tester.pump();
     verify(() => checklistVM.setChecklistSearch('bryl')).called(1);
@@ -156,8 +160,7 @@ void main() {
     final fab = find.byType(FloatingActionButton);
     expect(fab, findsOneWidget);
 
-    // We don’t assert the overlay content here (top-level helper),
-    // just ensure the handler is hooked and doesn’t throw.
+    // Just ensure tapping it does not throw; overlay content is tested elsewhere.
     await tester.tap(fab);
     await tester.pump();
   });

@@ -196,27 +196,28 @@ class ServiceViewModel extends ChangeNotifier {
     Set<String> deletes,
   ) {
     final cached = _cache.getService(id);
-    if (cached != null) {
-      final updated = cached.copyWith(
-        name: fields.containsKey('name')
-            ? fields['name'] as String?
-            : (deletes.contains('name') ? null : cached.name),
-        description: fields.containsKey('description')
-            ? fields['description'] as String?
-            : (deletes.contains('description') ? null : cached.description),
-        duration: fields.containsKey('duration')
-            ? fields['duration'] as String?
-            : (deletes.contains('duration') ? null : cached.duration),
-        price: fields.containsKey('price')
-            ? (fields['price'] as num?)?.toDouble()
-            : (deletes.contains('price') ? null : cached.price),
-        image: fields.containsKey('image')
-            ? fields['image'] as String?
-            : (deletes.contains('image') ? null : cached.image),
-      );
-      _cache.cacheService(updated);
-      _recompute();
-    }
+    if (cached == null) return;
+
+    final updated = ServiceModel(
+      id: cached.id,
+      name: fields.containsKey('name')
+          ? fields['name'] as String?
+          : (deletes.contains('name') ? null : cached.name),
+      description: fields.containsKey('description')
+          ? fields['description'] as String?
+          : (deletes.contains('description') ? null : cached.description),
+      duration: fields.containsKey('duration')
+          ? fields['duration'] as String?
+          : (deletes.contains('duration') ? null : cached.duration),
+      price: fields.containsKey('price')
+          ? (fields['price'] as num?)?.toDouble()
+          : (deletes.contains('price') ? null : cached.price),
+      image: fields.containsKey('image')
+          ? fields['image'] as String?
+          : (deletes.contains('image') ? null : cached.image),
+    );
+    _cache.cacheService(updated);
+    _recompute();
   }
 
   Future<void> handleUpdateFields(
@@ -288,6 +289,7 @@ class ServiceViewModel extends ChangeNotifier {
     _sub = null;
     _query = '';
     _allFiltered = const [];
+    _cache.clear();
     notifyListeners();
   }
 }

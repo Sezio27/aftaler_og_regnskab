@@ -66,40 +66,56 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // 60% with overflow becoming "..."
                 Expanded(
+                  flex: 3,
                   child: Row(
                     children: [
                       StatusIconRound(status: _status.label),
                       const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.title,
-                            style: AppTypography.acTtitle,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            widget.service,
-                            style: AppTypography.acSubtitle,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: AppTypography.acTtitle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              widget.service,
+                              style: AppTypography.acSubtitle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(
-                  width: 150,
+                // 40 % with spacebetween
+                Expanded(
+                  flex: 2,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(widget.dateText, style: AppTypography.f1),
-
-                      Text(formatDKK(widget.price), style: AppTypography.num3),
+                      Flexible(
+                        child: Text(
+                          widget.dateText,
+                          style: AppTypography.f1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        formatDKK(widget.price),
+                        style: AppTypography.num3,
+                        textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
@@ -107,27 +123,32 @@ class _AppointmentStatusCardState extends State<AppointmentStatusCard>
             ),
             const SizedBox(height: 4),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                InkWell(
-                  onTap: _toggle,
-                  borderRadius: BorderRadius.circular(6),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: 2,
-                    ),
-                    child: Text(
-                      'Ændr status',
-                      style: AppTypography.b3.copyWith(color: cs.primary),
+                Flexible(
+                  child: InkWell(
+                    onTap: _toggle,
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 2,
+                      ),
+                      child: Text(
+                        'Ændr status',
+                        style: AppTypography.b3.copyWith(color: cs.primary),
+                      ),
                     ),
                   ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: widget.onSeeDetails,
-                  child: Text(
-                    'Se detaljer',
-                    style: AppTypography.b3.copyWith(color: cs.onSurface),
+
+                Flexible(
+                  child: TextButton(
+                    onPressed: widget.onSeeDetails,
+                    child: Text(
+                      'Se detaljer',
+                      style: AppTypography.b3.copyWith(color: cs.onSurface),
+                    ),
                   ),
                 ),
               ],

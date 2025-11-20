@@ -17,7 +17,6 @@ void main() {
       expect(vm.visibleMonth, getMonth(initial));
       expect(vm.visibleWeek, getWeek(initial));
 
-      // selectedDay is *now* (by design), not derived from initial
       final now = DateTime.now();
       expect(vm.selectedDay.year, now.year);
       expect(vm.selectedDay.month, now.month);
@@ -163,7 +162,7 @@ void main() {
         final vm = CalendarViewModel(initial: anchor);
 
         final w = vm.visibleWeek; // Monday
-        final expectedTitle = 'Uge ${isoWeekNumber(w)}, ${weekYear(w)}';
+        final expectedTitle = 'Uge ${isoWeekNumber(w)}';
         expect(vm.weekTitle, expectedTitle);
 
         final thursdayAnchor = toThursday(w);

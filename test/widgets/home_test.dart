@@ -11,10 +11,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../support/mocks.dart';
 import '../support/test_wrappers.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mocks
-// ─────────────────────────────────────────────────────────────────────────────
-
 void main() {
   setUpAll(() async {
     // Date formatting for 'da' used by DateFormat in the widget.
@@ -22,7 +18,6 @@ void main() {
 
     // Fallbacks for matchers
     registerFallbackValue(DateTime(2000, 1, 1));
-    // Segment enum lives in FinanceViewModel; just register a sensible fallback:
     registerFallbackValue(Segment.month);
   });
 
@@ -37,7 +32,9 @@ void main() {
     when(() => financeVM.ensureFinanceForHomeSeeded()).thenAnswer((_) async {});
     when(() => financeVM.summaryNow(any())).thenReturn((income: 0.0, count: 0));
 
-    when(() => apptVM.isReady).thenReturn(false);
+    // New flag used by HomeScreen selector
+    when(() => apptVM.hasLoadedInitialWindow).thenReturn(false);
+
     when(
       () => apptVM.cardsForRange(any(), any()),
     ).thenReturn(const <AppointmentCardModel>[]);
@@ -70,15 +67,15 @@ void main() {
   // ───────────────────────────────────────────────────────────────────────────
   // Summary cards
   // ───────────────────────────────────────────────────────────────────────────
-  testWidgets('renders month summary (Omsætning/Aftaler) and uses selector', (
+  testWidgets('renders month summary (Omsætning/Aftaler) via selector', (
     tester,
   ) async {
     when(
       () => financeVM.summaryNow(Segment.month),
     ).thenReturn((income: 12345.0, count: 3));
 
-    // Make list ready but empty so we don’t show the spinner
-    when(() => apptVM.isReady).thenReturn(true);
+    // We only care that the list does not show the spinner here
+    when(() => apptVM.hasLoadedInitialWindow).thenReturn(true);
 
     await pumpWithShell(
       tester,
@@ -91,32 +88,32 @@ void main() {
       routeName: 'home',
     );
 
+    // One extra pump is enough; summary is synchronous
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1));
 
     // Summary labels
     expect(find.text('Omsætning'), findsOneWidget);
     expect(find.text('Aftaler'), findsOneWidget);
     expect(find.text('Denne måned'), findsNWidgets(2));
 
-    // We won’t assert exact DKK formatting to avoid locale flakiness;
-    // but count should be rendered as "3".
+    // Count should be rendered as "3"
     expect(find.text('3'), findsWidgets);
 
     // The “Ny aftale” CTA is visible
     expect(find.text('Ny aftale'), findsOneWidget);
 
-    // The selector must have invoked summaryNow(Segment.month)
+    // Selector invoked summaryNow(Segment.month)
     verify(() => financeVM.summaryNow(Segment.month)).called(1);
   });
 
   // ───────────────────────────────────────────────────────────────────────────
   // Upcoming list states
   // ───────────────────────────────────────────────────────────────────────────
-  testWidgets('shows loading spinner when appointments not ready', (
+  testWidgets('shows loading spinner when appointments not loaded yet', (
     tester,
   ) async {
-    when(() => apptVM.isReady).thenReturn(false);
+    when(() => apptVM.hasLoadedInitialWindow).thenReturn(false);
+
     await pumpWithShell(
       tester,
       child: const HomeScreen(),
@@ -133,8 +130,8 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('shows empty state when ready but no items', (tester) async {
-    when(() => apptVM.isReady).thenReturn(true);
+  testWidgets('shows empty state when loaded but no items', (tester) async {
+    when(() => apptVM.hasLoadedInitialWindow).thenReturn(true);
     when(
       () => apptVM.cardsForRange(any(), any()),
     ).thenReturn(const <AppointmentCardModel>[]);
@@ -149,16 +146,17 @@ void main() {
       location: '/home',
       routeName: 'home',
     );
+
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 1));
 
     expect(find.text('Ingen kommende aftaler'), findsOneWidget);
   });
 
-  testWidgets('renders upcoming list items when ready with data', (
+  testWidgets('renders upcoming list items when loaded with data', (
     tester,
   ) async {
-    when(() => apptVM.isReady).thenReturn(true);
+    when(() => apptVM.hasLoadedInitialWindow).thenReturn(true);
 
     final now = DateTime(2025, 1, 10, 14, 30);
     final items = <AppointmentCardModel>[
@@ -196,9 +194,10 @@ void main() {
       location: '/home',
       routeName: 'home',
     );
+
     await tester.pump(const Duration(milliseconds: 1));
 
-    // Two list tiles (AppointmentCard) keyed by 'appt-<id>'
+    // Two AppointmentCard widgets keyed by 'appt-<id>'
     expect(find.byKey(const ValueKey('appt-a1')), findsOneWidget);
     expect(find.byKey(const ValueKey('appt-a2')), findsOneWidget);
 
@@ -211,8 +210,5 @@ void main() {
     expect(find.text('Hår'), findsOneWidget);
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Safety: tapping buttons doesn’t throw when no router is configured
-  // (we do NOT tap “Ny aftale” / “Se alle” in these tests to avoid go_router).
-  // ───────────────────────────────────────────────────────────────────────────
+  // (We still don't tap “Ny aftale” / “Se alle” here to avoid go_router wiring.)
 }
