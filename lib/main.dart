@@ -11,7 +11,7 @@ import 'package:aftaler_og_regnskab/domain/cache/service_cache.dart';
 import 'package:aftaler_og_regnskab/data/repositories/finance_summary_repository.dart';
 import 'package:aftaler_og_regnskab/data/repositories/service_repository.dart';
 import 'package:aftaler_og_regnskab/data/repositories/user_repository.dart';
-import 'package:aftaler_og_regnskab/debug/bench.dart';
+
 import 'package:aftaler_og_regnskab/data/services/firebase_options.dart';
 import 'package:aftaler_og_regnskab/data/services/firebase_auth_methods.dart';
 import 'package:aftaler_og_regnskab/data/services/image_storage.dart';
@@ -33,15 +33,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+final Stopwatch startupStopwatch = Stopwatch();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('da');
   final appRouter = createRouter();
-  assert(() {
-    bench = Bench();
-    return true;
-  }());
+  startupStopwatch.start();
   runApp(MyApp(router: appRouter));
 }
 
@@ -188,7 +186,6 @@ class _AppBootstrapState extends State<_AppBootstrap> {
     }
 
     _didBootstrap = true;
-    debugPrint('BOOT: notifications+range ready @ ${DateTime.now()}');
   }
 
   void _onSignedOut() {

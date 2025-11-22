@@ -35,24 +35,4 @@ class ServiceModel {
       image: image ?? this.image,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'duration': duration,
-    if (price != null) 'price': price,
-    'image': image,
-  };
-
-  factory ServiceModel.fromJson(Map<String, dynamic> json) {
-    return ServiceModel(
-      id: json['id'] as String?,
-      name: json['name'] as String?,
-      description: json['description'] as String?,
-      duration: json['duration'] as String?,
-      price: (json['price'] as num?)?.toDouble(),
-      image: json['image'] as String?,
-    );
-  }
 }

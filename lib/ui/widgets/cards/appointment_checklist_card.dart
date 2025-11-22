@@ -66,28 +66,30 @@ class _AppointmentChecklistCardState extends State<AppointmentChecklistCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.checklist.name ?? '—', style: AppTypography.b3),
-                  if ((widget.checklist.description ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.checklist.description!,
-                      style: AppTypography.b6,
-                    ),
-                  ],
-
-                  if (!isEdit) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '$done af $total færdige',
-                      style: AppTypography.num5.copyWith(
-                        color: cs.onSurface.withAlpha(180),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.checklist.name ?? '—', style: AppTypography.b3),
+                    if ((widget.checklist.description ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.checklist.description!,
+                        style: AppTypography.b6,
                       ),
-                    ),
+                    ],
+
+                    if (!isEdit) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '$done af $total færdige',
+                        style: AppTypography.num5.copyWith(
+                          color: cs.onSurface.withAlpha(180),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
               const SizedBox(width: 8),
               Row(

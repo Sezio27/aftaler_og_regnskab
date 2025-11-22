@@ -1,4 +1,5 @@
-// lib/utils/perf_timer.dart
+import 'package:flutter/material.dart';
+
 class PerfTimer {
   static final Map<String, DateTime> _marks = {};
 
@@ -6,9 +7,9 @@ class PerfTimer {
 
   static void stop(String key, {String label = 'first frame'}) {
     final t0 = _marks.remove(key);
-    if (t0 == null) return; // safe if start wasn't called
+    if (t0 == null) return;
     final ms = DateTime.now().difference(t0).inMilliseconds;
-    // ignore: avoid_print
-    print('$key → $label: ${ms}ms');
+
+    debugPrint('$key → $label: ${ms}ms');
   }
 }

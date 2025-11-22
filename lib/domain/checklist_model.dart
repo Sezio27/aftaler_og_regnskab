@@ -25,21 +25,4 @@ class ChecklistModel {
     description: description ?? this.description,
     points: points ?? this.points,
   );
-
-  Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
-    'name': name,
-    'description': description,
-    'points': points,
-  };
-
-  factory ChecklistModel.fromJson(Map<String, dynamic> json) => ChecklistModel(
-    id: json['id'] as String?,
-    name: json['name'] as String?,
-    description: json['description'] as String?,
-    points: ((json['points'] as List?) ?? const [])
-        .map((e) => (e as String?)?.trim() ?? '')
-        .where((s) => s.isNotEmpty)
-        .toList(),
-  );
 }

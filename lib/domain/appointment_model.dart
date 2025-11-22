@@ -55,48 +55,4 @@ class AppointmentModel {
       status: status ?? this.status,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    if (id != null) 'id': id,
-    'clientId': clientId,
-    'serviceId': serviceId,
-    'checklistIds': checklistIds,
-    'dateTime': dateTime,
-    'payDate': payDate,
-    if (price != null) 'price': price,
-    'location': location,
-    'note': note,
-    'imageUrls': imageUrls,
-    'status': status,
-  };
-
-  factory AppointmentModel.fromJson(Map<String, dynamic> json) {
-    final dt = json['dateTime'];
-    DateTime? dtParsed;
-    if (dt is DateTime) dtParsed = dt;
-
-    final payDt = json['payDate'];
-    DateTime? payDtParsed;
-    if (payDt is DateTime) payDtParsed = payDt;
-
-    return AppointmentModel(
-      id: json['id'] as String?,
-      clientId: json['clientId'] as String?,
-      serviceId: json['serviceId'] as String?,
-      checklistIds: ((json['checklistIds'] as List?) ?? const [])
-          .map((e) => (e as String?)?.trim() ?? '')
-          .where((s) => s.isNotEmpty)
-          .toList(),
-      dateTime: dtParsed,
-      payDate: payDtParsed,
-      price: (json['price'] as num?)?.toDouble(),
-      location: json['location'] as String?,
-      note: json['note'] as String?,
-      imageUrls: ((json['imageUrls'] as List?) ?? const [])
-          .map((e) => (e as String?)?.trim() ?? '')
-          .where((s) => s.isNotEmpty)
-          .toList(),
-      status: json['status'] as String?,
-    );
-  }
 }

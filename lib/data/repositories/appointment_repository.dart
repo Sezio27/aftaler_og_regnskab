@@ -1,8 +1,6 @@
-import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 
 class AppointmentRepository {
   AppointmentRepository({FirebaseAuth? auth, FirebaseFirestore? firestore})
@@ -40,7 +38,6 @@ class AppointmentRepository {
     DateTime endInclusive,
   ) {
     final uid = _uidOrThrow;
-    var countedFirstServer = false;
 
     return _collection(uid)
         .where(
@@ -54,45 +51,8 @@ class AppointmentRepository {
         .orderBy('dateTime')
         .snapshots()
         .map((q) {
-          assert(() {
-            if (!q.metadata.isFromCache) {
-              if (!countedFirstServer) {
-                bench?.liveFirstReads += q.docs.length;
-                countedFirstServer = true;
-              } else {
-                bench?.liveUpdateReads += q.docChanges.length;
-              }
-            }
-            return true;
-          }());
-
           return q.docs.map(_fromDoc).toList();
         });
-  }
-
-  Future<Map<String, AppointmentModel?>> getAppointments(
-    Set<String> ids,
-  ) async {
-    if (ids.isEmpty) return {};
-    final uid = _uidOrThrow;
-    final idsList = ids.toList();
-    final result = <String, AppointmentModel?>{};
-    for (var i = 0; i < idsList.length; i += 10) {
-      final chunk = idsList.sublist(
-        i,
-        i + 10 > idsList.length ? idsList.length : i + 10,
-      );
-      final querySnapshot = await _collection(
-        uid,
-      ).where(FieldPath.documentId, whereIn: chunk).get();
-      for (final doc in querySnapshot.docs) {
-        result[doc.id] = _fromDoc(doc);
-      }
-      for (final id in chunk) {
-        result.putIfAbsent(id, () => null);
-      }
-    }
-    return result;
   }
 
   Future<List<AppointmentModel>> getAppointmentsBetween(
@@ -118,13 +78,6 @@ class AppointmentRepository {
         .where('dateTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
         .orderBy('dateTime')
         .get();
-
-    assert(() {
-      if (!(q.metadata.isFromCache)) {
-        bench?.pagedReads += q.docs.length;
-      }
-      return true;
-    }());
 
     return q.docs.map(_fromDoc).toList();
   }
@@ -191,88 +144,6 @@ class AppointmentRepository {
     await _collection(uid).doc(apptId).set(payload, SetOptions(merge: true));
   }
 
-  Future<int> countAppointments({
-    DateTime? startInclusive,
-    DateTime? endInclusive,
-    String? status,
-  }) async {
-    final uid = _uidOrThrow;
-    Query<Map<String, dynamic>> q = _collection(uid);
-
-    if (startInclusive != null) {
-      q = q.where(
-        'dateTime',
-        isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
-      );
-    }
-    if (endInclusive != null) {
-      final eod = DateTime(
-        endInclusive.year,
-        endInclusive.month,
-        endInclusive.day,
-        23,
-        59,
-        59,
-        999,
-      );
-      q = q.where('dateTime', isLessThanOrEqualTo: Timestamp.fromDate(eod));
-    }
-    if (status != null && status.isNotEmpty) {
-      q = q.where('status', isEqualTo: status);
-    }
-
-    try {
-      final agg = await q.count().get();
-      final c = agg.count ?? 0;
-      return c;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<double> sumPaidInRange({
-    DateTime? startInclusive,
-    DateTime? endInclusive,
-  }) async {
-    final uid = _uidOrThrow;
-    Query<Map<String, dynamic>> query = _collection(
-      uid,
-    ).where('status', isEqualTo: 'Betalt');
-
-    if (startInclusive != null) {
-      query = query.where(
-        'dateTime',
-        isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive),
-      );
-    }
-    if (endInclusive != null) {
-      final endOfDay = DateTime(
-        endInclusive.year,
-        endInclusive.month,
-        endInclusive.day,
-        23,
-        59,
-        59,
-        999,
-      );
-      query = query.where(
-        'dateTime',
-        isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
-      );
-    }
-
-    final aggregateQuery = query.aggregate(sum('price'));
-
-    try {
-      final agg = await aggregateQuery.get();
-      final val = agg.getSum('price');
-      debugPrint('[sumPaidInRange] result=$val');
-      return (val ?? 0.0).toDouble();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   Future<void> deleteAppointment(String id) async {
     final uid = _uidOrThrow;
     await _collection(uid).doc(id).delete();
@@ -326,13 +197,6 @@ class AppointmentRepository {
 
     final items = snap.docs.map(_fromDoc).toList();
     final lastDoc = snap.docs.isNotEmpty ? snap.docs.last : null;
-
-    assert(() {
-      if (!snap.metadata.isFromCache) {
-        bench?.pagedReads += snap.docs.length;
-      }
-      return true;
-    }());
 
     return (items: items, lastDoc: lastDoc);
   }

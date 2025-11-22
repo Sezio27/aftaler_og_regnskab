@@ -1,5 +1,4 @@
 import 'package:aftaler_og_regnskab/navigation/app_router.dart';
-import 'package:aftaler_og_regnskab/debug/bench.dart';
 import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/layout_metrics.dart';
@@ -93,10 +92,6 @@ class _AllAppointmentsScreenState extends State<AllAppointmentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    assert(() {
-      bench?.allAppointmentsBuilds++;
-      return true;
-    }());
     final listCards = context
         .select<AppointmentViewModel, List<AppointmentCardModel>>(
           (v) => v.listCards,

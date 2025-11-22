@@ -47,30 +47,4 @@ class ClientModel {
       image: image ?? this.image,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'phone': phone,
-    'email': email,
-    'address': address,
-    'city': city,
-    'postal': postal,
-    'cvr': cvr,
-    'image': image,
-  };
-
-  factory ClientModel.fromJson(Map<String, dynamic> json) {
-    return ClientModel(
-      id: json['id'] as String?,
-      name: json['name'] as String?,
-      phone: json['phone'] as String?,
-      email: json['email'] as String?,
-      address: json['address'] as String?,
-      city: json['city'] as String?,
-      postal: json['postal'] as String?,
-      cvr: json['cvr'] as String?,
-      image: json['image'] as String?,
-    );
-  }
 }

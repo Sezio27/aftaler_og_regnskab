@@ -7,7 +7,6 @@ PreferredSizeWidget buildTopBarForRouteName(
   required double maxContentWidth,
   required double fixedHeight,
 }) {
-  debugPrint(routeName);
   switch (routeName) {
     case 'home':
       return AppTopBar(width: maxContentWidth, height: fixedHeight);

@@ -212,6 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
+            //FOR DEVELOPMENT
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: () => context.read<NotificationService>().showNow(),
@@ -233,6 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               child: const Text('List pending'),
             ),
+
             const SizedBox(height: 16),
 
             Align(

@@ -1,4 +1,5 @@
 ﻿import 'package:aftaler_og_regnskab/domain/appointment_card_model.dart';
+import 'package:aftaler_og_regnskab/main.dart' as app_time;
 import 'package:aftaler_og_regnskab/theme/colors.dart';
 import 'package:aftaler_og_regnskab/theme/typography.dart';
 import 'package:aftaler_og_regnskab/utils/format_price.dart';
@@ -24,12 +25,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _logged = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<FinanceViewModel>().ensureFinanceForHomeSeeded();
+      if (_logged) return;
+      _logged = true;
+      final ms = app_time.startupStopwatch.elapsed.inMilliseconds;
+      debugPrint('Dart main() → Home first frame: $ms ms');
+      app_time.startupStopwatch.stop();
     });
   }
 
@@ -134,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-
                 final items = data.items;
                 if (items.isEmpty) {
                   return Padding(

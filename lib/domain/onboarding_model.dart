@@ -69,29 +69,5 @@ class OnboardingModel {
     },
   };
 
-  Map<String, dynamic> toJson() => {
-    'phone': phone,
-    'email': email,
-    'firstName': firstName,
-    'lastName': lastName,
-    'businessName': businessName,
-    'address': address,
-    'city': city,
-    'postal': postal,
-  };
-
-  factory OnboardingModel.fromJson(Map<String, dynamic> json) {
-    return OnboardingModel(
-      phone: json['phone'] as String?,
-      email: json['email'] as String?,
-      firstName: json['firstName'] as String?,
-      lastName: json['lastName'] as String?,
-      businessName: json['businessName'] as String?,
-      address: json['address'] as String?,
-      city: json['city'] as String?,
-      postal: json['postal'] as String?,
-    );
-  }
-
   static const empty = OnboardingModel();
 }

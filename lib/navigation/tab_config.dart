@@ -61,21 +61,5 @@ const List<String> tabRoutes = [
 void goToTab(BuildContext context, int i) {
   final route = tabRoutes[i];
   PerfTimer.start('tab:$route');
-  switch (i) {
-    case 0:
-      context.go(_paths[TabItem.home]!);
-      break;
-    case 1:
-      context.go(_paths[TabItem.calendar]!);
-      break;
-    case 2:
-      context.go(_paths[TabItem.finance]!);
-      break;
-    case 3:
-      context.go(_paths[TabItem.catalog]!);
-      break;
-    case 4:
-      context.go(_paths[TabItem.settings]!);
-      break;
-  }
+  context.go(route);
 }
