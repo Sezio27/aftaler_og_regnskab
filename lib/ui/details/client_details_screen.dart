@@ -409,49 +409,52 @@ class __ClientEditPaneState extends State<_ClientEditPane> {
                     icon: Icons.map_outlined,
                     label: 'Adresse',
 
-                    child: SoftTextField(
-                      controller: _address,
-                      keyboardType: TextInputType.streetAddress,
-                      fill: cs.onPrimary,
-                      borderRadius: 8,
-                      showStroke: true,
-                      strokeColor: _active != 4
-                          ? cs.onSurface.withAlpha(50)
-                          : cs.primary,
-                      strokeWidth: _active != 4 ? 1 : 1.5,
-                      onTap: () => setState(() => _active = 4),
+                    child: Column(
+                      children: [
+                        SoftTextField(
+                          controller: _address,
+                          keyboardType: TextInputType.streetAddress,
+                          fill: cs.onPrimary,
+                          borderRadius: 8,
+                          showStroke: true,
+                          strokeColor: _active != 4
+                              ? cs.onSurface.withAlpha(50)
+                              : cs.primary,
+                          strokeWidth: _active != 4 ? 1 : 1.5,
+                          onTap: () => setState(() => _active = 4),
+                        ),
+                        const SizedBox(height: 8),
+
+                        SoftTextField(
+                          controller: _postal,
+                          keyboardType: TextInputType.number,
+                          hintText: 'Postnummer',
+                          fill: cs.onPrimary,
+                          borderRadius: 8,
+                          showStroke: true,
+                          strokeColor: _active != 5
+                              ? cs.onSurface.withAlpha(50)
+                              : cs.primary,
+                          strokeWidth: _active != 5 ? 1 : 1.5,
+                          onTap: () => setState(() => _active = 5),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        SoftTextField(
+                          controller: _city,
+                          hintText: 'By',
+                          fill: cs.onPrimary,
+                          borderRadius: 8,
+                          showStroke: true,
+                          strokeColor: _active != 6
+                              ? cs.onSurface.withAlpha(50)
+                              : cs.primary,
+                          strokeWidth: _active != 6 ? 1 : 1.5,
+                          onTap: () => setState(() => _active = 6),
+                        ),
+                      ],
                     ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  SoftTextField(
-                    controller: _postal,
-                    keyboardType: TextInputType.number,
-                    hintText: 'Postnummer',
-                    fill: cs.onPrimary,
-                    borderRadius: 8,
-                    showStroke: true,
-                    strokeColor: _active != 5
-                        ? cs.onSurface.withAlpha(50)
-                        : cs.primary,
-                    strokeWidth: _active != 5 ? 1 : 1.5,
-                    onTap: () => setState(() => _active = 5),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  SoftTextField(
-                    controller: _city,
-                    hintText: 'By',
-                    fill: cs.onPrimary,
-                    borderRadius: 8,
-                    showStroke: true,
-                    strokeColor: _active != 6
-                        ? cs.onSurface.withAlpha(50)
-                        : cs.primary,
-                    strokeWidth: _active != 6 ? 1 : 1.5,
-                    onTap: () => setState(() => _active = 6),
                   ),
 
                   const SizedBox(height: 6),

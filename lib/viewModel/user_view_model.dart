@@ -55,7 +55,7 @@ class UserViewModel extends ChangeNotifier {
     if (!asked) {
       // First ever run → ask OS once
       final granted = await ns.requestAllIfNeeded();
-      _notificationsOn = granted; // reflect OS decision
+      _notificationsOn = granted;
       await sp.setBool(_prefsKeyNoti, _notificationsOn);
       await sp.setBool(_prefsKeyAskedOnce, true);
       await ns.applyEnabled(_notificationsOn);

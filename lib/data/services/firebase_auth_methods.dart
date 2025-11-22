@@ -1,16 +1,8 @@
 import 'dart:async';
-
-import 'package:aftaler_og_regnskab/domain/cache/client_cache.dart';
-import 'package:aftaler_og_regnskab/domain/cache/service_cache.dart';
-import 'package:aftaler_og_regnskab/utils/showOtpDialog.dart';
 import 'package:aftaler_og_regnskab/utils/showSnackBar.dart';
-import 'package:aftaler_og_regnskab/viewModel/client_view_model.dart';
-import 'package:aftaler_og_regnskab/viewModel/service_view_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 class FirebaseAuthMethods {
   final FirebaseAuth _auth;
