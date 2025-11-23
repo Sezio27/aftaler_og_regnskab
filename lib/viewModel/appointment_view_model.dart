@@ -589,6 +589,9 @@ class AppointmentViewModel extends ChangeNotifier {
     required Map<String, Set<int>> progress,
   }) => _repo.setAllChecklistProgress(appointmentId, progress);
 
+  /// Starts a new paged appointment list for the given date range,
+  /// resets pagination state, and preloads pages until some items are loaded
+  /// or there are no more appointments.
   Future<void> beginListRange(DateTime start, DateTime end) async {
     _listStart = dateOnly(start);
     _listEnd = endOfDayInclusive(dateOnly(end));
@@ -603,6 +606,9 @@ class AppointmentViewModel extends ChangeNotifier {
     } while (_listModels.isEmpty && _listHasMore);
   }
 
+  /// Loads the next one or more pages of appointments for the current
+  /// list range, updating pagination flags, caching the results and
+  /// prefetching related clients and services.
   Future<void> loadNextListPage({int count = 1}) async {
     if (!_listHasMore || _listLoading) return;
     if (_listStart == null || _listEnd == null) return;

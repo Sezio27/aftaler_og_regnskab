@@ -149,6 +149,9 @@ class AppointmentRepository {
     await _collection(uid).doc(id).delete();
   }
 
+  /// Fetches a page of appointments for the current user, optionally filtered by
+  /// a date range, ordered by `dateTime`. Returns the loaded items together
+  /// with the last document snapshot for use as a pagination cursor.
   Future<
     ({
       List<AppointmentModel> items,

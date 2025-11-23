@@ -1,10 +1,16 @@
 import 'package:aftaler_og_regnskab/domain/appointment_model.dart';
 import 'package:aftaler_og_regnskab/data/services/notification_service.dart';
 
+/// Small wrapper around [NotificationService] with appointment-specific logic.
 class AppointmentNotifications {
   AppointmentNotifications(this._ns);
   final NotificationService _ns;
 
+  /// Synchronises today's notifications for the given appointments.
+  ///
+  /// If notifications are disabled, any existing reminders for these
+  /// appointments are cancelled. Otherwise, a "2 hours before" notification
+  /// is scheduled for each appointment that falls on the current day.
   Future<void> syncToday({
     required Iterable<AppointmentModel> appointments,
   }) async {
@@ -32,6 +38,10 @@ class AppointmentNotifications {
     await _ns.cancelForAppointment(appointmentId);
   }
 
+  /// Recomputes notifications when a single appointment has changed.
+  ///
+  /// Any existing reminders for the appointment are cancelled, and a new
+  /// "2 hours before" notification is scheduled based on the updated start time.
   Future<void> onAppointmentChanged(AppointmentModel appt) async {
     final id = appt.id;
     final dt = appt.dateTime;
@@ -49,6 +59,7 @@ class AppointmentNotifications {
     );
   }
 
+  /// Formats a time of day as `HH:mm`.
   String _fmt(DateTime t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 }

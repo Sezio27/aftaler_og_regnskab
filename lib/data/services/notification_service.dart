@@ -9,6 +9,7 @@ import 'package:timezone/timezone.dart' as tz;
 class NotificationService {
   NotificationService();
 
+  // Underlying platform plugin for Android / iOS local notifications.
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   bool _enabled = true;
@@ -117,6 +118,7 @@ class NotificationService {
 
     final ts = tz.TZDateTime.from(whenLocal, tz.local);
 
+    // Do not schedule notifications in the past (or “now”).
     if (!ts.isAfter(tz.TZDateTime.now(tz.local))) return;
 
     final details = NotificationDetails(
@@ -147,6 +149,8 @@ class NotificationService {
     } on PlatformException catch (e) {
       final notPermitted = e.code == 'exact_alarms_not_permitted';
       if (Platform.isAndroid && notPermitted) {
+        // Fallback: if exact alarms are not permitted, schedule an inexact
+        // alarm instead of failing outright.
         await _plugin.zonedSchedule(
           id,
           title,
@@ -171,11 +175,13 @@ class NotificationService {
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day);
     final end = start.add(const Duration(days: 1));
+    // Only schedule if the appointment is “today” (within [start, end)).
     if (appointmentDateTime.isBefore(start) ||
         !appointmentDateTime.isBefore(end)) {
       return;
     }
     final trigger = appointmentDateTime.subtract(const Duration(hours: 2));
+    // Use a stable, appointment-specific ID so we can cancel this reminder later.
     final id = stableId('appt-$appointmentId-2h');
     await scheduleAt(
       id: id,
@@ -193,6 +199,8 @@ class NotificationService {
 
   Future<void> cancelForAppointment(String appointmentId) async {
     final pending = await _plugin.pendingNotificationRequests();
+    // Cancel any pending notification that carries the appointment payload,
+    // plus the “two hours before” reminder with its stable ID.
     for (final r in pending) {
       if ((r.payload ?? '') == 'appt:$appointmentId') {
         await _plugin.cancel(r.id);

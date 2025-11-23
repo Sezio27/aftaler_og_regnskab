@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+/// Simple wrapper around Firebase Storage for user-scoped images.
 class ImageStorage {
   ImageStorage({FirebaseAuth? auth, FirebaseStorage? storage})
     : _auth = auth ?? FirebaseAuth.instance,
@@ -22,12 +23,15 @@ class ImageStorage {
     required ({Uint8List bytes, String name, String? mimeType}) image,
   }) async {
     final uid = _uidOrThrow;
+
+    // Store the client image at a fixed path per user/client.
     final ref = _storage.ref('users/$uid/clients/$clientId/image');
     final meta = SettableMetadata(
       contentType: image.mimeType ?? 'image/jpeg',
       cacheControl: 'public,max-age=3600',
     );
     try {
+      // Add a timeout so a hanging upload does not block the UI indefinitely.
       final snap = await ref
           .putData(image.bytes, meta)
           .timeout(const Duration(seconds: 10));
@@ -35,6 +39,7 @@ class ImageStorage {
     } on TimeoutException {
       throw Exception('Billedupload tog for lang tid (timeout). Tjek netværk.');
     } on FirebaseException catch (e) {
+      // Wrap the Firebase error in a user-facing message.
       throw Exception('Storage-fejl: ${e.code} ${e.message ?? ""}'.trim());
     }
   }
@@ -68,10 +73,13 @@ class ImageStorage {
     if (images.isEmpty) return const [];
 
     final uid = _uidOrThrow;
+
+    // Folder containing all images for a given appointment.
     final folder = _storage.ref('users/$uid/appointments/$appointmentId');
 
     final uploads = <Future<String>>[];
     for (final img in images) {
+      // Use a timestamp prefix to avoid name collisions.
       final name = '${DateTime.now().microsecondsSinceEpoch}_${img.name}';
       final ref = folder.child(name);
 
@@ -80,6 +88,7 @@ class ImageStorage {
         cacheControl: 'public,max-age=3600',
       );
 
+      // Each upload is a small async function returning the download URL.
       uploads.add(() async {
         try {
           final snap = await ref
@@ -94,6 +103,7 @@ class ImageStorage {
       }());
     }
 
+    // Wait for all uploads and collect the URLs.
     return Future.wait(uploads);
   }
 
@@ -123,6 +133,7 @@ class ImageStorage {
     final uid = _uidOrThrow;
     final folder = _storage.ref('users/$uid/appointments/$appointmentId');
     try {
+      // List all blobs under the appointment folder and delete them one by one.
       final list = await folder.listAll();
       for (final item in list.items) {
         await item.delete();
@@ -136,6 +147,7 @@ class ImageStorage {
   Future<void> deleteAppointmentImagesByUrls(Iterable<String> urls) async {
     for (final url in urls) {
       try {
+        // Derive the storage reference from the public download URL.
         final ref = _storage.refFromURL(url);
         await ref.delete();
       } on FirebaseException catch (e) {
