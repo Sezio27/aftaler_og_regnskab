@@ -47,7 +47,7 @@ flutter devices
 
 # 5) Run the app on the first available device
 flutter run
-
+```
 
 ## 2. Logging in
 
