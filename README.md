@@ -47,3 +47,20 @@ flutter devices
 
 # 5) Run the app on the first available device
 flutter run
+
+
+## 2. Logging in
+
+The app uses phone number authentication. For evaluation, a fixed test account is configured:
+
+- **Phone number:** `12345678`
+- **Verification code:** `123456`
+
+To log in:
+
+1. Start the app using the commands above (`flutter run`).
+2. On the login screen, enter the phone number `12345678` 
+3. Request the verification code.
+4. When prompted, enter `123456` as the authentication code.
+5. After successful login, you will be taken to the main flow.
+
